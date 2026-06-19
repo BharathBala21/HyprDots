@@ -1,0 +1,18 @@
+{
+    "dynamicIslandLeftSwipeItems": [
+    ],
+    "dynamicIslandPrimaryAction": "toggleExpandedPlayer",
+    "dynamicIslandPrimaryButton": 1,
+    "dynamicIslandSecondaryAction": "toggleControlCenter",
+    "dynamicIslandSecondaryButton": 3,
+    "heroFontFamily": "Inter Display",
+    "iconFontFamily": "JetBrainsMono Nerd Font",
+    "overviewGlobalShortcutAppid": "quickshell",
+    "overviewGlobalShortcutName": "dynamic-island-overview",
+    "textFontFamily": "Inter Display",
+    "timeFontFamily": "Inter Display",
+    "tlpPermissionMode": "password",
+    "tlpSudoPassword": "YOUR_SUDO_PASSWORD",
+    "wallpaperPath": "/home/aashiqed/Pictures/Wallpapers/eki.jpg",
+    "workspaceOverviewWindowDragButton": 1
+}

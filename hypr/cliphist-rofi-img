@@ -1,0 +1,19 @@
+#!/bin/bash
+
+theme="$HOME/.local/src/rofi-themes-collection/themes/rounded-nord-dark.rasi"
+
+selection=$(cliphist list | rofi -dmenu \
+    -theme "$theme" \
+    -show-icons \
+    -i \
+    -p "Clipboard")
+
+[ -z "$selection" ] && exit
+
+action=$(printf "Copy\nDelete" | rofi -dmenu -theme "$theme" -p "Action")
+
+if [ "$action" = "Copy" ]; then
+    echo "$selection" | cliphist decode | wl-copy
+elif [ "$action" = "Delete" ]; then
+    echo "$selection" | cliphist delete
+fi

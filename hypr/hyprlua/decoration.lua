@@ -7,6 +7,10 @@ hl.config (
 
             blur = {
                 -- enabled = false
+                size=25,
+                passes = 3,
+                vibrancy=0,
+                contrast=2
             -- special = trues
           },
           shadow = {

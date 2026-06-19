@@ -10,6 +10,30 @@ hl.gesture({
 
 
 
+hl.gesture({
+  fingers = 4,
+  direction = "up",
+  action = function()
+    hl.exec_cmd("qs ipc -p /home/aashiqed/.local/src/HyprDots/tide-island call overview toggle")
+  end
+})
+
+hl.gesture({
+  fingers = 4,
+  direction = "down",
+  action = function()
+    hl.exec_cmd("qs ipc -p /home/aashiqed/.local/src/HyprDots/tide-island call overview toggle")
+  end
+})
+
+
+hl.gesture({
+  fingers = 3,
+  direction = "swipe",
+  action = "move"
+})
+
+
 hl.config({
 
     input =  {

@@ -1,5 +1,4 @@
--- require("hyprlua.binds")
-
+require("hyprlua.env")
 require("monitors")
 require("hyprlua.binds")
 require("hyprlua.general")

@@ -1,6 +1,6 @@
 wallpaper {
 	monitor = eDP-1
-	path = /home/aashiqed/Pictures/Wallpapers/eki.jpg
+	path = {{WALLPAPER_PATH}}
 	timeout = 0
 	fit_mode = cover
 }
