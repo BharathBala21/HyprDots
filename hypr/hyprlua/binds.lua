@@ -88,7 +88,7 @@ hl.bind(mainMod .. "+D",hl.dsp.window.fullscreen({mode = "maximized"}))
 
 
 --hyprlauncher 
--- hl.bind("SUPER + SUPER_L" ,hl.dsp.exec_cmd("fuzzel --config=/home/aashiqed/.config/fuzzel/colors.ini"),{release = true})
+-- hl.bind("SUPER + SUPER_L" ,hl.dsp.exec_cmd("fuzzel --config=" .. os.getenv("HOME") .. "/.config/fuzzel/colors.ini"),{release = true})
 hl.bind("SUPER + SUPER_L",
     hl.dsp.exec_cmd("pgrep -x rofi && pkill -x rofi || rofi -show drun -show-icons -theme ~/.local/src/rofi-themes-collection/themes/windows11-grid-dark.rasi"),
     { release = true }
