@@ -21,4 +21,3 @@ alias yazi="sudo yazi"
 
 # Added by Antigravity CLI installer
 fish_add_path $HOME/.local/bin
-fish_add_path $HOME/.spicetify

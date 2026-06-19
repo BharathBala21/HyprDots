@@ -6,3 +6,4 @@ hypr/colors.lua
 kitty/current-theme.conf
 kitty/themes/Matugen.conf
 yazi/theme.toml
+fish/fish_variables
