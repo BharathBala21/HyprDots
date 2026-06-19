@@ -1,109 +1,74 @@
-# ...
 [templates.kitty]
-input_path = '~/.config/matugen/templates/kitty-colors.conf'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/kitty-colors.conf'
 output_path = '~/.config/kitty/themes/Matugen.conf'
 post_hook = "kitty +kitten themes --reload-in=all Matugen"
-# ...
 
 [config]
-# ...
-[templates.yazi]
-input_path = '~/.config/matugen/templates/yazi-theme.toml'
-output_path = '~/.config/yazi/theme.toml'
-# ...
 
-# ...
+[templates.yazi]
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/yazi-theme.toml'
+output_path = '~/.config/yazi/theme.toml'
+
 [templates.btop]
-input_path = '~/.config/matugen/templates/btop.theme'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/btop.theme'
 output_path = '~/.config/btop/themes/matugen.theme'
 post_hook = 'pkill -USR2 btop || true'
-# ...
 
-# ...
 [templates.fuzzel]
-input_path = '~/.config/matugen/templates/fuzzel.ini'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/fuzzel.ini'
 output_path = '~/.config/fuzzel/colors.ini'
-# ...
 
-# ...
 [templates.hyprland]
-input_path = '~/.config/matugen/templates/hyprland-colors.lua'
-output_path = '~/.config/hypr/colors.lua'
-# ...
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/hyprland-colors.lua'
+output_path = '/home/aashiqed/.local/src/HyprDots/hypr/colors.lua'
 
 [templates.cava]
-input_path = '~/.config/matugen/templates/cava-colors.ini'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/cava-colors.ini'
 output_path = '~/.config/cava/themes/matugen'
 
-# ...
 # [templates.dunst]
-# input_path = '~/.config/matugen/templates/dunstrc-colors'
+# input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/dunstrc-colors'
 # output_path = '~/.config/dunst/dunstrc'
 # post_hook = 'dunstctl reload'
-# ...
 
-# ...
 [templates.steam]
-input_path = '~/.config/matugen/templates/steam.css'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/steam.css'
 output_path = "~/.local/share/Steam/steamui/adwaita/colorthemes/everforest/everforest.css" 
-#Put theme to everforest
-# ..
 
-# ...
 [templates.obs]
-input_path = '~/.config/matugen/templates/matugen.obt'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/matugen.obt'
 output_path = '~/.config/obs-studio/themes/matugen.obt'
-# ...
 
-# ...
 [templates.obsidian]
-input_path = '~/.config/matugen/templates/obsidian.css'
-output_path = "~/Obsidian-Vault/Pirates' Vault/.obsidian/snippets/matugen.css"
-# ...
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/obsidian.css'
+output_path = "/home/aashiqed/ObsidianVault/.obsidian/snippets/matugen.css"
 
-# ...
 [templates.starship]
-input_path = '~/.config/matugen/templates/starship-colors.toml'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/starship-colors.toml'
 output_path = '~/.config/starship.toml'
-# ...
 
+[templates.firefox-website-colors]
+input_path = "/home/aashiqed/.local/src/HyprDots/matugen/templates/firefox-colors.css"
+output_path = "~/.config/zen/vzvuye4x.Default (release)/chrome/colors.css"
 
- [templates.firefox-website-colors]
- input_path = "~/.config/matugen/templates/firefox-colors.css"
- output_path = "~/.config/zen/vzvuye4x.Default (release)/chrome/colors.css"
-
-
-
-
-# ...
 [templates.color-scheme]
-input_path = '~/.config/matugen/templates/Matugen.colors'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/Matugen.colors'
 output_path = '~/.local/share/color-schemes/Matugen.colors'
-# ...
-
 
 # VS Code Matugen Theme extension
 [templates.vscode-raw]
-input_path = '~/.config/matugen/templates/vscode-colors'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/vscode-colors'
 output_path = '~/.cache/matugen/vscode-colors'
 
 [templates.vscode-json]
-input_path = '~/.config/matugen/templates/vscode-colors.json'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/vscode-colors.json'
 output_path = '~/.cache/matugen/vscode-colors.json'
 
-
-
-
-# ...
 [templates.quickshell]
-input_path = '~/.config/matugen/templates/quickshell.qml'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/quickshell.qml'
 output_path = '~/.local/state/quickshell/generated/colors.json'
-# ...
 
-
-# ...
 [templates.spotify]
-input_path = '~/.config/matugen/templates/spicetify.ini'
+input_path = '/home/aashiqed/.local/src/HyprDots/matugen/templates/spicetify.ini'
 output_path = '~/.config/spicetify/Themes/Sleek/color.ini'
 post_hook = 'spicetify watch -s 2>&1 | sed "/Reloaded Spotify/q"'
-# ...

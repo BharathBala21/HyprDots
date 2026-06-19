@@ -5,15 +5,14 @@ hl.config (
             rounding = 7,
             -- dim_special = 0.5,
 
-        --     blur = {
-        --         -- enabled = false
-        --     -- special = trues
-        --     size = 12,
-        --     passes = 1,
-        --     ignore_opacity = false,
-        --     contrast = 1.5,
-            
-        --   },
+            blur = {
+                -- enabled = false
+                size=25,
+                passes = 3,
+                vibrancy=0,
+                contrast=2
+            -- special = trues
+          },
           shadow = {
             -- enabled = false,
             color = mat.outline,
