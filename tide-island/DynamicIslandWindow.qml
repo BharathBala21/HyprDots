@@ -39,6 +39,7 @@ PanelWindow {
         && shellRootController.screenRecordingActive !== undefined
         ? !!shellRootController.screenRecordingActive
         : false
+    readonly property bool launcherLayerVisible: islandContainer.islandState === "launcher"
 
     readonly property var userConfig: UserConfig
 
@@ -100,11 +101,23 @@ PanelWindow {
         : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
     exclusiveZone: 45
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive)
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher")
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive)
-        ? WlrKeyboardFocus.OnDemand
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher")
+        ? (islandContainer.islandState === "launcher" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
+
+    HyprlandFocusGrab {
+        id: launcherGrab
+        active: root.monitorFocused && islandContainer.islandState === "launcher"
+        windows: [ root ]
+        onCleared: {
+            if (islandContainer.islandState === "launcher") {
+                islandContainer.smartRestoreState();
+            }
+        }
+    }
+
     readonly property string iconFontFamily: userConfig.iconFontFamily
     readonly property string textFontFamily: userConfig.textFontFamily
     readonly property string heroFontFamily: userConfig.heroFontFamily
@@ -286,6 +299,10 @@ PanelWindow {
         islandContainer.handleConfiguredClickAction("toggleControlCenter");
     }
 
+    function toggleLauncher() {
+        islandContainer.toggleLauncher();
+    }
+
     onOverviewVisibleChanged: {
         if (overviewVisible && monitorFocused) overviewFocusTimer.restart();
     }
@@ -293,12 +310,17 @@ PanelWindow {
         if (connectivityPromptActive && monitorFocused)
             connectivityPromptFocusTimer.restart();
     }
+    onLauncherLayerVisibleChanged: {
+        if (launcherLayerVisible && monitorFocused)
+            launcherFocusTimer.restart();
+    }
     onOverviewVisualReadyChanged: {
         if (overviewVisualReady) beginOverviewOpening();
     }
     onMonitorFocusedChanged: {
         if (overviewVisible && monitorFocused) overviewFocusTimer.restart();
         if (connectivityPromptActive && monitorFocused) connectivityPromptFocusTimer.restart();
+        if (launcherLayerVisible && monitorFocused) launcherFocusTimer.restart();
     }
 
     Timer {
@@ -310,6 +332,13 @@ PanelWindow {
 
     Timer {
         id: connectivityPromptFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: islandContainer.forceActiveFocus()
+    }
+
+    Timer {
+        id: launcherFocusTimer
         interval: 0
         repeat: false
         onTriggered: islandContainer.forceActiveFocus()
@@ -371,7 +400,7 @@ PanelWindow {
     FocusScope {
         id: islandContainer
         anchors.fill: parent
-        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive)
+        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "launcher")
 
         property string islandState: "normal"
         property string splitIcon: root.defaultSplitIcon
@@ -407,6 +436,7 @@ PanelWindow {
             || islandState === "bluetooth_expanded"
             || islandState === "control_center"
             || islandState === "notification"
+            || islandState === "launcher"
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
@@ -588,6 +618,19 @@ PanelWindow {
                 return;
             case "closeControlCenter":
                 if (islandState === "control_center")
+                    smartRestoreState();
+                return;
+            case "toggleLauncher":
+                if (islandState === "launcher")
+                    smartRestoreState();
+                else
+                    showLauncher();
+                return;
+            case "openLauncher":
+                showLauncher();
+                return;
+            case "closeLauncher":
+                if (islandState === "launcher")
                     smartRestoreState();
                 return;
             case "toggleOverview":
@@ -871,7 +914,7 @@ PanelWindow {
         }
 
         function showNotificationCapsule(appName, summary, body) {
-            if (root.overviewVisible || islandState === "control_center" || islandState === "expanded") return;
+            if (root.overviewVisible || islandState === "control_center" || islandState === "expanded" || islandState === "launcher") return;
 
             const cleanedAppName = cleanNotificationText(appName);
             const cleanedSummary = cleanNotificationText(summary);
@@ -946,7 +989,7 @@ PanelWindow {
         }
 
         function showBluetoothExpanded(device) {
-            if (!device || root.overviewVisible || islandState === "control_center" || islandState === "notification")
+            if (!device || root.overviewVisible || islandState === "control_center" || islandState === "notification" || islandState === "launcher")
                 return;
 
             cancelSideSwipeSettle();
@@ -966,6 +1009,22 @@ PanelWindow {
             islandState = "control_center";
             mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
             stopAutoHideTimer();
+        }
+
+        function showLauncher() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "launcher";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function toggleLauncher() {
+            if (islandState === "launcher")
+                smartRestoreState();
+            else
+                showLauncher();
         }
 
         function showCustomCapsule() {
@@ -988,7 +1047,7 @@ PanelWindow {
 
         function showWorkspaceCapsule(wsId) {
             currentWs = wsId;
-            if (islandState === "control_center" || islandState === "notification") return;
+            if (islandState === "control_center" || islandState === "notification" || islandState === "launcher") return;
             const animateFromSide = currentTransientOriginSide();
             clearTransientCapsule();
             sideTransientRestoreTimer.stop();
@@ -1040,7 +1099,8 @@ PanelWindow {
             if (currentTrack !== ""
                     && islandState !== "control_center"
                     && islandState !== "notification"
-                    && islandState !== "bluetooth_expanded") {
+                    && islandState !== "bluetooth_expanded"
+                    && islandState !== "launcher") {
                 if (islandState === "expanded" && !expandedByPlayerAutoOpen) return;
                 showExpandedPlayer(true);
             }
@@ -1081,6 +1141,8 @@ PanelWindow {
                     return islandContainer.lyricsCapsuleWidth;
                 case "control_center":
                     return 420;
+                case "launcher":
+                    return 680;
                 case "expanded":
                 case "bluetooth_expanded":
                     return 400;
@@ -1100,6 +1162,8 @@ PanelWindow {
                 switch (islandContainer.islandState) {
                 case "control_center":
                     return 320 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                case "launcher":
+                    return 420;
                 case "expanded":
                 case "bluetooth_expanded":
                     return 165;
@@ -1116,6 +1180,7 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
+                case "launcher":
                     return 34;
                 case "expanded":
                 case "bluetooth_expanded":
@@ -1624,6 +1689,28 @@ PanelWindow {
                         showCondition: islandContainer.controlCenterLayerVisible
                         onConnectivityPanelRequested: function(kind, open) {
                             root.setConnectivityDetailVisible(kind, open);
+                        }
+                    }
+                }
+            }
+
+            Loader {
+                id: launcherLoader
+                anchors.fill: parent
+                active: islandContainer.islandState === "launcher"
+                asynchronous: false
+                visible: active
+                focus: true
+
+                sourceComponent: Component {
+                    AppLauncherLayer {
+                        focus: true
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        heroFontFamily: root.heroFontFamily
+                        showCondition: islandContainer.islandState === "launcher"
+                        onCloseRequested: {
+                            islandContainer.islandState = "normal";
                         }
                     }
                 }

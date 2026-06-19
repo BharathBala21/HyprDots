@@ -12,7 +12,7 @@
     "textFontFamily": "Inter Display",
     "timeFontFamily": "Inter Display",
     "tlpPermissionMode": "password",
-    "tlpSudoPassword": "a",
+    "tlpSudoPassword": "YOUR_SUDO_PASSWORD",
     "wallpaperPath": "{{WALLPAPER_PATH}}",
     "workspaceOverviewWindowDragButton": 1
 }

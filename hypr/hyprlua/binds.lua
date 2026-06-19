@@ -90,7 +90,7 @@ hl.bind(mainMod .. "+D",hl.dsp.window.fullscreen({mode = "maximized"}))
 --hyprlauncher 
 -- hl.bind("SUPER + SUPER_L" ,hl.dsp.exec_cmd("fuzzel --config=" .. os.getenv("HOME") .. "/.config/fuzzel/colors.ini"),{release = true})
 hl.bind("SUPER + SUPER_L",
-    hl.dsp.exec_cmd("pgrep -x rofi && pkill -x rofi || rofi -show drun -show-icons -theme ~/.local/src/rofi-themes-collection/themes/windows11-grid-dark.rasi"),
+    hl.dsp.exec_cmd("qs ipc -p /home/aashiqed/.local/src/HyprDots/tide-island call island toggleLauncher"),
     { release = true }
 )
 
@@ -177,7 +177,7 @@ hl.bind(mainMod .. " +SHIFT + W",hl.dsp.exec_cmd("hyprshot -z -m window"))
 
 
 --TIDE-ISLAND-OVERVIEW
-hl.bind("SUPER + TAB",hl.dsp.exec_cmd("qs ipc -p /usr/share/tide-island call overview toggle"))
+hl.bind("SUPER + TAB",hl.dsp.exec_cmd("qs ipc -p /home/aashiqed/.local/src/HyprDots/tide-island call overview toggle"))
 
 hl.bind("SUPER + A", hl.dsp.exec_cmd("qs ipc -p ~/.local/src/HyprDots/tide-island call island toggleControlCenter"))
 

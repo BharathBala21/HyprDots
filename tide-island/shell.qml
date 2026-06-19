@@ -9,6 +9,7 @@ Scope {
 
     readonly property bool screenRecordingActive: SystemServices.screenRecordingActive
     property bool shuttingDown: false
+    property bool superReleaseMightTrigger: false
 
     readonly property var userConfig: UserConfig
 
@@ -62,6 +63,13 @@ Scope {
             shellRoot.openOverviewAll();
     }
 
+    function toggleLauncherAll() {
+        shellRoot.forEachWindow((window) => {
+            if (window && window.toggleLauncher)
+                window.toggleLauncher();
+        });
+    }
+
     IpcHandler {
         target: "overview"
 
@@ -94,6 +102,13 @@ Scope {
                     window.toggleControlCenter();
             });
         }
+
+        function toggleLauncher() {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.toggleLauncher)
+                    window.toggleLauncher();
+            });
+        }
     }
 
     GlobalShortcut {
@@ -101,6 +116,32 @@ Scope {
         name: userConfig.overviewGlobalShortcutName
 
         onPressed: shellRoot.toggleOverviewAll()
+    }
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "searchToggleRelease"
+
+        onPressed: {
+            shellRoot.superReleaseMightTrigger = true;
+        }
+
+        onReleased: {
+            if (!shellRoot.superReleaseMightTrigger) {
+                shellRoot.superReleaseMightTrigger = true;
+                return;
+            }
+            shellRoot.toggleLauncherAll();
+        }
+    }
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "searchToggleReleaseInterrupt"
+
+        onPressed: {
+            shellRoot.superReleaseMightTrigger = false;
+        }
     }
 
     Connections {
