@@ -130,7 +130,7 @@ end)
 
 --cliphist 
 -- hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("~/.config/hypr/cliphist-fuzzel-img"))
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("~/.config/hypr/cliphist-rofi-img"))
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("qs ipc -p /home/aashiqed/.local/src/HyprDots/tide-island call island toggleClipboard"))
 
 --hyprpicker
 hl.bind(mainMod .. " +SHIFT + C",hl.dsp.exec_cmd("hyprpicker -a"))

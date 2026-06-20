@@ -70,6 +70,13 @@ Scope {
         });
     }
 
+    function toggleClipboardAll() {
+        shellRoot.forEachWindow((window) => {
+            if (window && window.toggleClipboard)
+                window.toggleClipboard();
+        });
+    }
+
     IpcHandler {
         target: "overview"
 
@@ -107,6 +114,13 @@ Scope {
             shellRoot.forEachWindow((window) => {
                 if (window && window.toggleLauncher)
                     window.toggleLauncher();
+            });
+        }
+
+        function toggleClipboard() {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.toggleClipboard)
+                    window.toggleClipboard();
             });
         }
     }

@@ -59,14 +59,18 @@ FocusScope {
         onTriggered: searchInput.forceActiveFocus()
     }
 
+    Component.onCompleted: {
+        appListProcess.running = true;
+    }
+
     onShowConditionChanged: {
         if (showCondition) {
-            appListProcess.running = true;
             searchText = "";
             selectedIndex = 0;
             focusTimer.restart();
         } else {
-            appListProcess.running = false;
+            // Refresh applications list in background to pick up any changes
+            appListProcess.running = true;
         }
     }
 
