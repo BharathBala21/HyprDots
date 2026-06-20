@@ -375,16 +375,29 @@ FocusScope {
                                 anchors.right: parent.right
                                 anchors.rightMargin: 16
                                 radius: 8
-                                color: Qt.rgba(0, 0, 0, 0.2)
+                                color: "#0a0a0c"
                                 border.color: isSelected ? Qt.rgba(255, 255, 255, 0.15) : Qt.rgba(255, 255, 255, 0.05)
                                 border.width: 1
                                 clip: true
                                 visible: modelData.is_image
 
+                                // 1. Blurred background representation for color-matched ambient fallback
                                 Image {
                                     anchors.fill: parent
                                     source: modelData.is_image ? modelData.thumbnail : ""
                                     fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    opacity: 0.3
+                                    sourceSize.width: 100 // low resolution for soft natural blur
+                                    sourceSize.height: 50
+                                }
+
+                                // 2. Foreground full image preview preserving aspect ratio
+                                Image {
+                                    anchors.fill: parent
+                                    anchors.margins: 4
+                                    source: modelData.is_image ? modelData.thumbnail : ""
+                                    fillMode: Image.PreserveAspectFit
                                     asynchronous: true
                                     sourceSize.width: 600
                                     sourceSize.height: 300
@@ -394,7 +407,7 @@ FocusScope {
                                     anchors.fill: parent
                                     gradient: Gradient {
                                         GradientStop { position: 0.0; color: "transparent" }
-                                        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.3) }
+                                        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.25) }
                                     }
                                 }
                             }
