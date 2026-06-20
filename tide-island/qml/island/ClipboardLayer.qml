@@ -29,6 +29,7 @@ FocusScope {
     property var allClips: []
     property int selectedIndex: 0
     property string searchText: ""
+    property bool showConfirmModal: false
 
     readonly property var filteredClips: {
         if (searchText.trim() === "") {
@@ -71,13 +72,24 @@ FocusScope {
 
     onSelectedIndexChanged: {
         if (filteredClips.length === 0) return;
-        const itemHeight = 52 + 8; // height + spacing
-        const yPos = selectedIndex * itemHeight;
+        
+        let yPos = 0;
+        let selectedHeight = 52;
+        const spacing = 8;
+        
+        for (let i = 0; i < selectedIndex; i++) {
+            const clip = filteredClips[i];
+            yPos += (clip.is_image ? 176 : 52) + spacing;
+        }
+        
+        if (selectedIndex < filteredClips.length) {
+            selectedHeight = filteredClips[selectedIndex].is_image ? 176 : 52;
+        }
         
         if (yPos < flickable.contentY) {
             flickable.contentY = yPos;
-        } else if (yPos + 52 > flickable.contentY + flickable.height) {
-            flickable.contentY = yPos + 52 - flickable.height;
+        } else if (yPos + selectedHeight > flickable.contentY + flickable.height) {
+            flickable.contentY = yPos + selectedHeight - flickable.height;
         }
     }
 
@@ -254,7 +266,7 @@ FocusScope {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: {
-                        root.clearAll();
+                        root.showConfirmModal = true;
                     }
                 }
             }
@@ -284,7 +296,7 @@ FocusScope {
                         required property int index
 
                         width: listColumn.width
-                        height: 52
+                        height: modelData.is_image ? 176 : 52
 
                         readonly property bool isSelected: index === root.selectedIndex
 
@@ -298,48 +310,91 @@ FocusScope {
                             
                             Behavior on color { ColorAnimation { duration: 100 } }
 
-                            Row {
-                                anchors.fill: parent
-                                anchors.leftMargin: 16
-                                anchors.rightMargin: 8
-                                spacing: 12
+                            // Header row (contains text preview and delete button)
+                            Item {
+                                id: headerItem
+                                width: parent.width
+                                height: 52
+                                anchors.top: parent.top
 
-                                // Clip Text Preview
-                                Text {
-                                    text: modelData.preview
-                                    color: isSelected ? "#ffffff" : Qt.rgba(1, 1, 1, 0.65)
-                                    font.family: root.textFontFamily
-                                    font.pixelSize: 13
-                                    font.weight: isSelected ? Font.Medium : Font.Normal
-                                    width: parent.width - deleteButton.width - 24
-                                    elide: Text.ElideRight
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
+                                Row {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 16
+                                    anchors.rightMargin: 8
+                                    spacing: 12
 
-                                // Delete option on the right end
-                                Rectangle {
-                                    id: deleteButton
-                                    width: 36
-                                    height: 36
-                                    radius: 8
-                                    color: deleteMouseArea.containsMouse ? Qt.rgba(1, 0.2, 0.2, 0.15) : "transparent"
-                                    anchors.verticalCenter: parent.verticalCenter
-
+                                    // Clip Text Preview
                                     Text {
-                                        text: ""
-                                        font.family: root.iconFontFamily
-                                        font.pixelSize: 14
-                                        color: deleteMouseArea.containsMouse ? "#ff5555" : Qt.rgba(1, 1, 1, 0.3)
-                                        anchors.centerIn: parent
+                                        text: modelData.preview
+                                        color: isSelected ? "#ffffff" : Qt.rgba(1, 1, 1, 0.65)
+                                        font.family: root.textFontFamily
+                                        font.pixelSize: 13
+                                        font.weight: isSelected ? Font.Medium : Font.Normal
+                                        width: parent.width - deleteButton.width - 24
+                                        elide: Text.ElideRight
+                                        anchors.verticalCenter: parent.verticalCenter
                                     }
 
-                                    MouseArea {
-                                        id: deleteMouseArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        onClicked: {
-                                            root.deleteClip(modelData, index);
+                                    // Delete option on the right end
+                                    Rectangle {
+                                        id: deleteButton
+                                        width: 36
+                                        height: 36
+                                        radius: 8
+                                        color: deleteMouseArea.containsMouse ? Qt.rgba(1, 0.2, 0.2, 0.15) : "transparent"
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        Text {
+                                            text: ""
+                                            font.family: root.iconFontFamily
+                                            font.pixelSize: 14
+                                            color: deleteMouseArea.containsMouse ? "#ff5555" : Qt.rgba(1, 1, 1, 0.3)
+                                            anchors.centerIn: parent
                                         }
+
+                                        MouseArea {
+                                            id: deleteMouseArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: {
+                                                root.deleteClip(modelData, index);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Big image preview below the header
+                            Rectangle {
+                                id: bigImagePreview
+                                anchors.top: headerItem.bottom
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: 12
+                                anchors.left: parent.left
+                                anchors.leftMargin: 16
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                radius: 8
+                                color: Qt.rgba(0, 0, 0, 0.2)
+                                border.color: isSelected ? Qt.rgba(255, 255, 255, 0.15) : Qt.rgba(255, 255, 255, 0.05)
+                                border.width: 1
+                                clip: true
+                                visible: modelData.is_image
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: modelData.is_image ? modelData.thumbnail : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    sourceSize.width: 600
+                                    sourceSize.height: 300
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    gradient: Gradient {
+                                        GradientStop { position: 0.0; color: "transparent" }
+                                        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.3) }
                                     }
                                 }
                             }
@@ -386,6 +441,130 @@ FocusScope {
             font.pixelSize: 13
             color: Qt.rgba(1, 1, 1, 0.2)
             anchors.horizontalCenter: parent.horizontalCenter
+        }
+    }
+
+    // Clear All Confirmation Modal Overlay
+    Rectangle {
+        id: confirmModalOverlay
+        anchors.fill: parent
+        color: Qt.rgba(0, 0, 0, 0.6)
+        visible: opacity > 0
+        opacity: root.showConfirmModal ? 1 : 0
+        z: 100
+
+        Behavior on opacity {
+            NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+        }
+
+        Rectangle {
+            width: 320
+            height: 170
+            radius: 20
+            color: "#18181a"
+            border.color: Qt.rgba(1, 1, 1, 0.08)
+            border.width: 1
+            anchors.centerIn: parent
+
+            scale: root.showConfirmModal ? 1.0 : 0.9
+            Behavior on scale {
+                NumberAnimation { duration: 180; easing.type: Easing.OutBack }
+            }
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 16
+
+                Text {
+                    text: qsTr("Clear clipboard history?")
+                    color: "#ffffff"
+                    font.family: root.textFontFamily
+                    font.pixelSize: 16
+                    font.weight: Font.Bold
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                Text {
+                    text: qsTr("This will delete all items and cannot be undone.")
+                    color: Qt.rgba(1, 1, 1, 0.5)
+                    font.family: root.textFontFamily
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: 12
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    Rectangle {
+                        width: (parent.width - 12) / 2
+                        height: 40
+                        radius: 12
+                        color: cancelMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.05)
+                        border.width: 0
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Text {
+                            text: qsTr("Cancel")
+                            color: "#ffffff"
+                            font.family: root.textFontFamily
+                            font.pixelSize: 13
+                            font.weight: Font.Medium
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            id: cancelMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: {
+                                root.showConfirmModal = false;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: (parent.width - 12) / 2
+                        height: 40
+                        radius: 12
+                        color: confirmMouse.containsMouse ? "#ff4444" : "#e63946"
+                        border.width: 0
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Text {
+                            text: qsTr("Clear All")
+                            color: "#ffffff"
+                            font.family: root.textFontFamily
+                            font.pixelSize: 13
+                            font.weight: Font.Bold
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            id: confirmMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: {
+                                root.showConfirmModal = false;
+                                root.clearAll();
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
