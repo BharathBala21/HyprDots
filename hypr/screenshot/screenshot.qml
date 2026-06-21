@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Io
 import IslandBackend
 
 ShellRoot {
@@ -11,6 +12,72 @@ ShellRoot {
     property int selectedMainIndex: 0 // 0 = Screenshot, 1 = Record, 2 = Cancel
     property bool dropdownOpen: false
     property int selectedSubIndex: 2 // 0 = Workspace, 1 = Window, 2 = Region
+
+    // Recording state variables
+    property bool isRecording: false
+    property bool wfRecorderActive: false
+    property int recordingSeconds: 0
+    property int startTimeoutCounter: 0
+
+    Timer {
+        id: statusCheckTimer
+        interval: 500
+        running: shellRoot.isRecording
+        repeat: true
+        onTriggered: {
+            if (!checkRecorderProcess.running) {
+                checkRecorderProcess.running = true;
+            }
+        }
+    }
+
+    Process {
+        id: checkRecorderProcess
+        command: ["pgrep", "-x", "wf-recorder"]
+        running: false
+        onExited: (exitCode) => {
+            var isRunning = (exitCode === 0);
+            if (isRunning) {
+                if (!shellRoot.wfRecorderActive) {
+                    shellRoot.wfRecorderActive = true;
+                    recordingTimer.running = true;
+                }
+            } else {
+                if (shellRoot.wfRecorderActive) {
+                    // It was recording, but now stopped
+                    Qt.quit();
+                } else {
+                    // Not started yet. Let's count timeouts.
+                    shellRoot.startTimeoutCounter++;
+                    if (shellRoot.startTimeoutCounter > 30) { // 30 * 500ms = 15 seconds
+                        Qt.quit();
+                    }
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: recordingTimer
+        interval: 1000
+        running: false
+        repeat: true
+        onTriggered: {
+            shellRoot.recordingSeconds++;
+        }
+    }
+
+    function formatTime(seconds) {
+        var mins = Math.floor(seconds / 60);
+        var secs = seconds % 60;
+        return (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs);
+    }
+
+    function stopRecording() {
+        var scriptPath = Quickshell.env("HOME") + "/.config/hypr/screenshot/record.sh";
+        Quickshell.execDetached([scriptPath]);
+        Qt.quit();
+    }
 
     // When an option is confirmed
     signal confirmed(int mainIndex, int subIndex)
@@ -58,6 +125,8 @@ ShellRoot {
             } else if (subIndex === 2) {
                 cmd = ["hyprshot", "-z", "-m", "region"];
             }
+            Quickshell.execDetached(cmd);
+            Qt.quit();
         } else if (mainIndex === 1) { // Record
             var scriptPath = Quickshell.env("HOME") + "/.config/hypr/screenshot/record.sh";
             if (subIndex === 0) {
@@ -67,10 +136,14 @@ ShellRoot {
             } else if (subIndex === 2) {
                 cmd = [scriptPath, "-r"];
             }
-        }
+            shellRoot.isRecording = true;
+            shellRoot.wfRecorderActive = false;
+            shellRoot.recordingSeconds = 0;
+            shellRoot.startTimeoutCounter = 0;
+            shellRoot.dropdownOpen = false;
 
-        Quickshell.execDetached(cmd);
-        Qt.quit();
+            Quickshell.execDetached(cmd);
+        }
     }
 
     Variants {
@@ -82,19 +155,37 @@ ShellRoot {
             screen: modelData
 
             anchors {
-                top: true
+                top: !shellRoot.isRecording
                 bottom: true
                 left: true
                 right: true
             }
 
+            implicitHeight: shellRoot.isRecording ? (pill.height + 100) : win.screen.height
+
             color: "transparent"
             aboveWindows: true
-            focusable: true
+            focusable: !shellRoot.isRecording
 
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.namespace: "screenshot_overlay"
-            WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+            WlrLayershell.namespace: shellRoot.isRecording ? "screenshot_recording" : "screenshot_overlay"
+            WlrLayershell.keyboardFocus: shellRoot.isRecording ? WlrKeyboardFocus.None : WlrKeyboardFocus.Exclusive
+
+            mask: Region {
+                Region {
+                    x: 0
+                    y: 0
+                    width: shellRoot.isRecording ? 0 : win.width
+                    height: shellRoot.isRecording ? 0 : win.height
+                }
+                Region {
+                    intersection: Intersection.Combine
+                    x: pill.x
+                    y: pill.y
+                    width: shellRoot.isRecording ? pill.width : 0
+                    height: shellRoot.isRecording ? pill.height : 0
+                }
+            }
 
             Component.onCompleted: {
                 fadeInAnimation.start();
@@ -116,13 +207,14 @@ ShellRoot {
             Rectangle {
                 id: overlayBackground
                 anchors.fill: parent
-                color: Qt.rgba(StyleTokens.panel.r, StyleTokens.panel.g, StyleTokens.panel.b, 0.45)
+                color: shellRoot.isRecording ? "transparent" : Qt.rgba(StyleTokens.panel.r, StyleTokens.panel.g, StyleTokens.panel.b, 0.45)
                 opacity: 0
                 focus: true
 
                 // Clicking anywhere on the background dismisses the screenshot GUI
                 MouseArea {
                     anchors.fill: parent
+                    enabled: !shellRoot.isRecording
                     onClicked: {
                         Qt.quit();
                     }
@@ -320,9 +412,16 @@ ShellRoot {
                     anchors.bottomMargin: 80
                     anchors.horizontalCenter: parent.horizontalCenter
 
-                    implicitWidth: contentRow.width + 32
+                    width: shellRoot.isRecording ? (recordingRow.width + 32) : (contentRow.width + 32)
                     implicitHeight: 64
                     radius: 32
+
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: 250
+                            easing.type: Easing.OutQuint
+                        }
+                    }
 
                     // Styling matching tide-island
                     color: StyleTokens.panel
@@ -346,6 +445,7 @@ ShellRoot {
                         height: pill.targetButton ? pill.targetButton.height : 0
                         radius: pill.targetButton ? pill.targetButton.radius : 0
                         color: pill.targetButton && pill.targetButton.isCancel ? mColors.error : mColors.primary
+                        visible: !shellRoot.isRecording
 
                         Behavior on x {
                             NumberAnimation {
@@ -370,6 +470,7 @@ ShellRoot {
                         id: contentRow
                         anchors.centerIn: parent
                         spacing: 8
+                        visible: !shellRoot.isRecording
 
                         // Screenshot Dropdown Trigger
                         PillButton {
@@ -419,6 +520,69 @@ ShellRoot {
                             onClicked: {
                                 shellRoot.selectedMainIndex = 2;
                                 Qt.quit();
+                            }
+                        }
+                    }
+
+                    Row {
+                        id: recordingRow
+                        anchors.centerIn: parent
+                        spacing: 12
+                        visible: shellRoot.isRecording
+
+                        // Blinking red indicator dot
+                        Rectangle {
+                            id: recDot
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: mColors.error
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: shellRoot.wfRecorderActive
+
+                            SequentialAnimation on opacity {
+                                running: shellRoot.wfRecorderActive
+                                loops: Animation.Infinite
+                                NumberAnimation { from: 1.0; to: 0.2; duration: 600 }
+                                NumberAnimation { from: 0.2; to: 1.0; duration: 600 }
+                            }
+                        }
+
+                        Text {
+                            text: shellRoot.wfRecorderActive ? "Recording" : "Starting..."
+                            font.family: UserConfig.textFontFamily
+                            font.pixelSize: 14
+                            font.weight: Font.DemiBold
+                            color: StyleTokens.textPrimary
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            text: formatTime(shellRoot.recordingSeconds)
+                            font.family: UserConfig.textFontFamily
+                            font.pixelSize: 14
+                            font.weight: Font.Medium
+                            color: StyleTokens.textSecondary
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: shellRoot.wfRecorderActive
+                        }
+
+                        // Vertical separator
+                        Rectangle {
+                            width: 1
+                            height: 20
+                            color: Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.15)
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        // Stop/Cancel button
+                        PillButton {
+                            id: btnStopRec
+                            icon: "󰙦"
+                            label: shellRoot.wfRecorderActive ? "Stop" : "Cancel"
+                            isCancel: true
+                            onClicked: {
+                                stopRecording();
                             }
                         }
                     }
