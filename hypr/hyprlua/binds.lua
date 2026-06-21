@@ -148,9 +148,9 @@ hl.bind(
 hl.bind(mainMod .. " +SHIFT + C",hl.dsp.exec_cmd("hyprpicker -a"))
 
 --hyprshot
-hl.bind(mainMod .. " +SHIFT + S",hl.dsp.exec_cmd("hyprshot -z -m region"))
-hl.bind("Print",hl.dsp.exec_cmd("hyprshot -z -m output -m eDP-1"))
-hl.bind(mainMod .. " +SHIFT + W",hl.dsp.exec_cmd("hyprshot -z -m window"))
+hl.bind(mainMod .. " +SHIFT + S", hl.dsp.exec_cmd("env SCREENSHOT_MODE=region quickshell -n -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/hypr/screenshot/screenshot.qml"))
+hl.bind("Print", hl.dsp.exec_cmd("env SCREENSHOT_MODE=output quickshell -n -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/hypr/screenshot/screenshot.qml"))
+hl.bind(mainMod .. " +SHIFT + W", hl.dsp.exec_cmd("env SCREENSHOT_MODE=window quickshell -n -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/hypr/screenshot/screenshot.qml"))
 
 
 --wf-Recorder

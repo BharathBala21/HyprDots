@@ -23,3 +23,9 @@ hl.window_rule({
     persistent_size = true
 
 })
+
+hl.layer_rule({
+    name = "screenshot_overlay",
+    blur = true,
+    ignore_alpha = true
+})
