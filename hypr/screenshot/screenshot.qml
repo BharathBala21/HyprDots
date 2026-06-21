@@ -98,6 +98,10 @@ ShellRoot {
                 opacity: 0
                 focus: true
 
+                Colors {
+                    id: mColors
+                }
+
                 // Clicking anywhere on the background dismisses the screenshot GUI
                 MouseArea {
                     anchors.fill: parent
@@ -136,7 +140,7 @@ ShellRoot {
 
                     // Styling matching tide-island
                     color: StyleTokens.panel
-                    border.color: Qt.rgba(StyleTokens.textPrimary.r, StyleTokens.textPrimary.g, StyleTokens.textPrimary.b, 0.15)
+                    border.color: Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.15)
                     border.width: 1
 
                     Row {
@@ -181,7 +185,7 @@ ShellRoot {
                         Rectangle {
                             width: 1
                             height: 24
-                            color: Qt.rgba(StyleTokens.textPrimary.r, StyleTokens.textPrimary.g, StyleTokens.textPrimary.b, 0.15)
+                            color: Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.15)
                             anchors.verticalCenter: parent.verticalCenter
                         }
 

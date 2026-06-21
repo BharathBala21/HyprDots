@@ -11,26 +11,30 @@ Rectangle {
 
     signal clicked()
 
+    Colors {
+        id: mColors
+    }
+
     implicitWidth: buttonRow.width + 24
     implicitHeight: 44
     radius: 22
 
     // Background color:
-    // If selected: StyleTokens.accent (or StyleTokens.error for cancel)
-    // If hovered: StyleTokens.moduleHover (or a soft red for cancel)
+    // If selected: matugen primary/error color
+    // If hovered: StyleTokens.moduleHover
     // Otherwise: transparent
     color: {
         if (isSelected) {
-            return isCancel ? StyleTokens.error : StyleTokens.accent;
+            return isCancel ? mColors.error : mColors.primary;
         }
         if (mouseArea.containsMouse) {
-            return isCancel ? Qt.rgba(StyleTokens.error.r, StyleTokens.error.g, StyleTokens.error.b, 0.2) : StyleTokens.moduleHover;
+            return isCancel ? Qt.rgba(mColors.error.r, mColors.error.g, mColors.error.b, 0.2) : StyleTokens.moduleHover;
         }
         return "transparent";
     }
 
     border.width: isSelected ? 0 : 1
-    border.color: mouseArea.containsMouse ? "#40ffffff" : "transparent"
+    border.color: mouseArea.containsMouse ? Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.25) : "transparent"
 
     scale: mouseArea.pressed ? 0.95 : 1.0
 
@@ -52,9 +56,9 @@ Rectangle {
             font.pixelSize: 18
             color: {
                 if (isSelected) {
-                    return "#ffffff";
+                    return isCancel ? mColors.on_error : mColors.on_primary;
                 }
-                return isCancel ? StyleTokens.error : StyleTokens.textPrimary;
+                return isCancel ? mColors.error : StyleTokens.textPrimary;
             }
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -66,7 +70,7 @@ Rectangle {
             font.weight: Font.Medium
             color: {
                 if (isSelected) {
-                    return "#ffffff";
+                    return isCancel ? mColors.on_error : mColors.on_primary;
                 }
                 return StyleTokens.textPrimary;
             }
