@@ -20,12 +20,11 @@ Rectangle {
     radius: 22
 
     // Background color:
-    // If selected: matugen primary/error color
-    // If hovered: StyleTokens.moduleHover
-    // Otherwise: transparent
+    // If selected, the sliding highlight handles it (so return transparent)
+    // If hovered: StyleTokens.moduleHover or transparent red
     color: {
         if (isSelected) {
-            return isCancel ? mColors.error : mColors.primary;
+            return "transparent";
         }
         if (mouseArea.containsMouse) {
             return isCancel ? Qt.rgba(mColors.error.r, mColors.error.g, mColors.error.b, 0.2) : StyleTokens.moduleHover;
@@ -33,8 +32,8 @@ Rectangle {
         return "transparent";
     }
 
-    border.width: isSelected ? 0 : 1
-    border.color: mouseArea.containsMouse ? Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.25) : "transparent"
+    border.width: 1
+    border.color: (!isSelected && mouseArea.containsMouse) ? Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.25) : "transparent"
 
     scale: mouseArea.pressed ? 0.95 : 1.0
 
@@ -61,6 +60,10 @@ Rectangle {
                 return isCancel ? mColors.error : StyleTokens.textPrimary;
             }
             anchors.verticalCenter: parent.verticalCenter
+
+            Behavior on color {
+                ColorAnimation { duration: 150 }
+            }
         }
 
         Text {
@@ -75,6 +78,10 @@ Rectangle {
                 return StyleTokens.textPrimary;
             }
             anchors.verticalCenter: parent.verticalCenter
+
+            Behavior on color {
+                ColorAnimation { duration: 150 }
+            }
         }
     }
 

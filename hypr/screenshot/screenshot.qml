@@ -143,6 +143,44 @@ ShellRoot {
                     border.color: Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.15)
                     border.width: 1
 
+                    // Reference to the currently selected button for positioning the highlight
+                    readonly property var targetButton: {
+                        if (shellRoot.selectedIndex === 0) return btnWorkspace;
+                        if (shellRoot.selectedIndex === 1) return btnWindow;
+                        if (shellRoot.selectedIndex === 2) return btnRegion;
+                        if (shellRoot.selectedIndex === 3) return btnCancel;
+                        return btnRegion;
+                    }
+
+                    // Sliding highlight background behind the selected option button
+                    Rectangle {
+                        id: highlightBg
+                        x: pill.targetButton ? contentRow.x + pill.targetButton.x : 0
+                        y: pill.targetButton ? contentRow.y + pill.targetButton.y : 0
+                        width: pill.targetButton ? pill.targetButton.width : 0
+                        height: pill.targetButton ? pill.targetButton.height : 0
+                        radius: pill.targetButton ? pill.targetButton.radius : 0
+                        color: pill.targetButton && pill.targetButton.isCancel ? mColors.error : mColors.primary
+
+                        Behavior on x {
+                            NumberAnimation {
+                                duration: 250
+                                easing.type: Easing.OutQuint
+                            }
+                        }
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: 250
+                                easing.type: Easing.OutQuint
+                            }
+                        }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 200
+                            }
+                        }
+                    }
+
                     Row {
                         id: contentRow
                         anchors.centerIn: parent
@@ -150,6 +188,7 @@ ShellRoot {
 
                         // Workspace button
                         PillButton {
+                            id: btnWorkspace
                             icon: "󰖲"
                             label: "Workspace"
                             isSelected: shellRoot.selectedIndex === 0
@@ -161,6 +200,7 @@ ShellRoot {
 
                         // Window button
                         PillButton {
+                            id: btnWindow
                             icon: "󰖯"
                             label: "Window"
                             isSelected: shellRoot.selectedIndex === 1
@@ -172,6 +212,7 @@ ShellRoot {
 
                         // Region button
                         PillButton {
+                            id: btnRegion
                             icon: "󰆞"
                             label: "Region"
                             isSelected: shellRoot.selectedIndex === 2
@@ -191,6 +232,7 @@ ShellRoot {
 
                         // Cancel button
                         PillButton {
+                            id: btnCancel
                             icon: "󰅖"
                             label: "Cancel"
                             isSelected: shellRoot.selectedIndex === 3
