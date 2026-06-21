@@ -8,6 +8,7 @@ Rectangle {
     property string label: ""
     property bool isSelected: false
     property bool isCancel: false
+    property bool centerContent: true
 
     signal clicked()
 
@@ -46,7 +47,10 @@ Rectangle {
 
     Row {
         id: buttonRow
-        anchors.centerIn: parent
+        anchors.centerIn: centerContent ? parent : undefined
+        anchors.left: centerContent ? undefined : parent.left
+        anchors.leftMargin: centerContent ? undefined : 16
+        anchors.verticalCenter: parent.verticalCenter
         spacing: 8
 
         Text {
