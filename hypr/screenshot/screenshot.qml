@@ -123,10 +123,12 @@ ShellRoot {
                     }
                 }
 
-                // The Pill GUI container in the center
+                // The Pill GUI container towards the bottom
                 Rectangle {
                     id: pill
-                    anchors.centerIn: parent
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 80
+                    anchors.horizontalCenter: parent.horizontalCenter
 
                     implicitWidth: contentRow.width + 32
                     implicitHeight: 64
