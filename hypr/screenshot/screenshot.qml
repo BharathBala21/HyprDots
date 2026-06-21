@@ -19,6 +19,10 @@ ShellRoot {
     property int recordingSeconds: 0
     property int startTimeoutCounter: 0
 
+    // Pill coordinates shared state
+    property real pillX: 0
+    property real pillY: 0
+
     Timer {
         id: statusCheckTimer
         interval: 500
@@ -79,35 +83,7 @@ ShellRoot {
         Qt.quit();
     }
 
-    // When an option is confirmed
-    signal confirmed(int mainIndex, int subIndex)
 
-    onConfirmed: (mainIndex, subIndex) => {
-        executeAction(mainIndex, subIndex);
-    }
-
-    Component.onCompleted: {
-        var sMode = Quickshell.env("SCREENSHOT_MODE");
-        var rMode = Quickshell.env("RECORD_MODE");
-        
-        if (sMode) {
-            selectedMainIndex = 0;
-            dropdownOpen = true;
-            if (sMode === "output" || sMode === "workspace") selectedSubIndex = 0;
-            else if (sMode === "window") selectedSubIndex = 1;
-            else selectedSubIndex = 2;
-        } else if (rMode) {
-            selectedMainIndex = 1;
-            dropdownOpen = true;
-            if (rMode === "output" || rMode === "workspace") selectedSubIndex = 0;
-            else if (rMode === "window") selectedSubIndex = 1;
-            else selectedSubIndex = 2;
-        } else {
-            selectedMainIndex = 0;
-            dropdownOpen = false;
-            selectedSubIndex = 2;
-        }
-    }
 
     function executeAction(mainIndex, subIndex) {
         if (mainIndex === 2) {
@@ -146,6 +122,7 @@ ShellRoot {
         }
     }
 
+    // Selection UI - PanelWindow per screen
     Variants {
         model: Quickshell.screens
 
@@ -155,35 +132,28 @@ ShellRoot {
             screen: modelData
 
             anchors {
-                top: !shellRoot.isRecording
+                top: true
                 bottom: true
                 left: true
                 right: true
             }
 
-            implicitHeight: shellRoot.isRecording ? (pill.height + 100) : win.screen.height
-
             color: "transparent"
             aboveWindows: true
-            focusable: !shellRoot.isRecording
+            focusable: true
 
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.namespace: shellRoot.isRecording ? "screenshot_recording" : "screenshot_overlay"
-            WlrLayershell.keyboardFocus: shellRoot.isRecording ? WlrKeyboardFocus.None : WlrKeyboardFocus.Exclusive
+            WlrLayershell.namespace: "screenshot_overlay"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+
+            visible: !shellRoot.isRecording
 
             mask: Region {
                 Region {
                     x: 0
                     y: 0
-                    width: shellRoot.isRecording ? 0 : win.width
-                    height: shellRoot.isRecording ? 0 : win.height
-                }
-                Region {
-                    intersection: Intersection.Combine
-                    x: pill.x
-                    y: pill.y
-                    width: shellRoot.isRecording ? pill.width : 0
-                    height: shellRoot.isRecording ? pill.height : 0
+                    width: win.width
+                    height: win.height
                 }
             }
 
@@ -207,76 +177,15 @@ ShellRoot {
             Rectangle {
                 id: overlayBackground
                 anchors.fill: parent
-                color: shellRoot.isRecording ? "transparent" : Qt.rgba(StyleTokens.panel.r, StyleTokens.panel.g, StyleTokens.panel.b, 0.45)
+                color: Qt.rgba(StyleTokens.panel.r, StyleTokens.panel.g, StyleTokens.panel.b, 0.45)
                 opacity: 0
                 focus: true
 
                 // Clicking anywhere on the background dismisses the screenshot GUI
                 MouseArea {
                     anchors.fill: parent
-                    enabled: !shellRoot.isRecording
                     onClicked: {
                         Qt.quit();
-                    }
-                }
-
-                // Handle keyboard navigation globally on each window
-                Keys.onPressed: (event) => {
-                    if (event.key === Qt.Key_Escape) {
-                        if (shellRoot.dropdownOpen) {
-                            shellRoot.dropdownOpen = false;
-                        } else {
-                            Qt.quit();
-                        }
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Left) {
-                        if (shellRoot.dropdownOpen) {
-                            shellRoot.dropdownOpen = false;
-                        }
-                        shellRoot.selectedMainIndex = (shellRoot.selectedMainIndex + 2) % 3;
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Right) {
-                        if (shellRoot.dropdownOpen) {
-                            shellRoot.dropdownOpen = false;
-                        }
-                        shellRoot.selectedMainIndex = (shellRoot.selectedMainIndex + 1) % 3;
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Up) {
-                        if (!shellRoot.dropdownOpen) {
-                            if (shellRoot.selectedMainIndex <= 1) {
-                                shellRoot.dropdownOpen = true;
-                                shellRoot.selectedSubIndex = 2; // Default to region
-                            }
-                        } else {
-                            shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 2) % 3;
-                        }
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Down) {
-                        if (shellRoot.dropdownOpen) {
-                            if (shellRoot.selectedSubIndex === 2) {
-                                shellRoot.dropdownOpen = false;
-                            } else {
-                                shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 1) % 3;
-                            }
-                        }
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Tab) {
-                        if (!shellRoot.dropdownOpen) {
-                            shellRoot.selectedMainIndex = (shellRoot.selectedMainIndex + 1) % 3;
-                        } else {
-                            shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 1) % 3;
-                        }
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
-                        if (shellRoot.selectedMainIndex === 2) {
-                            Qt.quit();
-                        } else if (!shellRoot.dropdownOpen) {
-                            shellRoot.dropdownOpen = true;
-                            shellRoot.selectedSubIndex = 2;
-                        } else {
-                            shellRoot.confirmed(shellRoot.selectedMainIndex, shellRoot.selectedSubIndex);
-                        }
-                        event.accepted = true;
                     }
                 }
 
@@ -373,7 +282,7 @@ ShellRoot {
                             isSelected: shellRoot.dropdownOpen && shellRoot.selectedSubIndex === 0
                             onClicked: {
                                 shellRoot.selectedSubIndex = 0;
-                                shellRoot.confirmed(shellRoot.selectedMainIndex, 0);
+                                shellRoot.executeAction(shellRoot.selectedMainIndex, 0);
                             }
                         }
 
@@ -386,7 +295,7 @@ ShellRoot {
                             isSelected: shellRoot.dropdownOpen && shellRoot.selectedSubIndex === 1
                             onClicked: {
                                 shellRoot.selectedSubIndex = 1;
-                                shellRoot.confirmed(shellRoot.selectedMainIndex, 1);
+                                shellRoot.executeAction(shellRoot.selectedMainIndex, 1);
                             }
                         }
 
@@ -399,7 +308,7 @@ ShellRoot {
                             isSelected: shellRoot.dropdownOpen && shellRoot.selectedSubIndex === 2
                             onClicked: {
                                 shellRoot.selectedSubIndex = 2;
-                                shellRoot.confirmed(shellRoot.selectedMainIndex, 2);
+                                shellRoot.executeAction(shellRoot.selectedMainIndex, 2);
                             }
                         }
                     }
@@ -408,20 +317,12 @@ ShellRoot {
                 // The Pill GUI container towards the bottom
                 Rectangle {
                     id: pill
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 80
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    x: (parent.width - width) / 2
+                    y: parent.height - height - 80
 
-                    width: shellRoot.isRecording ? (recordingRow.width + 32) : (contentRow.width + 32)
+                    width: contentRow.width + 32
                     implicitHeight: 64
                     radius: 32
-
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 250
-                            easing.type: Easing.OutQuint
-                        }
-                    }
 
                     // Styling matching tide-island
                     color: StyleTokens.panel
@@ -445,7 +346,6 @@ ShellRoot {
                         height: pill.targetButton ? pill.targetButton.height : 0
                         radius: pill.targetButton ? pill.targetButton.radius : 0
                         color: pill.targetButton && pill.targetButton.isCancel ? mColors.error : mColors.primary
-                        visible: !shellRoot.isRecording
 
                         Behavior on x {
                             NumberAnimation {
@@ -470,7 +370,6 @@ ShellRoot {
                         id: contentRow
                         anchors.centerIn: parent
                         spacing: 8
-                        visible: !shellRoot.isRecording
 
                         // Screenshot Dropdown Trigger
                         PillButton {
@@ -523,71 +422,192 @@ ShellRoot {
                             }
                         }
                     }
+                }
 
-                    Row {
-                        id: recordingRow
-                        anchors.centerIn: parent
-                        spacing: 12
-                        visible: shellRoot.isRecording
-
-                        // Blinking red indicator dot
-                        Rectangle {
-                            id: recDot
-                            width: 10
-                            height: 10
-                            radius: 5
-                            color: mColors.error
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: shellRoot.wfRecorderActive
-
-                            SequentialAnimation on opacity {
-                                running: shellRoot.wfRecorderActive
-                                loops: Animation.Infinite
-                                NumberAnimation { from: 1.0; to: 0.2; duration: 600 }
-                                NumberAnimation { from: 0.2; to: 1.0; duration: 600 }
+                // Handle keyboard navigation globally on each window
+                Keys.onPressed: (event) => {
+                    if (event.key === Qt.Key_Escape) {
+                        if (shellRoot.dropdownOpen) {
+                            shellRoot.dropdownOpen = false;
+                        } else {
+                            Qt.quit();
+                        }
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Left) {
+                        if (shellRoot.dropdownOpen) {
+                            shellRoot.dropdownOpen = false;
+                        }
+                        shellRoot.selectedMainIndex = (shellRoot.selectedMainIndex + 2) % 3;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Right) {
+                        if (shellRoot.dropdownOpen) {
+                            shellRoot.dropdownOpen = false;
+                        }
+                        shellRoot.selectedMainIndex = (shellRoot.selectedMainIndex + 1) % 3;
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Up) {
+                        if (!shellRoot.dropdownOpen) {
+                            if (shellRoot.selectedMainIndex <= 1) {
+                                shellRoot.dropdownOpen = true;
+                                shellRoot.selectedSubIndex = 2; // Default to region
+                            }
+                        } else {
+                            shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 2) % 3;
+                        }
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Down) {
+                        if (shellRoot.dropdownOpen) {
+                            if (shellRoot.selectedSubIndex === 2) {
+                                shellRoot.dropdownOpen = false;
+                            } else {
+                                shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 1) % 3;
                             }
                         }
-
-                        Text {
-                            text: shellRoot.wfRecorderActive ? "Recording" : "Starting..."
-                            font.family: UserConfig.textFontFamily
-                            font.pixelSize: 14
-                            font.weight: Font.DemiBold
-                            color: StyleTokens.textPrimary
-                            anchors.verticalCenter: parent.verticalCenter
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Tab) {
+                        if (!shellRoot.dropdownOpen) {
+                            shellRoot.selectedMainIndex = (shellRoot.selectedMainIndex + 1) % 3;
+                        } else {
+                            shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 1) % 3;
                         }
-
-                        Text {
-                            text: formatTime(shellRoot.recordingSeconds)
-                            font.family: UserConfig.textFontFamily
-                            font.pixelSize: 14
-                            font.weight: Font.Medium
-                            color: StyleTokens.textSecondary
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: shellRoot.wfRecorderActive
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
+                        if (shellRoot.selectedMainIndex === 2) {
+                            Qt.quit();
+                        } else if (!shellRoot.dropdownOpen) {
+                            shellRoot.dropdownOpen = true;
+                            shellRoot.selectedSubIndex = 2;
+                        } else {
+                            shellRoot.executeAction(shellRoot.selectedMainIndex, shellRoot.selectedSubIndex);
                         }
-
-                        // Vertical separator
-                        Rectangle {
-                            width: 1
-                            height: 20
-                            color: Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.15)
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        // Stop/Cancel button
-                        PillButton {
-                            id: btnStopRec
-                            icon: "󰙦"
-                            label: shellRoot.wfRecorderActive ? "Stop" : "Cancel"
-                            isCancel: true
-                            onClicked: {
-                                stopRecording();
-                            }
-                        }
+                        event.accepted = true;
                     }
                 }
             }
+        }
+    }
+
+    // Recording UI - Single Window
+    Window {
+        id: recWin
+
+        title: "Screenshot Recording Pill"
+        color: "transparent"
+
+        width: recPill.width
+        height: recPill.height
+
+        x: shellRoot.pillX !== 0 ? shellRoot.pillX : (screen ? (screen.width - width) / 2 : 830)
+        y: shellRoot.pillY !== 0 ? shellRoot.pillY : (screen ? screen.height - height - 80 : 936)
+
+        visible: shellRoot.isRecording
+
+        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+
+        Rectangle {
+            id: recPill
+            color: StyleTokens.panel
+            border.color: Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.15)
+            border.width: 1
+            radius: 32
+
+            Colors {
+                id: mColors
+            }
+
+            Row {
+                id: recordingRow
+                anchors.centerIn: parent
+                spacing: 12
+
+                // Blinking red indicator dot
+                Rectangle {
+                    id: recDot
+                    width: 10
+                    height: 10
+                    radius: 5
+                    color: mColors.error
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: shellRoot.wfRecorderActive
+
+                    SequentialAnimation on opacity {
+                        running: shellRoot.wfRecorderActive
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1.0; to: 0.2; duration: 600 }
+                        NumberAnimation { from: 0.2; to: 1.0; duration: 600 }
+                    }
+                }
+
+                Text {
+                    text: shellRoot.wfRecorderActive ? "Recording" : "Starting..."
+                    font.family: UserConfig.textFontFamily
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                    color: StyleTokens.textPrimary
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: formatTime(shellRoot.recordingSeconds)
+                    font.family: UserConfig.textFontFamily
+                    font.pixelSize: 14
+                    font.weight: Font.Medium
+                    color: StyleTokens.textSecondary
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: shellRoot.wfRecorderActive
+                }
+
+                // Vertical separator
+                Rectangle {
+                    width: 1
+                    height: 20
+                    color: Qt.rgba(mColors.primary.r, mColors.primary.g, mColors.primary.b, 0.15)
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                // Stop/Cancel button
+                PillButton {
+                    id: btnStopRec
+                    icon: "󰙦"
+                    label: shellRoot.wfRecorderActive ? "Stop" : "Cancel"
+                    isCancel: true
+                    onClicked: {
+                        stopRecording();
+                    }
+                }
+            }
+
+            MouseArea {
+                id: dragArea
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width / 2
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                hoverEnabled: true
+
+                property point clickPos: "0,0"
+                property real startPillX: 0
+                property real startPillY: 0
+
+                onPressed: (mouse) => {
+                    clickPos = recPill.mapToGlobal(mouse.x, mouse.y)
+                    startPillX = recWin.x
+                    startPillY = recWin.y
+                    recWin.startSystemMove()
+                }
+
+                onPositionChanged: (mouse) => {
+                    if (pressed) {
+                        var currPos = recPill.mapToGlobal(mouse.x, mouse.y)
+                        shellRoot.pillX = startPillX + (currPos.x - clickPos.x)
+                        shellRoot.pillY = startPillY + (currPos.y - clickPos.y)
+                    }
+                }
+            }
+
+            width: 320
+            height: 64
         }
     }
 }
