@@ -164,32 +164,6 @@ hl.bind(mainMod .. " + R", function()
 end)
 
 
--- hl.bind("SUPER + G", function()
---     wpid = os.execute("pgrep kitty") 
---     -- if wpid then
---     --     hl.exec_cmd("pkill -INT wf-recorder")
---     --     hl.notification.create({text = "Stopped wf-recorder", time="3000",icon = 2})
---     --     return
---     -- end
---     hl.exec_cmd(" wf-recorder -g $(slurp) -f ~/Videos/Recordings/recording-$(date +%F_%H-%M).mkv --audio=alsa_output.pci-0000_00_1f.3.analog-stereo.monitor")
---     hl.notification.create({ text = tostring(wpid), time = "5000",icon = 1})
--- end)
-
-
--- hl.bind("SUPER + G", function()
---     local result = os.execute("pgrep -x wf-recorder")
- 
-
---     if result ~= nil then
---         hl.exec_cmd("pkill -INT wf-recorder")
---         hl.notification.create({text = "Stopped wf-recorder", time="5000", icon = 2})
---         return
---     end
-
---     hl.exec_cmd("wf-recorder -g \"$(slurp)\" -f ~/Videos/Recordings/recording-$(date +%F_%H-%M).mkv --audio=alsa_output.pci-0000_00_1f.3.analog-stereo.monitor")
---     hl.notification.create({text = "Started recording", time = "5000", icon = 1})
--- end)
-
 
 --TIDE-ISLAND-OVERVIEW
 hl.bind(
