@@ -8,6 +8,46 @@ import IslandBackend
 ShellRoot {
     id: shellRoot
 
+    readonly property bool isImmediateAction: Quickshell.env("SCREENSHOT_MODE") === "region" || Quickshell.env("RECORD_MODE") === "region"
+
+    Timer {
+        id: startupTimer
+        interval: 50
+        running: shellRoot.isImmediateAction
+        repeat: false
+        onTriggered: {
+            var screenshotMode = Quickshell.env("SCREENSHOT_MODE");
+            var recordMode = Quickshell.env("RECORD_MODE");
+            if (screenshotMode === "region") {
+                executeAction(0, 2);
+            } else if (recordMode === "region") {
+                executeAction(1, 2);
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        var screenshotMode = Quickshell.env("SCREENSHOT_MODE");
+        var recordMode = Quickshell.env("RECORD_MODE");
+        if (screenshotMode === "window") {
+            selectedMainIndex = 0;
+            selectedSubIndex = 1;
+            dropdownOpen = true;
+        } else if (screenshotMode === "output") {
+            selectedMainIndex = 0;
+            selectedSubIndex = 0;
+            dropdownOpen = true;
+        } else if (recordMode === "window") {
+            selectedMainIndex = 1;
+            selectedSubIndex = 1;
+            dropdownOpen = true;
+        } else if (recordMode === "output") {
+            selectedMainIndex = 1;
+            selectedSubIndex = 0;
+            dropdownOpen = true;
+        }
+    }
+
     // State selection variables
     property int selectedMainIndex: 0 // 0 = Screenshot, 1 = Record, 2 = Cancel
     property bool dropdownOpen: false
@@ -146,7 +186,7 @@ ShellRoot {
             WlrLayershell.namespace: "screenshot_overlay"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 
-            visible: !shellRoot.isRecording
+            visible: !shellRoot.isRecording && !shellRoot.isImmediateAction
 
             mask: Region {
                 Region {
@@ -158,8 +198,10 @@ ShellRoot {
             }
 
             Component.onCompleted: {
-                fadeInAnimation.start();
-                overlayBackground.forceActiveFocus();
+                if (!shellRoot.isImmediateAction) {
+                    fadeInAnimation.start();
+                    overlayBackground.forceActiveFocus();
+                }
             }
 
             SequentialAnimation {
