@@ -28,20 +28,21 @@ Item {
     Row {
         id: contentRow
         anchors.centerIn: parent
-        spacing: 12
+        spacing: 0
 
         SwipeCavaBars {
             id: visualizer
             levels: root.cavaLevels
             anchors.verticalCenter: parent.verticalCenter
-            visible: opacity > 0
+            visible: width > 0
             opacity: root.musicPlaying ? 1 : 0
+            clip: true
 
             width: root.musicPlaying ? implicitWidth : 0
             Behavior on width {
                 NumberAnimation {
-                    duration: 250
-                    easing.type: Easing.InOutQuad
+                    duration: 350
+                    easing.type: Easing.OutQuint
                 }
             }
             Behavior on opacity {
@@ -53,17 +54,33 @@ Item {
         }
 
         // Separator between visualizer and battery (visible only when music playing)
-        Rectangle {
-            width: 1
+        Item {
+            id: separatorContainer
+            width: root.musicPlaying ? 25 : 0 // 1px separator + 12px spacing on each side = 25px total
             height: 14
-            color: "#44ffffff"
             anchors.verticalCenter: parent.verticalCenter
-            visible: visualizer.width > 0 && visualizer.opacity > 0.1
+            clip: true
+            visible: width > 0
 
-            // Smooth transition matching visualizer width behavior
-            opacity: root.musicPlaying ? 1 : 0
-            Behavior on opacity {
-                NumberAnimation { duration: 250 }
+            Behavior on width {
+                NumberAnimation {
+                    duration: 350
+                    easing.type: Easing.OutQuint
+                }
+            }
+
+            Rectangle {
+                width: 1
+                height: parent.height
+                color: "#44ffffff"
+                anchors.centerIn: parent
+                opacity: root.musicPlaying ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 250
+                        easing.type: Easing.InOutQuad
+                    }
+                }
             }
         }
 
