@@ -148,44 +148,21 @@ hl.bind(
 hl.bind(mainMod .. " +SHIFT + C",hl.dsp.exec_cmd("hyprpicker -a"))
 
 --hyprshot
-hl.bind(mainMod .. " +SHIFT + S",hl.dsp.exec_cmd("hyprshot -z -m region"))
-hl.bind("Print",hl.dsp.exec_cmd("hyprshot -z -m output -m eDP-1"))
-hl.bind(mainMod .. " +SHIFT + W",hl.dsp.exec_cmd("hyprshot -z -m window"))
-
+hl.bind(mainMod .. " +SHIFT + S", hl.dsp.exec_cmd("hyprshot -z -m region"))
+hl.bind("Print", hl.dsp.exec_cmd("hyprshot -z -m output"))
+hl.bind(mainMod .. " +SHIFT + W", hl.dsp.exec_cmd("hyprshot -z -m window"))
 
 --wf-Recorder
--- hl.bind(mainMod .. " + R",
---   hl.dsp.exec_cmd(
---     "sh -c 'pgrep wf-recorder && pkill -INT wf-recorder || wf-recorder -f ~/Videos/Recordings/recording-$(date +%F_%H-%M).mkv --audio=alsa_output.pci-0000_00_1f.3.analog-stereo.monitor'"
---   )
--- )
+hl.bind(mainMod .. " + R", function()
+    local status = os.execute("pgrep -x wf-recorder")
+    local is_running = (status == 0 or status == true)
+    if is_running then
+        hl.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/record.sh")
+    else
+        hl.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/record.sh -r")
+    end
+end)
 
-
--- hl.bind("SUPER + G", function()
---     wpid = os.execute("pgrep kitty") 
---     -- if wpid then
---     --     hl.exec_cmd("pkill -INT wf-recorder")
---     --     hl.notification.create({text = "Stopped wf-recorder", time="3000",icon = 2})
---     --     return
---     -- end
---     hl.exec_cmd(" wf-recorder -g $(slurp) -f ~/Videos/Recordings/recording-$(date +%F_%H-%M).mkv --audio=alsa_output.pci-0000_00_1f.3.analog-stereo.monitor")
---     hl.notification.create({ text = tostring(wpid), time = "5000",icon = 1})
--- end)
-
-
--- hl.bind("SUPER + G", function()
---     local result = os.execute("pgrep -x wf-recorder")
- 
-
---     if result ~= nil then
---         hl.exec_cmd("pkill -INT wf-recorder")
---         hl.notification.create({text = "Stopped wf-recorder", time="5000", icon = 2})
---         return
---     end
-
---     hl.exec_cmd("wf-recorder -g \"$(slurp)\" -f ~/Videos/Recordings/recording-$(date +%F_%H-%M).mkv --audio=alsa_output.pci-0000_00_1f.3.analog-stereo.monitor")
---     hl.notification.create({text = "Started recording", time = "5000", icon = 1})
--- end)
 
 
 --TIDE-ISLAND-OVERVIEW

@@ -8,10 +8,30 @@ import IslandBackend
 Scope {
     id: shellRoot
 
-    readonly property bool screenRecordingActive: SystemServices.screenRecordingActive
+    readonly property bool screenRecordingActive: SystemServices.screenRecordingActive || shellRoot.wfRecorderRunning
+    property bool wfRecorderRunning: false
     property bool shuttingDown: false
     property bool superReleaseMightTrigger: false
     property bool settingsWindowOpen: false
+
+    Timer {
+        id: checkWfRecorderTimer
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: {
+            checkWfRecorderProcess.running = true;
+        }
+    }
+
+    Process {
+        id: checkWfRecorderProcess
+        command: ["pgrep", "-x", "wf-recorder"]
+        running: false
+        onExited: (exitCode) => {
+            shellRoot.wfRecorderRunning = (exitCode === 0);
+        }
+    }
 
     readonly property var userConfig: UserConfig
 

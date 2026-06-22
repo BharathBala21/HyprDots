@@ -31,13 +31,6 @@ input_path = '~/.config/matugen/templates/cava-colors.ini'
 output_path = '~/.config/cava/themes/matugen'
 
 # ...
-# [templates.dunst]
-# input_path = '~/.config/matugen/templates/dunstrc-colors'
-# output_path = '~/.config/dunst/dunstrc'
-# post_hook = 'dunstctl reload'
-# ...
-
-# ...
 [templates.steam]
 input_path = '~/.config/matugen/templates/steam.css'
 output_path = "~/.local/share/Steam/steamui/adwaita/colorthemes/everforest/everforest.css" 
@@ -93,7 +86,7 @@ output_path = '~/.cache/matugen/vscode-colors.json'
 [templates.quickshell]
 input_path = '~/.config/matugen/templates/quickshell.qml'
 output_path = '~/.local/state/quickshell/generated/colors.json'
-# ...
+
 
 
 # ...
