@@ -42,5 +42,3 @@ fi
 # Run in background
 wf-recorder "$@" -f "$OUTPUT_FILE" --audio="$AUDIO_DEVICE" > /dev/null 2>&1 &
 
-notify-send -i video-x-generic "Screen Recorder" "Recording started..."
-
