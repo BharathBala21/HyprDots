@@ -30,7 +30,16 @@ mkdir -p "$HOME/Videos/Recordings"
 # Generate filename with timestamp
 OUTPUT_FILE="$HOME/Videos/Recordings/recording-$(date +%F_%H-%M).mkv"
 
+# Get default sink monitor or fallback
+DEFAULT_SINK=$(pactl get-default-sink 2>/dev/null)
+if [ -n "$DEFAULT_SINK" ]; then
+    AUDIO_DEVICE="${DEFAULT_SINK}.monitor"
+else
+    AUDIO_DEVICE="default"
+fi
+
 # Run in background
-wf-recorder "$@" -f "$OUTPUT_FILE" --audio=alsa_output.pci-0000_00_1f.3.analog-stereo.monitor > /dev/null 2>&1 &
+wf-recorder "$@" -f "$OUTPUT_FILE" --audio="$AUDIO_DEVICE" > /dev/null 2>&1 &
 
 notify-send -i video-x-generic "Screen Recorder" "Recording started..."
+
