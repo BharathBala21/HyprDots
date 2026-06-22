@@ -39,7 +39,7 @@ ShellRoot {
             dropdownOpen = true;
         } else if (recordMode === "window") {
             selectedMainIndex = 1;
-            selectedSubIndex = 1;
+            selectedSubIndex = 2;
             dropdownOpen = true;
         } else if (recordMode === "output") {
             selectedMainIndex = 1;
@@ -52,6 +52,18 @@ ShellRoot {
     property int selectedMainIndex: 0 // 0 = Screenshot, 1 = Record, 2 = Cancel
     property bool dropdownOpen: false
     property int selectedSubIndex: 2 // 0 = Workspace, 1 = Window, 2 = Region
+
+    onSelectedMainIndexChanged: {
+        if (selectedMainIndex === 1 && selectedSubIndex === 1) {
+            selectedSubIndex = 2;
+        }
+    }
+
+    onSelectedSubIndexChanged: {
+        if (selectedMainIndex === 1 && selectedSubIndex === 1) {
+            selectedSubIndex = 2;
+        }
+    }
 
     // Recording state variables
     property bool isRecording: false
@@ -72,6 +84,19 @@ ShellRoot {
             if (!checkRecorderProcess.running) {
                 checkRecorderProcess.running = true;
             }
+            if (!checkSlurpProcess.running) {
+                checkSlurpProcess.running = true;
+            }
+        }
+    }
+
+    Process {
+        id: checkSlurpProcess
+        command: ["pgrep", "-x", "slurp"]
+        running: false
+        property bool isSlurpRunning: false
+        onExited: (exitCode) => {
+            isSlurpRunning = (exitCode === 0);
         }
     }
 
@@ -91,10 +116,14 @@ ShellRoot {
                     // It was recording, but now stopped
                     Qt.quit();
                 } else {
-                    // Not started yet. Let's count timeouts.
-                    shellRoot.startTimeoutCounter++;
-                    if (shellRoot.startTimeoutCounter > 30) { // 30 * 500ms = 15 seconds
-                        Qt.quit();
+                    // Not started yet.
+                    if (checkSlurpProcess.isSlurpRunning) {
+                        shellRoot.startTimeoutCounter = 0; // Reset while user is selecting
+                    } else {
+                        shellRoot.startTimeoutCounter++;
+                        if (shellRoot.startTimeoutCounter > 3) { // 3 * 500ms = 1.5 seconds
+                            Qt.quit();
+                        }
                     }
                 }
             }
@@ -119,7 +148,12 @@ ShellRoot {
 
     function stopRecording() {
         var scriptPath = Quickshell.env("HOME") + "/.local/src/HyprDots/tide-island/screenshot/record.sh";
-        Quickshell.execDetached([scriptPath]);
+        if (shellRoot.wfRecorderActive) {
+            Quickshell.execDetached([scriptPath]);
+        } else {
+            Quickshell.execDetached(["pkill", "-x", "wf-recorder"]);
+        }
+        Quickshell.execDetached(["pkill", "-x", "slurp"]);
         Qt.quit();
     }
 
@@ -148,7 +182,7 @@ ShellRoot {
             if (subIndex === 0) {
                 cmd = [scriptPath];
             } else if (subIndex === 1) {
-                cmd = [scriptPath, "-w"];
+                cmd = [scriptPath, "-r"];
             } else if (subIndex === 2) {
                 cmd = [scriptPath, "-r"];
             }
@@ -334,6 +368,7 @@ ShellRoot {
                             label: "Window"
                             width: parent.width
                             centerContent: false
+                            visible: shellRoot.selectedMainIndex !== 1
                             isSelected: shellRoot.dropdownOpen && shellRoot.selectedSubIndex === 1
                             onClicked: {
                                 shellRoot.selectedSubIndex = 1;
@@ -495,6 +530,9 @@ ShellRoot {
                             }
                         } else {
                             shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 2) % 3;
+                            if (shellRoot.selectedMainIndex === 1 && shellRoot.selectedSubIndex === 1) {
+                                shellRoot.selectedSubIndex = 0; // Skip Window option (index 1) for record
+                            }
                         }
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Down) {
@@ -503,6 +541,9 @@ ShellRoot {
                                 shellRoot.dropdownOpen = false;
                             } else {
                                 shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 1) % 3;
+                                if (shellRoot.selectedMainIndex === 1 && shellRoot.selectedSubIndex === 1) {
+                                    shellRoot.selectedSubIndex = 2; // Skip Window option (index 1) for record
+                                }
                             }
                         }
                         event.accepted = true;
@@ -511,6 +552,9 @@ ShellRoot {
                             shellRoot.selectedMainIndex = (shellRoot.selectedMainIndex + 1) % 3;
                         } else {
                             shellRoot.selectedSubIndex = (shellRoot.selectedSubIndex + 1) % 3;
+                            if (shellRoot.selectedMainIndex === 1 && shellRoot.selectedSubIndex === 1) {
+                                shellRoot.selectedSubIndex = 2; // Skip Window option (index 1) for record
+                            }
                         }
                         event.accepted = true;
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
@@ -530,21 +574,34 @@ ShellRoot {
     }
 
     // Recording UI - Single Window
-    Window {
+    PanelWindow {
         id: recWin
 
-        title: "Screenshot Recording Pill"
         color: "transparent"
+        screen: {
+            var name = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
+            for (var i = 0; i < Quickshell.screens.length; i++) {
+                if (Quickshell.screens[i].name === name) {
+                    return Quickshell.screens[i];
+                }
+            }
+            return Quickshell.screens[0];
+        }
 
-        width: recPill.width
-        height: recPill.height
-
-        x: shellRoot.pillX !== 0 ? shellRoot.pillX : (screen ? (screen.width - width) / 2 : 830)
-        y: shellRoot.pillY !== 0 ? shellRoot.pillY : (screen ? screen.height - height - 80 : 936)
+        implicitWidth: recPill.width
+        implicitHeight: recPill.height
 
         visible: shellRoot.isRecording
+        exclusiveZone: -1
 
-        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "screenshot_recording"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+        anchors {
+            bottom: true
+        }
+        margins.bottom: 80
 
         Rectangle {
             id: recPill
@@ -615,35 +672,6 @@ ShellRoot {
                     isCancel: true
                     onClicked: {
                         stopRecording();
-                    }
-                }
-            }
-
-            MouseArea {
-                id: dragArea
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width / 2
-                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                hoverEnabled: true
-
-                property point clickPos: "0,0"
-                property real startPillX: 0
-                property real startPillY: 0
-
-                onPressed: (mouse) => {
-                    clickPos = recPill.mapToGlobal(mouse.x, mouse.y)
-                    startPillX = recWin.x
-                    startPillY = recWin.y
-                    recWin.startSystemMove()
-                }
-
-                onPositionChanged: (mouse) => {
-                    if (pressed) {
-                        var currPos = recPill.mapToGlobal(mouse.x, mouse.y)
-                        shellRoot.pillX = startPillX + (currPos.x - clickPos.x)
-                        shellRoot.pillY = startPillY + (currPos.y - clickPos.y)
                     }
                 }
             }

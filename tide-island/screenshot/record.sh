@@ -8,6 +8,7 @@ fi
 
 # Parse custom mode flags
 if [ "$1" = "-w" ]; then
+    sleep 0.25
     GEOM=$(hyprctl activewindow -j | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')
     if [ -z "$GEOM" ] || [ "$GEOM" = "null,null nullxnull" ]; then
         notify-send -i error "Screen Recorder" "No active window found."
