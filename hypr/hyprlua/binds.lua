@@ -148,17 +148,17 @@ hl.bind(
 hl.bind(mainMod .. " +SHIFT + C",hl.dsp.exec_cmd("hyprpicker -a"))
 
 --hyprshot
-hl.bind(mainMod .. " +SHIFT + S", hl.dsp.exec_cmd("env SCREENSHOT_MODE=region quickshell -n -p " .. os.getenv("HOME") .. "/.config/hypr/screenshot/screenshot.qml"))
-hl.bind("Print", hl.dsp.exec_cmd("env SCREENSHOT_MODE=output quickshell -n -p " .. os.getenv("HOME") .. "/.config/hypr/screenshot/screenshot.qml"))
-hl.bind(mainMod .. " +SHIFT + W", hl.dsp.exec_cmd("env SCREENSHOT_MODE=window quickshell -n -p " .. os.getenv("HOME") .. "/.config/hypr/screenshot/screenshot.qml"))
+hl.bind(mainMod .. " +SHIFT + S", hl.dsp.exec_cmd("env SCREENSHOT_MODE=region quickshell -n -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/screenshot/screenshot.qml"))
+hl.bind("Print", hl.dsp.exec_cmd("env SCREENSHOT_MODE=output quickshell -n -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/screenshot/screenshot.qml"))
+hl.bind(mainMod .. " +SHIFT + W", hl.dsp.exec_cmd("env SCREENSHOT_MODE=window quickshell -n -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/screenshot/screenshot.qml"))
 
 --wf-Recorder
 hl.bind(mainMod .. " + R", function()
     local is_running = os.execute("pgrep -x wf-recorder")
     if is_running then
-        hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/screenshot/record.sh")
+        hl.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/screenshot/record.sh")
     else
-        hl.exec_cmd("env RECORD_MODE=region quickshell -n -p " .. os.getenv("HOME") .. "/.config/hypr/screenshot/screenshot.qml")
+        hl.exec_cmd("env RECORD_MODE=region quickshell -n -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/screenshot/screenshot.qml")
     end
 end)
 

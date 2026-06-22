@@ -96,7 +96,7 @@ output_path = '~/.local/state/quickshell/generated/colors.json'
 
 [templates.screenshot]
 input_path = '~/.config/matugen/templates/quickshell.qml'
-output_path = '~/.config/hypr/screenshot/Colors.qml'
+output_path = '~/.local/src/HyprDots/tide-island/screenshot/Colors.qml'
 
 # ...
 

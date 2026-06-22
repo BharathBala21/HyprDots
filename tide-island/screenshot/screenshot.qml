@@ -78,7 +78,7 @@ ShellRoot {
     }
 
     function stopRecording() {
-        var scriptPath = Quickshell.env("HOME") + "/.config/hypr/screenshot/record.sh";
+        var scriptPath = Quickshell.env("HOME") + "/.local/src/HyprDots/tide-island/screenshot/record.sh";
         Quickshell.execDetached([scriptPath]);
         Qt.quit();
     }
@@ -104,7 +104,7 @@ ShellRoot {
             Quickshell.execDetached(cmd);
             Qt.quit();
         } else if (mainIndex === 1) { // Record
-            var scriptPath = Quickshell.env("HOME") + "/.config/hypr/screenshot/record.sh";
+            var scriptPath = Quickshell.env("HOME") + "/.local/src/HyprDots/tide-island/screenshot/record.sh";
             if (subIndex === 0) {
                 cmd = [scriptPath];
             } else if (subIndex === 1) {
