@@ -622,6 +622,14 @@ PanelWindow {
             onTransientRequested: function(icon, progress, text) {
                 islandContainer.showTransientCapsule(icon, progress, text);
             }
+
+            onBatteryNotificationRequested: function(summary, body) {
+                if (root.shellRootController) {
+                    root.shellRootController.showNotificationAll("Battery", summary, body);
+                } else {
+                    root.showNotification("Battery", summary, body);
+                }
+            }
         }
 
         HyprlandWorkspaceTracker {

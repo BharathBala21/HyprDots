@@ -162,8 +162,8 @@ Item {
                                 width: Math.max(0, (parent.width - 4) * (Math.max(0, Math.min(100, Number(modelData.level || 0))) / 100.0))
                                 color: {
                                     const level = Math.max(0, Math.min(100, Number(modelData.level || 0)));
-                                    if (level <= 10) return "#ff3b30";
-                                    if (level <= 20) return "#ffcc00";
+                                    if (level < 10) return "#ff3b30";
+                                    if (level < 20) return '#fab300';
                                     return "#34c759";
                                 }
 

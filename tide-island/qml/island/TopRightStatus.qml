@@ -127,8 +127,8 @@ Item {
                         radius: 2
                         width: Math.max(0, (parent.width - 4) * (Math.max(0, Math.min(100, root.batteryCapacity)) / 100.0))
                         color: {
-                            if (root.batteryCapacity <= 10) return "#ff3b30";
-                            if (root.batteryCapacity <= 20) return "#ffcc00";
+                            if (root.batteryCapacity < 10) return "#ff3b30";
+                            if (root.batteryCapacity < 20) return "#fab300";
                             return "#34c759";
                         }
                         Behavior on width {

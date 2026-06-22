@@ -9,6 +9,7 @@ Item {
     height: 0
 
     signal transientRequested(string icon, real progress, string text)
+    signal batteryNotificationRequested(string summary, string body)
 
     property var configuredLeftSwipeItems: []
     property string timeText: "00:00"
@@ -46,6 +47,8 @@ Item {
     property var customLeftItems: []
 
     property string _lastChargeStatus: SysBackend.batteryStatus
+    property bool _notifiedLowBattery: false
+    property bool _notifiedCriticalBattery: false
     property string _pendingVolType: ""
     property real _pendingVolVal: 0.0
     property string _lastVolType: ""
@@ -376,6 +379,34 @@ Item {
         function onBatteryChanged(capacity, statusString) {
             root.batteryCapacity = capacity;
             root.isCharging = (statusString === "Charging" || statusString === "Full");
+
+            if (root.isCharging) {
+                root._notifiedLowBattery = false;
+                root._notifiedCriticalBattery = false;
+            } else {
+                if (capacity < 10 && !root._notifiedCriticalBattery) {
+                    root._notifiedCriticalBattery = true;
+                    root._notifiedLowBattery = true;
+                    root.batteryNotificationRequested(
+                        qsTr("Critical Battery"),
+                        qsTr("Battery is critical at %1%. Please connect a charger immediately.").arg(capacity)
+                    );
+                } else if (capacity < 20 && !root._notifiedLowBattery) {
+                    root._notifiedLowBattery = true;
+                    root.batteryNotificationRequested(
+                        qsTr("Low Battery"),
+                        qsTr("Battery is low at %1%. Please connect a charger.").arg(capacity)
+                    );
+                }
+
+                if (capacity >= 20) {
+                    root._notifiedLowBattery = false;
+                    root._notifiedCriticalBattery = false;
+                } else if (capacity >= 10) {
+                    root._notifiedCriticalBattery = false;
+                }
+            }
+
             if (root._lastChargeStatus !== "" && root._lastChargeStatus !== statusString) {
                 if (statusString === "Charging")
                     root.transientRequested(root.statusIcon("charging"), -1.0, "");
