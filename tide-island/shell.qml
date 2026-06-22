@@ -33,6 +33,16 @@ Scope {
         }
     }
 
+    Process {
+        id: playAlertProcess
+        command: ["pw-play", "/usr/share/tide-island/assets/alert.mp3"]
+        running: false
+    }
+
+    function playAlertSound() {
+        playAlertProcess.running = true;
+    }
+
     readonly property var userConfig: UserConfig
 
     function forEachWindow(callback) {
@@ -49,6 +59,9 @@ Scope {
             if (window && window.showNotification)
                 window.showNotification(appName, summary, body);
         });
+        if (appName === "Battery") {
+            shellRoot.playAlertSound();
+        }
     }
 
     function anyOverviewOpen() {
