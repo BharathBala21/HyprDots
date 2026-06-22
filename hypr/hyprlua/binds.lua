@@ -157,9 +157,9 @@ hl.bind(mainMod .. " + R", function()
     local status = os.execute("pgrep -x wf-recorder")
     local is_running = (status == 0 or status == true)
     if is_running then
-        hl.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/screenshot/record.sh")
+        hl.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/record.sh")
     else
-        hl.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/screenshot/record.sh -r")
+        hl.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/record.sh -r")
     end
 end)
 
