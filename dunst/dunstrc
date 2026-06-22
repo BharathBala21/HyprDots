@@ -1,0 +1,3 @@
+[disable-dunst-popups]
+    summary = "*"
+    skip_display = true
