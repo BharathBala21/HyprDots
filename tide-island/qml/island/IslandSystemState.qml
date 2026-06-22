@@ -37,7 +37,7 @@ Item {
     readonly property string bluetoothStatusIcon: "\u{F02CB}"
 
     property int batteryCapacity: SysBackend.batteryCapacity
-    property bool isCharging: SysBackend.batteryStatus === "Charging" || SysBackend.batteryStatus === "Full"
+    property bool isCharging: SysBackend.batteryStatus === "Charging" || SysBackend.batteryStatus === "Full" || SysBackend.batteryStatus === "Not charging"
     property real currentVolume: -1
     property bool isMuted: false
     property real currentBrightness: -1
@@ -378,7 +378,7 @@ Item {
 
         function onBatteryChanged(capacity, statusString) {
             root.batteryCapacity = capacity;
-            root.isCharging = (statusString === "Charging" || statusString === "Full");
+            root.isCharging = (statusString === "Charging" || statusString === "Full" || statusString === "Not charging");
 
             if (root.isCharging) {
                 root._notifiedLowBattery = false;

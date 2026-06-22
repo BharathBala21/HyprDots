@@ -625,9 +625,9 @@ PanelWindow {
 
             onBatteryNotificationRequested: function(summary, body) {
                 if (root.shellRootController) {
-                    root.shellRootController.showNotificationAll("Battery", summary, body);
+                    root.shellRootController.showNotificationAll("TideBatteryAlert", summary, body);
                 } else {
-                    root.showNotification("Battery", summary, body);
+                    root.showNotification("TideBatteryAlert", summary, body);
                 }
             }
         }
@@ -1019,7 +1019,8 @@ PanelWindow {
         function showNotificationCapsule(appName, summary, body) {
             if (root.overviewVisible || islandState === "control_center" || islandState === "expanded" || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers") return;
 
-            const cleanedAppName = cleanNotificationText(appName);
+            let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
+            const cleanedAppName = cleanNotificationText(displayAppName);
             const cleanedSummary = cleanNotificationText(summary);
             const cleanedBody = cleanNotificationText(body);
             const resolvedSummary = cleanedSummary !== ""

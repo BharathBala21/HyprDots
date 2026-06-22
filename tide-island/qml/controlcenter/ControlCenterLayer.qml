@@ -1224,6 +1224,7 @@ Item {
                                 radius: 2
                                 width: (parent.width - 4) * (batteryCapacity / 100.0)
                                 color: {
+                                    if (isCharging) return StyleTokens.success;
                                     if (batteryCapacity < 10) return StyleTokens.danger;
                                     if (batteryCapacity < 20) return StyleTokens.warning;
                                     return StyleTokens.success;

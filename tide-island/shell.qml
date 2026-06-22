@@ -55,11 +55,20 @@ Scope {
     }
 
     function showNotificationAll(appName, summary, body) {
+        // If charging or full, suppress any battery-related alerts/notifications
+        const isCharging = (SysBackend.batteryStatus === "Charging" || SysBackend.batteryStatus === "Full" || SysBackend.batteryStatus === "Not charging");
+        const isBatteryNotification = (appName === "Battery" || appName === "TideBatteryAlert" || appName.toLowerCase().indexOf("battery") !== -1);
+
+        if (isCharging && isBatteryNotification) {
+            return;
+        }
+
         shellRoot.forEachWindow((window) => {
             if (window && window.showNotification)
                 window.showNotification(appName, summary, body);
         });
-        if (appName === "Battery") {
+
+        if (appName === "TideBatteryAlert") {
             shellRoot.playAlertSound();
         }
     }

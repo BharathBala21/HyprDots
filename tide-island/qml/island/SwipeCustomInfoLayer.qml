@@ -161,9 +161,10 @@ Item {
                                 radius: root.batteryInnerRadius
                                 width: Math.max(0, (parent.width - 4) * (Math.max(0, Math.min(100, Number(modelData.level || 0))) / 100.0))
                                 color: {
+                                    if (modelData.isCharging) return "#34c759";
                                     const level = Math.max(0, Math.min(100, Number(modelData.level || 0)));
                                     if (level < 10) return "#ff3b30";
-                                    if (level < 20) return '#fab300';
+                                    if (level < 20) return "#ffcc00";
                                     return "#34c759";
                                 }
 
