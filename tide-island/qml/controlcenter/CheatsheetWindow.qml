@@ -186,7 +186,7 @@ FloatingWindow {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 hoverEnabled: true
-                onClicked: root.close()
+                onClicked: shellRoot.cheatsheetWindowOpen = false
 
                 Rectangle {
                     anchors.fill: parent
