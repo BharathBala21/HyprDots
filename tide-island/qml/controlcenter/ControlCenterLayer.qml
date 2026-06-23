@@ -73,6 +73,7 @@ Item {
     property string batteryModeLastCommandOutput: ""
     property int batteryModeRefreshPollsRemaining: 0
     property bool caffeineMode: false
+    property bool nightLightActive: false
 
     property string wifiLocalInfoMessage: ""
     property string wifiLocalError: ""
@@ -739,11 +740,29 @@ Item {
         caffeineCheckTimer.restart();
     }
 
+    function toggleNightLight() {
+        if (nightLightActive) {
+            Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
+            nightLightActive = false;
+        } else {
+            Quickshell.execDetached(["hyprsunset", "-t", "4000"]);
+            nightLightActive = true;
+        }
+        nightLightCheckTimer.restart();
+    }
+
     Timer {
         id: caffeineCheckTimer
         interval: 500
         repeat: false
         onTriggered: checkHypridleProcess.running = true
+    }
+
+    Timer {
+        id: nightLightCheckTimer
+        interval: 500
+        repeat: false
+        onTriggered: checkHyprsunsetProcess.running = true
     }
 
     function toggleBluetoothScan() {
@@ -819,6 +838,7 @@ Item {
             refreshBatteryModeState();
             requestWifiStateRefresh();
             checkHypridleProcess.running = true;
+            checkHyprsunsetProcess.running = true;
             if (wifiPanelOpen && wifiSupported && wifiEnabled)
                 requestWifiListRefresh(true);
         } else {
@@ -838,6 +858,7 @@ Item {
         SystemServices.requestVolume();
         refreshBatteryModeState();
         checkHypridleProcess.running = true;
+        checkHyprsunsetProcess.running = true;
     }
 
     Behavior on opacity {
@@ -965,6 +986,15 @@ Item {
         running: false
         onExited: (exitCode) => {
             controlCenter.caffeineMode = (exitCode !== 0);
+        }
+    }
+
+    Process {
+        id: checkHyprsunsetProcess
+        command: ["pgrep", "-x", "hyprsunset"]
+        running: false
+        onExited: (exitCode) => {
+            controlCenter.nightLightActive = (exitCode === 0);
         }
     }
 
@@ -1177,6 +1207,42 @@ Item {
                         hoverEnabled: true
                         onClicked: {
                             controlCenter.toggleCaffeineMode();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: nightLightButton
+                    width: 24
+                    height: 24
+                    radius: 12
+                    color: nightLightButtonMouse.containsMouse ? "#26ffffff" : StyleTokens.transparent
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf186" // Moon icon
+                        color: controlCenter.nightLightActive 
+                            ? "#5ac8fa" 
+                            : (nightLightButtonMouse.containsMouse ? "#ffffff" : StyleTokens.textSecondary)
+                        font.pixelSize: 14
+                        font.family: iconFontFamily
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+                    }
+
+                    MouseArea {
+                        id: nightLightButtonMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            controlCenter.toggleNightLight();
                         }
                     }
                 }
@@ -1721,10 +1787,127 @@ Item {
             }
 
             Rectangle {
+                id: nightLightCard
+                x: batteryDrawer.cardWidth + connectivityCardsRow.spacing
+                y: -height + controlCenter.batteryDrawerProgress * height
+                width: batteryDrawer.cardWidth
+                height: controlCenter.batteryModeCardHeight
+                radius: 20
+                color: (nightLightCardMouse.containsMouse) ? StyleTokens.connectivityCardHover : StyleTokens.connectivityCard
+                opacity: Math.min(1, controlCenter.batteryDrawerProgress * 1.35)
+                clip: true
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: StyleTokens.durationFast
+                    }
+                }
+
+                MouseArea {
+                    id: nightLightCardMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: {
+                        controlCenter.toggleNightLight();
+                    }
+                }
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    anchors.top: parent.top
+                    anchors.topMargin: 11
+                    text: "Night Light"
+                    color: textPrimary
+                    font.pixelSize: 13
+                    font.family: textFontFamily
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.top: parent.top
+                    anchors.topMargin: 12
+                    text: controlCenter.nightLightActive ? "Active" : "Off"
+                    color: controlCenter.nightLightActive ? "#5ac8fa" : StyleTokens.textMuted
+                    font.pixelSize: 9
+                    font.family: textFontFamily
+                    font.weight: Font.Medium
+                }
+
+                Rectangle {
+                    id: nightLightIconBg
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 10
+                    width: 28
+                    height: 28
+                    radius: 14
+                    color: controlCenter.nightLightActive ? "#265ac8fa" : "#292a2f"
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 140
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf186" // Moon icon
+                        color: controlCenter.nightLightActive ? "#5ac8fa" : StyleTokens.textDim
+                        font.pixelSize: 13
+                        font.family: iconFontFamily
+
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 140
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: nightLightSwitchTrack
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 14
+                    width: 34
+                    height: 20
+                    radius: 10
+                    color: controlCenter.nightLightActive ? StyleTokens.success : StyleTokens.switchOff
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: StyleTokens.durationFast
+                        }
+                    }
+
+                    Rectangle {
+                        width: 16
+                        height: 16
+                        radius: 8
+                        y: 2
+                        x: controlCenter.nightLightActive ? 16 : 2
+                        color: StyleTokens.white
+
+                        Behavior on x {
+                            NumberAnimation {
+                                duration: 140
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
                 id: batteryDrawerTunnelShade
                 anchors.left: parent.left
                 anchors.top: parent.top
-                width: batteryDrawer.cardWidth
+                width: parent.width
                 height: Math.max(1, controlCenter.batteryDrawerContentGap * 0.35)
                 z: 6
                 opacity: Math.min(0.34, controlCenter.batteryDrawerProgress * 0.45)
