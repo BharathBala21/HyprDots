@@ -16,6 +16,5 @@ function y
 	command rm -f -- "$tmp"
 end
 
-alias yazi="sudo yazi"
 
 
