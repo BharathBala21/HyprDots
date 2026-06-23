@@ -73,7 +73,12 @@ Item {
     property string batteryModeLastCommandOutput: ""
     property int batteryModeRefreshPollsRemaining: 0
     property bool caffeineMode: false
-    property bool nightLightActive: false
+
+    property real localTemp: 0.0
+    property real displayedTemp: 0.0
+    property real pendingTemp: 0.0
+    property real lastAppliedTemp: 0.0
+    property bool tempSetterRunning: false
 
     property string wifiLocalInfoMessage: ""
     property string wifiLocalError: ""
@@ -740,17 +745,6 @@ Item {
         caffeineCheckTimer.restart();
     }
 
-    function toggleNightLight() {
-        if (nightLightActive) {
-            Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
-            nightLightActive = false;
-        } else {
-            Quickshell.execDetached(["hyprsunset", "-t", "4000"]);
-            nightLightActive = true;
-        }
-        nightLightCheckTimer.restart();
-    }
-
     Timer {
         id: caffeineCheckTimer
         interval: 500
@@ -758,11 +752,55 @@ Item {
         onTriggered: checkHypridleProcess.running = true
     }
 
+    function tempFromValue(v) {
+        return Math.round(6500 - v * 4000);
+    }
+
+    function valueFromTemp(t) {
+        return Math.max(0.0, Math.min(1.0, (6500 - t) / 4000));
+    }
+
+    function syncTempFromSystem(value) {
+        console.log("[NightLight] syncTempFromSystem: value = " + value);
+        localTemp = clamp01(value);
+        if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
+        pendingTemp = localTemp;
+        lastAppliedTemp = localTemp;
+    }
+
+    function queueTemp(value) {
+        console.log("[NightLight] queueTemp: value = " + value);
+        localTemp = clamp01(value);
+        if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
+        pendingTemp = localTemp;
+        tempApplyTimer.restart();
+    }
+
+    function flushTemp(force) {
+        const nextValue = clamp01(pendingTemp);
+        console.log("[NightLight] flushTemp: force = " + force + ", nextValue = " + nextValue + ", lastApplied = " + lastAppliedTemp);
+        if (!force && Math.abs(nextValue - lastAppliedTemp) < 0.02) {
+            console.log("[NightLight] flushTemp: change is too small, ignoring");
+            return;
+        }
+
+        lastAppliedTemp = nextValue;
+
+        if (nextValue < 0.05) {
+            console.log("[NightLight] flushTemp: stopping night light");
+            Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
+        } else {
+            const targetK = tempFromValue(nextValue);
+            console.log("[NightLight] flushTemp: setting night light temp via execDetached to " + targetK);
+            Quickshell.execDetached(["sh", "-c", "pkill -x hyprsunset || true; sleep 0.15; hyprsunset -t " + targetK]);
+        }
+    }
+
     Timer {
-        id: nightLightCheckTimer
-        interval: 500
+        id: tempApplyTimer
+        interval: 100
         repeat: false
-        onTriggered: checkHyprsunsetProcess.running = true
+        onTriggered: controlCenter.flushTemp(false)
     }
 
     function toggleBluetoothScan() {
@@ -833,12 +871,13 @@ Item {
             sliderIntroPending = true;
             displayedBrightness = localBrightness;
             displayedVolume = localVolume;
+            displayedTemp = localTemp;
             sliderIntroTimer.interval = sliderIntroDelay;
             sliderIntroTimer.restart();
             refreshBatteryModeState();
             requestWifiStateRefresh();
             checkHypridleProcess.running = true;
-            checkHyprsunsetProcess.running = true;
+            queryHyprsunsetProcess.running = true;
             if (wifiPanelOpen && wifiSupported && wifiEnabled)
                 requestWifiListRefresh(true);
         } else {
@@ -846,6 +885,7 @@ Item {
             sliderIntroPending = false;
             displayedBrightness = localBrightness;
             displayedVolume = localVolume;
+            displayedTemp = localTemp;
             closeConnectivityPanels();
         }
     }
@@ -854,11 +894,12 @@ Item {
         syncLevelsFromProps();
         displayedBrightness = localBrightness;
         displayedVolume = localVolume;
+        displayedTemp = localTemp;
         SystemServices.requestBrightness();
         SystemServices.requestVolume();
         refreshBatteryModeState();
         checkHypridleProcess.running = true;
-        checkHyprsunsetProcess.running = true;
+        queryHyprsunsetProcess.running = true;
     }
 
     Behavior on opacity {
@@ -990,11 +1031,26 @@ Item {
     }
 
     Process {
-        id: checkHyprsunsetProcess
-        command: ["pgrep", "-x", "hyprsunset"]
+        id: queryHyprsunsetProcess
+        command: ["sh", "-c", "pgrep -fa hyprsunset || echo ''"]
         running: false
-        onExited: (exitCode) => {
-            controlCenter.nightLightActive = (exitCode === 0);
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    const text = this.text.trim();
+                    console.log("[NightLight] queryHyprsunsetProcess output: " + text);
+                    const match = text.match(/-t\s+(\d+)/);
+                    if (match && match[1]) {
+                        const temp = parseInt(match[1]);
+                        const v = (6500 - temp) / 4000;
+                        controlCenter.syncTempFromSystem(v);
+                    } else {
+                        controlCenter.syncTempFromSystem(0);
+                    }
+                } else {
+                    controlCenter.syncTempFromSystem(0);
+                }
+            }
         }
     }
 
@@ -1007,6 +1063,7 @@ Item {
             controlCenter.sliderIntroPending = false;
             controlCenter.displayedBrightness = controlCenter.localBrightness;
             controlCenter.displayedVolume = controlCenter.localVolume;
+            controlCenter.displayedTemp = controlCenter.localTemp;
         }
     }
 
@@ -1207,42 +1264,6 @@ Item {
                         hoverEnabled: true
                         onClicked: {
                             controlCenter.toggleCaffeineMode();
-                        }
-                    }
-                }
-
-                Rectangle {
-                    id: nightLightButton
-                    width: 24
-                    height: 24
-                    radius: 12
-                    color: nightLightButtonMouse.containsMouse ? "#26ffffff" : StyleTokens.transparent
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf186" // Moon icon
-                        color: controlCenter.nightLightActive 
-                            ? "#5ac8fa" 
-                            : (nightLightButtonMouse.containsMouse ? "#ffffff" : StyleTokens.textSecondary)
-                        font.pixelSize: 14
-                        font.family: iconFontFamily
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-
-                    MouseArea {
-                        id: nightLightButtonMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: {
-                            controlCenter.toggleNightLight();
                         }
                     }
                 }
@@ -1787,127 +1808,10 @@ Item {
             }
 
             Rectangle {
-                id: nightLightCard
-                x: batteryDrawer.cardWidth + connectivityCardsRow.spacing
-                y: -height + controlCenter.batteryDrawerProgress * height
-                width: batteryDrawer.cardWidth
-                height: controlCenter.batteryModeCardHeight
-                radius: 20
-                color: (nightLightCardMouse.containsMouse) ? StyleTokens.connectivityCardHover : StyleTokens.connectivityCard
-                opacity: Math.min(1, controlCenter.batteryDrawerProgress * 1.35)
-                clip: true
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: StyleTokens.durationFast
-                    }
-                }
-
-                MouseArea {
-                    id: nightLightCardMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: {
-                        controlCenter.toggleNightLight();
-                    }
-                }
-
-                Text {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.top: parent.top
-                    anchors.topMargin: 11
-                    text: "Night Light"
-                    color: textPrimary
-                    font.pixelSize: 13
-                    font.family: textFontFamily
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.top: parent.top
-                    anchors.topMargin: 12
-                    text: controlCenter.nightLightActive ? "Active" : "Off"
-                    color: controlCenter.nightLightActive ? "#5ac8fa" : StyleTokens.textMuted
-                    font.pixelSize: 9
-                    font.family: textFontFamily
-                    font.weight: Font.Medium
-                }
-
-                Rectangle {
-                    id: nightLightIconBg
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 10
-                    width: 28
-                    height: 28
-                    radius: 14
-                    color: controlCenter.nightLightActive ? "#265ac8fa" : "#292a2f"
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: 140
-                        }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf186" // Moon icon
-                        color: controlCenter.nightLightActive ? "#5ac8fa" : StyleTokens.textDim
-                        font.pixelSize: 13
-                        font.family: iconFontFamily
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: 140
-                            }
-                        }
-                    }
-                }
-
-                Rectangle {
-                    id: nightLightSwitchTrack
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 14
-                    width: 34
-                    height: 20
-                    radius: 10
-                    color: controlCenter.nightLightActive ? StyleTokens.success : StyleTokens.switchOff
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: StyleTokens.durationFast
-                        }
-                    }
-
-                    Rectangle {
-                        width: 16
-                        height: 16
-                        radius: 8
-                        y: 2
-                        x: controlCenter.nightLightActive ? 16 : 2
-                        color: StyleTokens.white
-
-                        Behavior on x {
-                            NumberAnimation {
-                                duration: 140
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-                    }
-                }
-            }
-
-            Rectangle {
                 id: batteryDrawerTunnelShade
                 anchors.left: parent.left
                 anchors.top: parent.top
-                width: parent.width
+                width: batteryDrawer.cardWidth
                 height: Math.max(1, controlCenter.batteryDrawerContentGap * 0.35)
                 z: 6
                 opacity: Math.min(0.34, controlCenter.batteryDrawerProgress * 0.45)
@@ -2020,6 +1924,7 @@ Item {
                     controlCenter.sliderIntroPending = false;
                     controlCenter.displayedBrightness = controlCenter.localBrightness;
                     controlCenter.displayedVolume = controlCenter.localVolume;
+                    controlCenter.displayedTemp = controlCenter.localTemp;
                 }
             }
             onValueMoved: function(value) {
@@ -2054,6 +1959,7 @@ Item {
                     controlCenter.sliderIntroPending = false;
                     controlCenter.displayedBrightness = controlCenter.localBrightness;
                     controlCenter.displayedVolume = controlCenter.localVolume;
+                    controlCenter.displayedTemp = controlCenter.localTemp;
                 }
             }
             onValueMoved: function(value) {
@@ -2064,6 +1970,41 @@ Item {
                 controlCenter.flushVolume(true);
             }
             onCancelRequested: SystemServices.requestVolume()
+        }
+
+        ControlSliderCard {
+            id: tempCard
+            width: parent.width
+            height: 76
+            title: "Night Light"
+            iconText: "\uf186" // Moon icon
+            iconFontFamily: controlCenter.iconFontFamily
+            textFontFamily: controlCenter.textFontFamily
+            value: controlCenter.displayedTemp
+            knobSize: controlCenter.sliderKnobSize
+            moduleColor: controlCenter.moduleColor
+            moduleHover: controlCenter.moduleHover
+            trackColor: controlCenter.trackColor
+            textPrimary: controlCenter.textPrimary
+            textSecondary: controlCenter.textSecondary
+
+            onInteractionStarted: {
+                if (controlCenter.sliderIntroPending) {
+                    sliderIntroTimer.stop();
+                    controlCenter.sliderIntroPending = false;
+                    controlCenter.displayedBrightness = controlCenter.localBrightness;
+                    controlCenter.displayedVolume = controlCenter.localVolume;
+                    controlCenter.displayedTemp = controlCenter.localTemp;
+                }
+            }
+            onValueMoved: function(value) {
+                controlCenter.queueTemp(value);
+            }
+            onCommitRequested: {
+                tempApplyTimer.stop();
+                controlCenter.flushTemp(true);
+            }
+            onCancelRequested: queryHyprsunsetProcess.running = true
         }
     }
 
