@@ -9,7 +9,7 @@ FloatingWindow {
     title: "Cheat sheet"
     implicitWidth: 1060
     implicitHeight: 600
-    color: "#0b0c10"
+    color: StyleTokens.panel
 
     signal cheatsheetClosed()
 
@@ -113,7 +113,7 @@ FloatingWindow {
         { keys: "Super+1..9", desc: "Focus workspace" },
         { keys: "Super+Ctrl+←/→", desc: "Workspace left/right" },
         { keys: "Super+Scroll", desc: "Workspace left/right" },
-        { keys: "Super+Alt+1..9", desc: "Move to workspace" },
+        { keys: "Super+Alt+1..9", desc: "Move window to workspace" },
         { keys: "Super+Alt+S", desc: "Spotify workspace" },
         { keys: "Super+Alt+D", desc: "Discord workspace" },
         { keys: "Super+Alt+E", desc: "Yazi workspace" },
@@ -146,12 +146,13 @@ FloatingWindow {
         { keys: "Bright Up/Down", desc: "Adjust brightness" }
     ]
 
-    // Background styling
+    // Background styling with custom rounding to match tide-island theme
     Rectangle {
         anchors.fill: parent
-        color: "#0b0c10"
+        color: StyleTokens.panel
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.color: StyleTokens.overviewInnerBorder
+        radius: 30
     }
 
     // Main Layout column
@@ -167,13 +168,13 @@ FloatingWindow {
 
             Text {
                 id: titleText
-                anchors.left: parent.left
+                anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Cheat sheet"
                 font.family: root.heroFontFamily
-                font.pixelSize: 22
+                font.pixelSize: 24
                 font.bold: true
-                color: "#ffffff"
+                color: StyleTokens.textPrimary
             }
 
             // Close button (x)
@@ -189,7 +190,7 @@ FloatingWindow {
                 Rectangle {
                     anchors.fill: parent
                     radius: 16
-                    color: closeBtn.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : StyleTokens.transparent
+                    color: closeBtn.containsMouse ? StyleTokens.moduleHover : StyleTokens.transparent
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
 
@@ -197,7 +198,7 @@ FloatingWindow {
                     text: "" // Font Awesome close x icon
                     font.family: root.iconFontFamily
                     font.pixelSize: 14
-                    color: closeBtn.containsMouse ? "#ffffff" : "#94a3b8"
+                    color: closeBtn.containsMouse ? StyleTokens.textPrimary : StyleTokens.textSecondary
                     anchors.centerIn: parent
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
@@ -208,7 +209,7 @@ FloatingWindow {
         Rectangle {
             width: parent.width
             height: 1
-            color: Qt.rgba(1, 1, 1, 0.08)
+            color: StyleTokens.overviewInnerBorder
         }
 
         // Scrollable Area containing keybind columns to prevent any overflow issues
@@ -233,14 +234,14 @@ FloatingWindow {
                     Text {
                         text: "Window"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 15
+                        font.pixelSize: 18
                         font.bold: true
                         color: StyleTokens.accent
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 8
+                        spacing: 10
                         Repeater {
                             model: root.windowBinds
                             delegate: shortcutRowDelegate
@@ -256,14 +257,14 @@ FloatingWindow {
                     Text {
                         text: "Workspace"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 15
+                        font.pixelSize: 18
                         font.bold: true
                         color: StyleTokens.accent
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 8
+                        spacing: 10
                         Repeater {
                             model: root.workspaceBinds
                             delegate: shortcutRowDelegate
@@ -279,14 +280,14 @@ FloatingWindow {
                     Text {
                         text: "Shell & System"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 15
+                        font.pixelSize: 18
                         font.bold: true
                         color: StyleTokens.accent
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 8
+                        spacing: 10
                         Repeater {
                             model: root.shellBinds
                             delegate: shortcutRowDelegate
@@ -302,14 +303,14 @@ FloatingWindow {
                     Text {
                         text: "Apps & Media"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 15
+                        font.pixelSize: 18
                         font.bold: true
                         color: StyleTokens.accent
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 8
+                        spacing: 10
                         Repeater {
                             model: root.appsMediaBinds
                             delegate: shortcutRowDelegate
@@ -325,7 +326,7 @@ FloatingWindow {
         id: shortcutRowDelegate
         Item {
             width: parent.width
-            height: 26
+            height: 32
 
             Row {
                 id: keysRow
@@ -343,21 +344,21 @@ FloatingWindow {
                         anchors.verticalCenter: parent.verticalCenter
 
                         Rectangle {
-                            height: 22
-                            width: keyText.text === "" ? 22 : Math.max(22, keyText.implicitWidth + 10)
-                            radius: 5
-                            color: Qt.rgba(1, 1, 1, 0.08)
+                            height: 26
+                            width: keyText.text === "" ? 26 : Math.max(26, keyText.implicitWidth + 12)
+                            radius: 6
+                            color: StyleTokens.module
                             border.width: 1
-                            border.color: Qt.rgba(1, 1, 1, 0.15)
+                            border.color: StyleTokens.overviewInnerBorder
                             anchors.verticalCenter: parent.verticalCenter
 
                             Text {
                                 id: keyText
                                 text: modelData
                                 font.family: modelData === "" ? root.iconFontFamily : root.textFontFamily
-                                font.pixelSize: modelData === "" ? 12 : 11
+                                font.pixelSize: modelData === "" ? 14 : 13
                                 font.bold: modelData !== ""
-                                color: "#f8fafc"
+                                color: StyleTokens.textPrimary
                                 anchors.centerIn: parent
                             }
                         }
@@ -365,8 +366,9 @@ FloatingWindow {
                         Text {
                             text: "+"
                             font.family: root.textFontFamily
-                            font.pixelSize: 11
-                            color: Qt.rgba(1, 1, 1, 0.4)
+                            font.pixelSize: 13
+                            color: StyleTokens.textSecondary
+                            opacity: 0.5
                             anchors.verticalCenter: parent.verticalCenter
                             visible: index < keysRow.keysArray.length - 1
                         }
@@ -380,9 +382,9 @@ FloatingWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - keysRow.width - 8
                 text: modelData.desc
-                color: "#94a3b8"
+                color: StyleTokens.textSecondary
                 font.family: root.textFontFamily
-                font.pixelSize: 12
+                font.pixelSize: 14
                 horizontalAlignment: Text.AlignRight
                 elide: Text.ElideRight
             }
