@@ -53,5 +53,8 @@ hl.window_rule({
     float = true,
     size = { 1627, 722 },
     center = true,
+    decorate=false,
+    no_shadow = true,
+    no_blur=true,
     dim_around  = true
 })

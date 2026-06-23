@@ -9,7 +9,7 @@ FloatingWindow {
     title: "Cheat sheet"
     implicitWidth: 1060
     implicitHeight: 600
-    color: colorBackground
+    color: "transparent"
 
     signal cheatsheetClosed()
 
@@ -162,7 +162,7 @@ FloatingWindow {
     Rectangle {
         anchors.fill: parent
         color: colorBackground
-        border.width: 1
+        border.width: 0
         border.color: colorOutline
         radius: 30
     }
