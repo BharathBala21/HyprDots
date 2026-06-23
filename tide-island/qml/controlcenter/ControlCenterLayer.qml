@@ -74,6 +74,12 @@ Item {
     property int batteryModeRefreshPollsRemaining: 0
     property bool caffeineMode: false
 
+    property real localTemp: 0.0
+    property real displayedTemp: 0.0
+    property real pendingTemp: 0.0
+    property real lastAppliedTemp: 0.0
+    property bool tempSetterRunning: false
+
     property string wifiLocalInfoMessage: ""
     property string wifiLocalError: ""
     property string wifiPendingPasswordSsid: ""
@@ -746,6 +752,57 @@ Item {
         onTriggered: checkHypridleProcess.running = true
     }
 
+    function tempFromValue(v) {
+        return Math.round(6500 - v * 4000);
+    }
+
+    function valueFromTemp(t) {
+        return Math.max(0.0, Math.min(1.0, (6500 - t) / 4000));
+    }
+
+    function syncTempFromSystem(value) {
+        console.log("[NightLight] syncTempFromSystem: value = " + value);
+        localTemp = clamp01(value);
+        if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
+        pendingTemp = localTemp;
+        lastAppliedTemp = localTemp;
+    }
+
+    function queueTemp(value) {
+        console.log("[NightLight] queueTemp: value = " + value);
+        localTemp = clamp01(value);
+        if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
+        pendingTemp = localTemp;
+        tempApplyTimer.restart();
+    }
+
+    function flushTemp(force) {
+        const nextValue = clamp01(pendingTemp);
+        console.log("[NightLight] flushTemp: force = " + force + ", nextValue = " + nextValue + ", lastApplied = " + lastAppliedTemp);
+        if (!force && Math.abs(nextValue - lastAppliedTemp) < 0.02) {
+            console.log("[NightLight] flushTemp: change is too small, ignoring");
+            return;
+        }
+
+        lastAppliedTemp = nextValue;
+
+        if (nextValue < 0.05) {
+            console.log("[NightLight] flushTemp: stopping night light");
+            Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
+        } else {
+            const targetK = tempFromValue(nextValue);
+            console.log("[NightLight] flushTemp: setting night light temp via execDetached to " + targetK);
+            Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
+        }
+    }
+
+    Timer {
+        id: tempApplyTimer
+        interval: 100
+        repeat: false
+        onTriggered: controlCenter.flushTemp(false)
+    }
+
     function toggleBluetoothScan() {
         if (!bluetoothAdapter) {
             bluetoothError = "No Bluetooth adapter is available.";
@@ -814,11 +871,13 @@ Item {
             sliderIntroPending = true;
             displayedBrightness = localBrightness;
             displayedVolume = localVolume;
+            displayedTemp = localTemp;
             sliderIntroTimer.interval = sliderIntroDelay;
             sliderIntroTimer.restart();
             refreshBatteryModeState();
             requestWifiStateRefresh();
             checkHypridleProcess.running = true;
+            queryHyprsunsetProcess.running = true;
             if (wifiPanelOpen && wifiSupported && wifiEnabled)
                 requestWifiListRefresh(true);
         } else {
@@ -826,6 +885,7 @@ Item {
             sliderIntroPending = false;
             displayedBrightness = localBrightness;
             displayedVolume = localVolume;
+            displayedTemp = localTemp;
             closeConnectivityPanels();
         }
     }
@@ -834,10 +894,12 @@ Item {
         syncLevelsFromProps();
         displayedBrightness = localBrightness;
         displayedVolume = localVolume;
+        displayedTemp = localTemp;
         SystemServices.requestBrightness();
         SystemServices.requestVolume();
         refreshBatteryModeState();
         checkHypridleProcess.running = true;
+        queryHyprsunsetProcess.running = true;
     }
 
     Behavior on opacity {
@@ -968,6 +1030,30 @@ Item {
         }
     }
 
+    Process {
+        id: queryHyprsunsetProcess
+        command: ["sh", "-c", "pgrep -fa hyprsunset || echo ''"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    const text = this.text.trim();
+                    console.log("[NightLight] queryHyprsunsetProcess output: " + text);
+                    const match = text.match(/-t\s+(\d+)/);
+                    if (match && match[1]) {
+                        const temp = parseInt(match[1]);
+                        const v = (6500 - temp) / 4000;
+                        controlCenter.syncTempFromSystem(v);
+                    } else {
+                        controlCenter.syncTempFromSystem(0);
+                    }
+                } else {
+                    controlCenter.syncTempFromSystem(0);
+                }
+            }
+        }
+    }
+
     Timer {
         id: sliderIntroTimer
         interval: controlCenter.sliderIntroDelay
@@ -977,6 +1063,7 @@ Item {
             controlCenter.sliderIntroPending = false;
             controlCenter.displayedBrightness = controlCenter.localBrightness;
             controlCenter.displayedVolume = controlCenter.localVolume;
+            controlCenter.displayedTemp = controlCenter.localTemp;
         }
     }
 
@@ -1837,6 +1924,7 @@ Item {
                     controlCenter.sliderIntroPending = false;
                     controlCenter.displayedBrightness = controlCenter.localBrightness;
                     controlCenter.displayedVolume = controlCenter.localVolume;
+                    controlCenter.displayedTemp = controlCenter.localTemp;
                 }
             }
             onValueMoved: function(value) {
@@ -1871,6 +1959,7 @@ Item {
                     controlCenter.sliderIntroPending = false;
                     controlCenter.displayedBrightness = controlCenter.localBrightness;
                     controlCenter.displayedVolume = controlCenter.localVolume;
+                    controlCenter.displayedTemp = controlCenter.localTemp;
                 }
             }
             onValueMoved: function(value) {
@@ -1881,6 +1970,41 @@ Item {
                 controlCenter.flushVolume(true);
             }
             onCancelRequested: SystemServices.requestVolume()
+        }
+
+        ControlSliderCard {
+            id: tempCard
+            width: parent.width
+            height: 76
+            title: "Temperature"
+            iconText: "\uf186" // Moon icon
+            iconFontFamily: controlCenter.iconFontFamily
+            textFontFamily: controlCenter.textFontFamily
+            value: controlCenter.displayedTemp
+            knobSize: controlCenter.sliderKnobSize
+            moduleColor: controlCenter.moduleColor
+            moduleHover: controlCenter.moduleHover
+            trackColor: controlCenter.trackColor
+            textPrimary: controlCenter.textPrimary
+            textSecondary: controlCenter.textSecondary
+
+            onInteractionStarted: {
+                if (controlCenter.sliderIntroPending) {
+                    sliderIntroTimer.stop();
+                    controlCenter.sliderIntroPending = false;
+                    controlCenter.displayedBrightness = controlCenter.localBrightness;
+                    controlCenter.displayedVolume = controlCenter.localVolume;
+                    controlCenter.displayedTemp = controlCenter.localTemp;
+                }
+            }
+            onValueMoved: function(value) {
+                controlCenter.queueTemp(value);
+            }
+            onCommitRequested: {
+                tempApplyTimer.stop();
+                controlCenter.flushTemp(true);
+            }
+            onCancelRequested: queryHyprsunsetProcess.running = true
         }
     }
 

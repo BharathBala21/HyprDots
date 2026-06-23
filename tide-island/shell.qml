@@ -192,6 +192,13 @@ Scope {
             });
         }
 
+        function setNightLightTemp(value: double) {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.setNightLightTemp)
+                    window.setNightLightTemp(value);
+            });
+        }
+
         function toggleLauncher() {
             shellRoot.forEachWindow((window) => {
                 if (window && window.toggleLauncher)

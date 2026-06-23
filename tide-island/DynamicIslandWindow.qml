@@ -173,7 +173,7 @@ PanelWindow {
         ? controlCenterLoader.item.controlCenterMaximumExtraHeight
         : 120
     readonly property real controlCenterWindowHeight: islandContainer.controlCenterLayerVisible
-        ? 4 + 320 + root.controlCenterMaximumExtraHeight + 12
+        ? 4 + 408 + root.controlCenterMaximumExtraHeight + 12
         : 0
     readonly property real connectivityDetailGap: 16
     readonly property int connectivityDetailAnimationDuration: 360
@@ -316,6 +316,12 @@ PanelWindow {
 
     function toggleControlCenter() {
         islandContainer.handleConfiguredClickAction("toggleControlCenter");
+    }
+
+    function setNightLightTemp(value) {
+        if (controlCenterLoader.item) {
+            controlCenterLoader.item.queueTemp(value);
+        }
     }
 
     function toggleLauncher() {
@@ -1319,7 +1325,7 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 320 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                    return 408 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
                 case "launcher":
                 case "clipboard":
                 case "emojis":
