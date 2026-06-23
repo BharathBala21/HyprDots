@@ -792,7 +792,7 @@ Item {
         } else {
             const targetK = tempFromValue(nextValue);
             console.log("[NightLight] flushTemp: setting night light temp via execDetached to " + targetK);
-            Quickshell.execDetached(["sh", "-c", "pkill -x hyprsunset || true; sleep 0.15; hyprsunset -t " + targetK]);
+            Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
         }
     }
 
