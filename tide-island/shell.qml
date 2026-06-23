@@ -13,6 +13,7 @@ Scope {
     property bool shuttingDown: false
     property bool superReleaseMightTrigger: false
     property bool settingsWindowOpen: false
+    property bool cheatsheetWindowOpen: false
 
     Timer {
         id: checkWfRecorderTimer
@@ -121,6 +122,10 @@ Scope {
         });
     }
 
+    function toggleCheatsheetAll() {
+        shellRoot.cheatsheetWindowOpen = !shellRoot.cheatsheetWindowOpen;
+    }
+
     IpcHandler {
         target: "overview"
 
@@ -180,6 +185,10 @@ Scope {
                 if (window && window.toggleWallpapers)
                     window.toggleWallpapers();
             });
+        }
+
+        function toggleCheatsheet() {
+            shellRoot.toggleCheatsheetAll();
         }
     }
 
@@ -255,6 +264,20 @@ Scope {
             if (status === Loader.Ready) {
                 item.settingsClosed.connect(() => {
                     shellRoot.settingsWindowOpen = false;
+                });
+            }
+        }
+    }
+
+    Loader {
+        id: cheatsheetWindowLoader
+        active: shellRoot.cheatsheetWindowOpen
+        source: "qml/controlcenter/CheatsheetWindow.qml"
+        
+        onStatusChanged: {
+            if (status === Loader.Ready) {
+                item.cheatsheetClosed.connect(() => {
+                    shellRoot.cheatsheetWindowOpen = false;
                 });
             }
         }

@@ -187,3 +187,11 @@ hl.bind("CTRL + SHIFT + code:9",
 
 -- Lock screen
 hl.bind("SUPER + L", hl.dsp.exec_cmd("~/.local/share/quickshell-lockscreen/lock.sh"))
+
+-- Cheatsheet toggle
+hl.bind(
+    mainMod .. " + slash",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleCheatsheet"
+    )
+)
