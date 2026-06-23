@@ -9,7 +9,7 @@ FloatingWindow {
     title: "Cheat sheet"
     implicitWidth: 1060
     implicitHeight: 600
-    color: StyleTokens.panel
+    color: colorBackground
 
     signal cheatsheetClosed()
 
@@ -26,6 +26,17 @@ FloatingWindow {
     readonly property string iconFontFamily: UserConfig.iconFontFamily
     readonly property string textFontFamily: UserConfig.textFontFamily
     readonly property string heroFontFamily: UserConfig.heroFontFamily
+
+    // Matugen dynamic theme colors
+    readonly property var themeColors: shellRoot.matugenThemeColors
+
+    readonly property color colorBackground: themeColors ? themeColors.background : "#0b0c10"
+    readonly property color colorPrimary: themeColors ? themeColors.primary : "#c084fc"
+    readonly property color colorOnSurface: themeColors ? themeColors.on_surface : "#ffffff"
+    readonly property color colorOnSurfaceVariant: themeColors ? themeColors.on_surface_variant : "#94a3b8"
+    readonly property color colorOutline: themeColors ? themeColors.outline_variant : Qt.rgba(1, 1, 1, 0.08)
+    readonly property color colorSecondaryContainer: themeColors ? themeColors.secondary_container : Qt.rgba(1, 1, 1, 0.08)
+    readonly property color colorOnSecondaryContainer: themeColors ? themeColors.on_secondary_container : "#f8fafc"
 
     // Defer focus to the window root to handle escape key press
     Timer {
@@ -150,9 +161,9 @@ FloatingWindow {
     // Background styling with custom rounding to match tide-island theme
     Rectangle {
         anchors.fill: parent
-        color: StyleTokens.panel
+        color: colorBackground
         border.width: 1
-        border.color: StyleTokens.overviewInnerBorder
+        border.color: colorOutline
         radius: 30
     }
 
@@ -175,7 +186,7 @@ FloatingWindow {
                 font.family: root.heroFontFamily
                 font.pixelSize: 24
                 font.bold: true
-                color: StyleTokens.textPrimary
+                color: colorOnSurface
             }
 
             // Close button (x)
@@ -191,7 +202,7 @@ FloatingWindow {
                 Rectangle {
                     anchors.fill: parent
                     radius: 16
-                    color: closeBtn.containsMouse ? StyleTokens.moduleHover : StyleTokens.transparent
+                    color: closeBtn.containsMouse ? colorSecondaryContainer : "transparent"
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
 
@@ -199,7 +210,7 @@ FloatingWindow {
                     text: "" // Font Awesome close x icon
                     font.family: root.iconFontFamily
                     font.pixelSize: 14
-                    color: closeBtn.containsMouse ? StyleTokens.textPrimary : StyleTokens.textSecondary
+                    color: closeBtn.containsMouse ? colorOnSurface : colorOnSurfaceVariant
                     anchors.centerIn: parent
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
@@ -210,7 +221,7 @@ FloatingWindow {
         Rectangle {
             width: parent.width
             height: 1
-            color: StyleTokens.overviewInnerBorder
+            color: colorOutline
         }
 
         // Scrollable Area containing keybind columns to prevent any overflow issues
@@ -237,7 +248,7 @@ FloatingWindow {
                         font.family: root.heroFontFamily
                         font.pixelSize: 18
                         font.bold: true
-                        color: StyleTokens.accent
+                        color: colorPrimary
                     }
 
                     Column {
@@ -260,7 +271,7 @@ FloatingWindow {
                         font.family: root.heroFontFamily
                         font.pixelSize: 18
                         font.bold: true
-                        color: StyleTokens.accent
+                        color: colorPrimary
                     }
 
                     Column {
@@ -283,7 +294,7 @@ FloatingWindow {
                         font.family: root.heroFontFamily
                         font.pixelSize: 18
                         font.bold: true
-                        color: StyleTokens.accent
+                        color: colorPrimary
                     }
 
                     Column {
@@ -306,7 +317,7 @@ FloatingWindow {
                         font.family: root.heroFontFamily
                         font.pixelSize: 18
                         font.bold: true
-                        color: StyleTokens.accent
+                        color: colorPrimary
                     }
 
                     Column {
@@ -348,9 +359,9 @@ FloatingWindow {
                             height: 26
                             width: keyText.text === "" ? 26 : Math.max(26, keyText.implicitWidth + 12)
                             radius: 6
-                            color: StyleTokens.module
+                            color: colorSecondaryContainer
                             border.width: 1
-                            border.color: StyleTokens.overviewInnerBorder
+                            border.color: colorOutline
                             anchors.verticalCenter: parent.verticalCenter
 
                             Text {
@@ -359,7 +370,7 @@ FloatingWindow {
                                 font.family: modelData === "" ? root.iconFontFamily : root.textFontFamily
                                 font.pixelSize: modelData === "" ? 14 : 13
                                 font.bold: modelData !== ""
-                                color: StyleTokens.textPrimary
+                                color: colorOnSecondaryContainer
                                 anchors.centerIn: parent
                             }
                         }
@@ -368,7 +379,7 @@ FloatingWindow {
                             text: "+"
                             font.family: root.textFontFamily
                             font.pixelSize: 13
-                            color: StyleTokens.textSecondary
+                            color: colorOnSurfaceVariant
                             opacity: 0.5
                             anchors.verticalCenter: parent.verticalCenter
                             visible: index < keysRow.keysArray.length - 1
@@ -383,7 +394,7 @@ FloatingWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - keysRow.width - 8
                 text: modelData.desc
-                color: StyleTokens.textSecondary
+                color: colorOnSurfaceVariant
                 font.family: root.textFontFamily
                 font.pixelSize: 14
                 horizontalAlignment: Text.AlignRight
