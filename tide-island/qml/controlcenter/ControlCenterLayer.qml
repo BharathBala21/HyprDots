@@ -1976,7 +1976,7 @@ Item {
             id: tempCard
             width: parent.width
             height: 76
-            title: "Night Light"
+            title: "Temperature"
             iconText: "\uf186" // Moon icon
             iconFontFamily: controlCenter.iconFontFamily
             textFontFamily: controlCenter.textFontFamily
