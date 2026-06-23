@@ -54,7 +54,7 @@ FloatingWindow {
             
             const lower = part.toLowerCase();
             if (lower === "super" || lower === "super_l" || lower === "win") {
-                result.push(""); // Font Awesome Windows logo
+                result.push(""); // Font Awesome Windows logo
             } else if (lower === "ctrl" || lower === "control") {
                 result.push("Ctrl");
             } else if (lower === "shift") {

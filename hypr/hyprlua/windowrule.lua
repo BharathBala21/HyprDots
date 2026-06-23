@@ -51,6 +51,7 @@ hl.window_rule({
 hl.window_rule({
     match = { title = "Cheat sheet" },
     float = true,
-    size = { 1100, 600 },
-    center = true
+    size = { 1627, 722 },
+    center = true,
+    dim_around  = true
 })
