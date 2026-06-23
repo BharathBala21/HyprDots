@@ -46,3 +46,15 @@ hl.window_rule({
     no_screen_share = true,
     move = "monitor_w/2-160 monitor_h-144"
 })
+
+-- Float and center the Cheat sheet window
+hl.window_rule({
+    match = { title = "Cheat sheet" },
+    float = true,
+    size = { 1627, 722 },
+    center = true,
+    decorate=false,
+    no_shadow = true,
+    no_blur=true,
+    dim_around  = true
+})

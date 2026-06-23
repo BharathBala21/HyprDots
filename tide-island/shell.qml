@@ -13,6 +13,40 @@ Scope {
     property bool shuttingDown: false
     property bool superReleaseMightTrigger: false
     property bool settingsWindowOpen: false
+    property bool cheatsheetWindowOpen: false
+
+    function getHomePath() {
+        const configPath = UserConfig.userConfigPath || "";
+        const idx = configPath.indexOf("/.config/");
+        if (idx !== -1) {
+            return configPath.substring(0, idx);
+        }
+        return "/home/aashiq";
+    }
+
+    FileView {
+        id: colorsWatcher
+        path: getHomePath() + "/.local/state/quickshell/generated/colors.json"
+        watchChanges: true
+        blockLoading: true
+
+        onFileChanged: {
+            colorsWatcher.reload();
+        }
+    }
+
+    function parseColorsQml(qmlText) {
+        if (!qmlText) return null;
+        const colors = {};
+        const regex = /readonly\s+property\s+color\s+(\w+)\s*:\s*"([^"]+)"/g;
+        let match;
+        while ((match = regex.exec(qmlText)) !== null) {
+            colors[match[1]] = match[2];
+        }
+        return colors;
+    }
+
+    readonly property var matugenThemeColors: parseColorsQml(colorsWatcher.text())
 
     Timer {
         id: checkWfRecorderTimer
@@ -121,6 +155,10 @@ Scope {
         });
     }
 
+    function toggleCheatsheetAll() {
+        shellRoot.cheatsheetWindowOpen = !shellRoot.cheatsheetWindowOpen;
+    }
+
     IpcHandler {
         target: "overview"
 
@@ -180,6 +218,10 @@ Scope {
                 if (window && window.toggleWallpapers)
                     window.toggleWallpapers();
             });
+        }
+
+        function toggleCheatsheet() {
+            shellRoot.toggleCheatsheetAll();
         }
     }
 
@@ -255,6 +297,20 @@ Scope {
             if (status === Loader.Ready) {
                 item.settingsClosed.connect(() => {
                     shellRoot.settingsWindowOpen = false;
+                });
+            }
+        }
+    }
+
+    Loader {
+        id: cheatsheetWindowLoader
+        active: shellRoot.cheatsheetWindowOpen
+        source: "qml/controlcenter/CheatsheetWindow.qml"
+        
+        onStatusChanged: {
+            if (status === Loader.Ready) {
+                item.cheatsheetClosed.connect(() => {
+                    shellRoot.cheatsheetWindowOpen = false;
                 });
             }
         }
