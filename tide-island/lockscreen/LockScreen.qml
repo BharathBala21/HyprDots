@@ -119,43 +119,66 @@ Item {
 
             Row {
                 id: clockRow
-                spacing: 0
+                spacing: 8
                 anchors.horizontalCenter: parent.horizontalCenter
+
+                // Soft ambient glow centered behind the clock text
+                Item {
+                    width: 0
+                    height: 0
+                    anchors.centerIn: parent
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 340
+                        height: 180
+                        radius: 90
+                        color: colorPrimary
+                        opacity: 0.15 // Soft ambient accent glow
+                        
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            blurEnabled: true
+                            blurMax: 64
+                            blur: 1.0
+                        }
+                    }
+                }
 
                 Text {
                     id: hoursText
-                    font.family: "JetBrainsMono Nerd Font, URW Gothic, Noto Sans, sans-serif"
-                    font.pixelSize: 160
-                    font.weight: Font.Bold
+                    font.family: "URW Gothic, JetBrainsMono Nerd Font, Noto Sans, sans-serif"
+                    font.pixelSize: 140
+                    font.weight: Font.Black // Ultra-bold
                     color: colorPrimary
                     
                     style: Text.Outline
-                    styleColor: "#40000000"
+                    styleColor: "#22000000"
                 }
 
                 Text {
                     id: minutesText
-                    font.family: "JetBrainsMono Nerd Font, URW Gothic, Noto Sans, sans-serif"
+                    font.family: "URW Gothic, JetBrainsMono Nerd Font, Noto Sans, sans-serif"
                     font.pixelSize: 100
-                    font.weight: Font.Bold
+                    font.weight: Font.Light // Ultra-light
                     color: colorOnSurface
                     anchors.baseline: hoursText.baseline
                     
                     style: Text.Outline
-                    styleColor: "#40000000"
+                    styleColor: "#22000000"
                 }
             }
 
             Text {
                 id: dateText
-                font.family: "Noto Sans, sans-serif"
-                font.pixelSize: 20
-                font.weight: Font.Normal
+                font.family: "URW Gothic, JetBrainsMono Nerd Font, Noto Sans, sans-serif"
+                font.pixelSize: 18
+                font.weight: Font.Medium
                 color: colorOnSurfaceVariant
                 anchors.horizontalCenter: parent.horizontalCenter
                 
                 style: Text.Outline
-                styleColor: "#40000000"
+                styleColor: "#22000000"
             }
 
             Component.onCompleted: {
