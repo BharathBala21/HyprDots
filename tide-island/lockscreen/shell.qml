@@ -35,6 +35,34 @@ ShellRoot {
         command: ["sh", "-c", "kill -9 $PPID"]
     }
 
+    // Matugen Colors Integration
+    FileView {
+        id: colorsWatcher
+        path: root.getHomePath() + "/.local/state/quickshell/generated/colors.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: {
+            colorsWatcher.reload();
+        }
+    }
+
+    function getHomePath() {
+        return Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "pirate");
+    }
+
+    function parseColorsQml(qmlText) {
+        if (!qmlText) return null;
+        const colors = {};
+        const regex = /readonly\s+property\s+color\s+(\w+)\s*:\s*"([^"]+)"/g;
+        let match;
+        while ((match = regex.exec(qmlText)) !== null) {
+            colors[match[1]] = match[2];
+        }
+        return colors;
+    }
+
+    readonly property var themeColors: parseColorsQml(colorsWatcher.text())
+
     function unlockSession() {
         console.log("Unlocking session and quitting...");
         if (!testMode && lockLoader.item) {
@@ -60,6 +88,7 @@ ShellRoot {
                 
                 LockScreen {
                     wallpaperPath: root.wallpaperPath
+                    themeColors: root.themeColors
                     isLocked: false
                     onUnlocked: {
                         root.unlockSession();
@@ -84,6 +113,7 @@ ShellRoot {
                         
                         LockScreen {
                             wallpaperPath: root.wallpaperPath
+                            themeColors: root.themeColors
                             isLocked: true
                             onUnlocked: {
                                 root.unlockSession();

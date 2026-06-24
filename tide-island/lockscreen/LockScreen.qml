@@ -9,17 +9,29 @@ Item {
     focus: true
 
     property string wallpaperPath: ""
+    property var themeColors: null
     property bool isLocked: true
     signal unlocked()
 
     property bool passwordFieldVisible: false
+
+    // Matugen dynamic theme color properties mapping cheatsheet convention
+    readonly property color colorBackground: themeColors ? themeColors.background : "#0b0c10"
+    readonly property color colorPrimary: themeColors ? themeColors.primary : "#c084fc"
+    readonly property color colorOnSurface: themeColors ? themeColors.on_surface : "#ffffff"
+    readonly property color colorOnSurfaceVariant: themeColors ? themeColors.on_surface_variant : "#94a3b8"
+    readonly property color colorOutline: themeColors ? themeColors.outline_variant : Qt.rgba(1, 1, 1, 0.08)
+    readonly property color colorSecondaryContainer: themeColors ? themeColors.secondary_container : Qt.rgba(1, 1, 1, 0.08)
+    readonly property color colorOnSecondaryContainer: themeColors ? themeColors.on_secondary_container : "#f8fafc"
+    readonly property color colorError: themeColors ? themeColors.error : "#f43f5e"
 
     // Format date and time
     function updateTime() {
         let d = new Date();
         let hours = d.getHours().toString().padStart(2, '0');
         let minutes = d.getMinutes().toString().padStart(2, '0');
-        timeText.text = hours + ":" + minutes;
+        hoursText.text = hours;
+        minutesText.text = minutes;
 
         let days = [qsTr("Sunday"), qsTr("Monday"), qsTr("Tuesday"), qsTr("Wednesday"), qsTr("Thursday"), qsTr("Friday"), qsTr("Saturday")];
         let months = [qsTr("January"), qsTr("February"), qsTr("March"), qsTr("April"), qsTr("May"), qsTr("June"), 
@@ -91,8 +103,8 @@ Item {
     // Main layout container (centered clock and input)
     Item {
         id: centerContainer
-        width: 400
-        height: 300
+        width: 600
+        height: 360
         anchors.centerIn: parent
 
         // Time and Date Section
@@ -105,17 +117,33 @@ Item {
             opacity: 0.0
             y: 30
 
-            Text {
-                id: timeText
-                font.family: "Noto Sans, sans-serif"
-                font.pixelSize: 84
-                font.weight: Font.DemiBold
-                color: "white"
+            Row {
+                id: clockRow
+                spacing: 0
                 anchors.horizontalCenter: parent.horizontalCenter
-                
-                // Add a subtle drop shadow to text for maximum legibility
-                style: Text.Outline
-                styleColor: "#40000000"
+
+                Text {
+                    id: hoursText
+                    font.family: "JetBrainsMono Nerd Font, URW Gothic, Noto Sans, sans-serif"
+                    font.pixelSize: 160
+                    font.weight: Font.Bold
+                    color: colorPrimary
+                    
+                    style: Text.Outline
+                    styleColor: "#40000000"
+                }
+
+                Text {
+                    id: minutesText
+                    font.family: "JetBrainsMono Nerd Font, URW Gothic, Noto Sans, sans-serif"
+                    font.pixelSize: 100
+                    font.weight: Font.Bold
+                    color: colorOnSurface
+                    anchors.baseline: hoursText.baseline
+                    
+                    style: Text.Outline
+                    styleColor: "#40000000"
+                }
             }
 
             Text {
@@ -123,7 +151,7 @@ Item {
                 font.family: "Noto Sans, sans-serif"
                 font.pixelSize: 20
                 font.weight: Font.Normal
-                color: "#e2e8f0"
+                color: colorOnSurfaceVariant
                 anchors.horizontalCenter: parent.horizontalCenter
                 
                 style: Text.Outline
@@ -195,10 +223,10 @@ Item {
                 height: 44
                 radius: 22
                 
-                // Translucent background
-                color: "#1affffff"
+                // Translucent background using secondary container color
+                color: colorSecondaryContainer
                 border.width: passwordInput.activeFocus ? 2 : 1
-                border.color: passwordInput.activeFocus ? "#3b82f6" : "#40ffffff"
+                border.color: passwordInput.activeFocus ? colorPrimary : colorOutline
 
                 // Glow ring on focus
                 Rectangle {
@@ -207,7 +235,8 @@ Item {
                     radius: 26
                     color: "transparent"
                     border.width: 2
-                    border.color: "#203b82f6"
+                    border.color: colorPrimary
+                    opacity: 0.15
                     visible: passwordInput.activeFocus
                 }
 
@@ -220,7 +249,7 @@ Item {
                     
                     font.family: "Noto Sans, sans-serif"
                     font.pixelSize: 15
-                    color: "white"
+                    color: colorOnSurface
                     echoMode: TextInput.Password
                     passwordCharacter: "•"
                     passwordMaskDelay: 600
@@ -232,7 +261,7 @@ Item {
                     // Placeholder text
                     Text {
                         text: qsTr("Enter password...")
-                        color: "#80ffffff"
+                        color: colorOnSurfaceVariant
                         font.family: "Noto Sans, sans-serif"
                         font.pixelSize: 15
                         visible: !passwordInput.text && !passwordInput.activeFocus
@@ -286,7 +315,7 @@ Item {
                 text: qsTr("Session Locked")
                 font.family: "Noto Sans, sans-serif"
                 font.pixelSize: 13
-                color: "#94a3b8"
+                color: colorOnSurfaceVariant
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: inputFieldBg.bottom
                 anchors.topMargin: 12
@@ -307,7 +336,7 @@ Item {
                         width: 8
                         height: 8
                         radius: 4
-                        color: "#3b82f6"
+                        color: colorPrimary
                         opacity: 0.3
 
                         SequentialAnimation on opacity {
@@ -343,7 +372,7 @@ Item {
             passwordFieldVisible = true;
             passwordInput.forceActiveFocus();
             statusText.text = qsTr("Enter password to unlock");
-            statusText.color = "#94a3b8";
+            statusText.color = colorOnSurfaceVariant;
         }
     }
 
@@ -434,11 +463,11 @@ Item {
             
             if (result === PamResult.Success) {
                 statusText.text = qsTr("Access Granted");
-                statusText.color = "#10b981"; // Success Green
+                statusText.color = colorPrimary; // Primary Theme Color
                 rootItem.unlocked();
             } else {
                 statusText.text = qsTr("Incorrect Password");
-                statusText.color = "#f43f5e"; // Rose Red
+                statusText.color = colorError; // Error color
                 shakeAnimation.start();
                 passwordInput.text = "";
                 passwordInput.forceActiveFocus();
@@ -452,7 +481,7 @@ Item {
             submittedPassword = "";
             passwordInput.enabled = true;
             statusText.text = qsTr("Auth Service Error");
-            statusText.color = "#f43f5e";
+            statusText.color = colorError;
             shakeAnimation.start();
             pam.active = false;
         }
@@ -463,7 +492,7 @@ Item {
         if (pwd === "") return;
 
         statusText.text = qsTr("Authenticating...");
-        statusText.color = "white";
+        statusText.color = colorOnSurface;
         pam.submittedPassword = pwd;
         passwordInput.enabled = false;
 
@@ -487,13 +516,13 @@ Item {
         width: 100
         height: 36
         radius: 18
-        color: "#20ffffff"
+        color: colorSecondaryContainer
         border.width: 1
-        border.color: "#30ffffff"
+        border.color: colorOutline
         
         Text {
             text: qsTr("Exit Test")
-            color: "white"
+            color: colorOnSurface
             font.family: "Noto Sans, sans-serif"
             font.pixelSize: 13
             anchors.centerIn: parent
