@@ -23,7 +23,8 @@ CYAN = '\033[96m'
 BOLD = '\033[1m'
 RESET = '\033[0m'
 
-LOG_FILE = "/home/aashiq/.gemini/antigravity-cli/scratch/visual_search_lens/visual_search.log"
+cache_dir = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+LOG_FILE = os.path.join(cache_dir, "visual_search_lens", "visual_search.log")
 
 BANNER = f"""
 {BLUE}{BOLD}┌────────────────────────────────────────────────────────┐
