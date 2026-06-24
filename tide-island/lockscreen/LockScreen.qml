@@ -40,7 +40,10 @@ Item {
         id: bgImage
         source: rootItem.wallpaperPath
         fillMode: Image.PreserveAspectCrop
-        anchors.fill: parent
+        // Make the image slightly larger than the screen to hide blur edge artifacts
+        width: parent.width + 128
+        height: parent.height + 128
+        anchors.centerIn: parent
         asynchronous: true
         
         // Start slightly zoomed out for the transition
