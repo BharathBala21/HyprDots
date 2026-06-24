@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import IslandBackend
 
 Item {
@@ -87,13 +88,13 @@ Item {
 
     ListModel {
         id: utilitiesModel
-        ListElement { name: "screenshot"; icon: "\uf030" }
-        ListElement { name: "wallpaper"; icon: "\uf03e" }
-        ListElement { name: "screenrecord"; icon: "\uf03d" }
-        ListElement { name: "colorpicker"; icon: "\uf1fb" }
-        ListElement { name: "ocr"; icon: "T" }
-        ListElement { name: "search"; icon: "\uf1a0" }
-        ListElement { name: "qr"; icon: "\uf029" }
+        ListElement { name: "screenshot"; icon: "\uf030"; tooltip: "Screenshot" }
+        ListElement { name: "wallpaper"; icon: "\uf03e"; tooltip: "Wallpaper Picker" }
+        ListElement { name: "screenrecord"; icon: "\uf03d"; tooltip: "Screen Recorder" }
+        ListElement { name: "colorpicker"; icon: "\uf1fb"; tooltip: "Color Picker" }
+        ListElement { name: "ocr"; icon: "T"; tooltip: "Extract Text (OCR)" }
+        ListElement { name: "search"; icon: "\uf1a0"; tooltip: "Visual Search" }
+        ListElement { name: "qr"; icon: "\uf029"; tooltip: "Scan QR/Barcode" }
     }
 
     // The Clock (Visible in normal/resting state, slides out to the right)
@@ -131,6 +132,7 @@ Item {
                 required property string name
                 required property string icon
                 required property int index
+                required property string tooltip
 
                 readonly property bool isActive: (root.selectedIdx === index) || mouseArea.containsMouse
 
@@ -179,6 +181,45 @@ Item {
 
                     onClicked: {
                         root.triggerUtility(index);
+                    }
+                }
+
+                ToolTip {
+                    id: controlToolTip
+                    visible: mouseArea.containsMouse || (root.activeFocus && root.selectedIdx === index)
+                    delay: mouseArea.containsMouse ? 150 : 0
+                    timeout: 5000
+                    text: buttonRect.tooltip
+                    x: (parent.width - width) / 2
+                    y: parent.height + 8
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 8
+                    bottomPadding: 8
+
+                    contentItem: Text {
+                        text: controlToolTip.text
+                        font.family: root.textFontFamily
+                        font.pixelSize: 11
+                        font.weight: Font.DemiBold
+                        color: "#ffffff"
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    background: Rectangle {
+                        color: "#18181b"
+                        border.color: Qt.rgba(1, 1, 1, 0.15)
+                        border.width: 1
+                        radius: 8
+                        clip: true
+
+                        Rectangle {
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: 2
+                            color: root.activeColor
+                        }
                     }
                 }
             }
