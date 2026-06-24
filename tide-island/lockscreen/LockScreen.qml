@@ -86,67 +86,7 @@ Item {
         opacity: 0.45
     }
 
-    // Ambient floating glow spots (render-thread animated particles)
-    Repeater {
-        model: 6
-        Item {
-            id: particle
-            width: 250 + index * 80
-            height: width
-            
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                // Curated visual palette of dark blue, indigo, and violet spots
-                color: index % 3 === 0 ? "#1d4ed8" : (index % 3 === 1 ? "#4f46e5" : "#7c3aed")
-                opacity: 0.08
-                
-                layer.enabled: true
-                layer.effect: MultiEffect {
-                    blurEnabled: true
-                    blurMax: 64
-                    blur: 1.0
-                }
-            }
 
-            Component.onCompleted: {
-                x = Math.random() * (rootItem.width - width);
-                y = Math.random() * (rootItem.height - height);
-                
-                driftX.from = x;
-                driftX.to = Math.random() * (rootItem.width - width);
-                driftX.duration = 18000 + Math.random() * 12000;
-                driftX.start();
-                
-                driftY.from = y;
-                driftY.to = Math.random() * (rootItem.height - height);
-                driftY.duration = 18000 + Math.random() * 12000;
-                driftY.start();
-            }
-
-            XAnimator {
-                id: driftX
-                target: particle
-                onFinished: {
-                    from = to;
-                    to = Math.random() * (rootItem.width - particle.width);
-                    duration = 18000 + Math.random() * 12000;
-                    start();
-                }
-            }
-
-            YAnimator {
-                id: driftY
-                target: particle
-                onFinished: {
-                    from = to;
-                    to = Math.random() * (rootItem.height - particle.height);
-                    duration = 18000 + Math.random() * 12000;
-                    start();
-                }
-            }
-        }
-    }
 
     // Main layout container (centered clock and input)
     Item {
