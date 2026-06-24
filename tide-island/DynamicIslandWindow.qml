@@ -43,6 +43,7 @@ PanelWindow {
     readonly property bool clipboardLayerVisible: islandContainer.islandState === "clipboard"
     readonly property bool emojiPickerLayerVisible: islandContainer.islandState === "emojis"
     readonly property bool wallpapersLayerVisible: islandContainer.islandState === "wallpapers"
+    readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
 
     readonly property var userConfig: UserConfig
 
@@ -114,18 +115,18 @@ PanelWindow {
     implicitHeight: 560
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers")
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers")
-        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
         id: launcherGrab
-        active: root.monitorFocused && (islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers")
+        active: root.monitorFocused && (islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
         windows: [ root ]
         onCleared: {
-            if (islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers") {
+            if (islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") {
                 islandContainer.smartRestoreState();
             }
         }
@@ -361,6 +362,10 @@ PanelWindow {
         if (wallpapersLayerVisible && monitorFocused)
             wallpapersFocusTimer.restart();
     }
+    onUtilitiesLayerVisibleChanged: {
+        if (utilitiesLayerVisible && monitorFocused)
+            utilitiesFocusTimer.restart();
+    }
     onOverviewVisualReadyChanged: {
         if (overviewVisualReady) beginOverviewOpening();
     }
@@ -371,6 +376,7 @@ PanelWindow {
         if (clipboardLayerVisible && monitorFocused) clipboardFocusTimer.restart();
         if (emojiPickerLayerVisible && monitorFocused) emojisFocusTimer.restart();
         if (wallpapersLayerVisible && monitorFocused) wallpapersFocusTimer.restart();
+        if (utilitiesLayerVisible && monitorFocused) utilitiesFocusTimer.restart();
     }
 
     Timer {
@@ -410,6 +416,13 @@ PanelWindow {
 
     Timer {
         id: wallpapersFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: islandContainer.forceActiveFocus()
+    }
+
+    Timer {
+        id: utilitiesFocusTimer
         interval: 0
         repeat: false
         onTriggered: islandContainer.forceActiveFocus()
@@ -478,7 +491,7 @@ PanelWindow {
     FocusScope {
         id: islandContainer
         anchors.fill: parent
-        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers")
+        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers" || islandState === "utilities")
 
         property string islandState: "normal"
         property string splitIcon: root.defaultSplitIcon
@@ -1787,11 +1800,18 @@ PanelWindow {
                 active: islandContainer.utilitiesSwipeVisible
                 asynchronous: false
                 visible: active
+                focus: islandContainer.islandState === "utilities"
 
-                onLoaded: islandContainer.syncUtilitiesCapsuleWidth()
+                onLoaded: {
+                    islandContainer.syncUtilitiesCapsuleWidth();
+                    if (item) {
+                        item.selectedIdx = 0;
+                    }
+                }
 
                 sourceComponent: Component {
                     SwipeUtilitiesLayer {
+                        focus: true
                         shellRootController: root.shellRootController
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
@@ -1802,6 +1822,9 @@ PanelWindow {
                         transitionProgress: islandContainer.islandState === "utilities" ? 1.0 : islandContainer.rightSwipeProgress
                         showCondition: true
                         onPreferredWidthChanged: islandContainer.syncUtilitiesCapsuleWidth()
+                        onCloseRequested: {
+                            islandContainer.islandState = "normal";
+                        }
                     }
                 }
             }

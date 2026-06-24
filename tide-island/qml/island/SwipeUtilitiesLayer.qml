@@ -4,6 +4,7 @@ import IslandBackend
 Item {
     id: root
 
+    signal closeRequested()
     property var shellRootController: null
     property string iconFontFamily: ""
     property string textFontFamily: ""
@@ -17,6 +18,41 @@ Item {
     property real horizontalPadding: 16
     property real spacing: 12
     property int textPixelSize: 16
+    property int selectedIdx: 0
+
+    focus: true
+
+    Keys.onLeftPressed: (event) => {
+        selectedIdx = (selectedIdx - 1 + utilitiesModel.count) % utilitiesModel.count;
+        event.accepted = true;
+    }
+    Keys.onRightPressed: (event) => {
+        selectedIdx = (selectedIdx + 1) % utilitiesModel.count;
+        event.accepted = true;
+    }
+    Keys.onEscapePressed: (event) => {
+        root.closeRequested();
+        event.accepted = true;
+    }
+    Keys.onReturnPressed: (event) => {
+        root.triggerUtility(selectedIdx);
+        event.accepted = true;
+    }
+    Keys.onEnterPressed: (event) => {
+        root.triggerUtility(selectedIdx);
+        event.accepted = true;
+    }
+    Keys.onSpacePressed: (event) => {
+        root.triggerUtility(selectedIdx);
+        event.accepted = true;
+    }
+
+    function triggerUtility(index) {
+        const item = utilitiesModel.get(index);
+        if (item) {
+            console.log("Triggered utility: " + item.name);
+        }
+    }
 
     readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
     readonly property color activeColor: themeColors ? themeColors.primary : (StyleTokens.accent || "#00f0c2")
@@ -94,15 +130,18 @@ Item {
 
                 required property string name
                 required property string icon
+                required property int index
+
+                readonly property bool isActive: (root.selectedIdx === index) || mouseArea.containsMouse
 
                 width: 50
                 height: 50
                 radius: 12
-                color: mouseArea.containsMouse ? root.activeColor : "#222222"
+                color: isActive ? root.activeColor : "#222222"
                 border.width: 1
-                border.color: mouseArea.containsMouse ? "#55ffffff" : "transparent"
+                border.color: isActive ? "#55ffffff" : "transparent"
 
-                scale: mouseArea.pressed ? 0.92 : (mouseArea.containsMouse ? 1.08 : 1.0)
+                scale: mouseArea.pressed ? 0.92 : (isActive ? 1.08 : 1.0)
 
                 Behavior on scale {
                     NumberAnimation { duration: 150; easing.type: Easing.OutBack }
@@ -120,7 +159,7 @@ Item {
                     font.family: buttonRect.name === "ocr" ? root.textFontFamily : root.iconFontFamily
                     font.pixelSize: 28
                     font.weight: buttonRect.name === "ocr" ? Font.Bold : Font.Normal
-                    color: mouseArea.containsMouse ? "#000000" : "#ffffff"
+                    color: isActive ? "#000000" : "#ffffff"
 
                     Behavior on color {
                         ColorAnimation { duration: 150 }
@@ -134,9 +173,12 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     preventStealing: true
 
+                    onEntered: {
+                        root.selectedIdx = index;
+                    }
+
                     onClicked: {
-                        console.log("Clicked utility: " + buttonRect.name);
-                        // Functionalities will be added later as requested
+                        root.triggerUtility(index);
                     }
                 }
             }
