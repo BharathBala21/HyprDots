@@ -463,7 +463,12 @@ PanelWindow {
         id: timeObj
     }
 
-
+    IslandRootGestureArea {
+        anchors.fill: parent
+        enabled: root.topGestureInputActive
+        islandController: islandContainer
+        capsule: mainCapsule
+    }
 
     // --- 灵动岛主容器与全局状态 ---
     FocusScope {
@@ -936,18 +941,12 @@ PanelWindow {
         }
 
         function advanceSideSwipeProgress(currentProgress, deltaX) {
-            const minProgress = hasCustomLeftItems ? -1 : 0;
+            const minProgress = 0;
             const maxProgress = 1;
             let nextProgress = Math.max(minProgress, Math.min(maxProgress, currentProgress));
             let remainingDelta = deltaX;
 
             if (remainingDelta > 0) {
-                if (nextProgress < 0) {
-                    const leftDistance = Math.max(1, sideSwipeDragDistanceForDirection("left"));
-                    const progressToCenter = Math.min(-nextProgress, remainingDelta / leftDistance);
-                    nextProgress += progressToCenter;
-                    remainingDelta -= progressToCenter * leftDistance;
-                }
                 if (remainingDelta > 0 && nextProgress >= 0 && nextProgress < maxProgress) {
                     const rightDistance = Math.max(1, sideSwipeDragDistanceForDirection("right"));
                     nextProgress = Math.min(maxProgress, nextProgress + remainingDelta / rightDistance);
@@ -959,10 +958,6 @@ PanelWindow {
                     nextProgress -= progressToCenter;
                     remainingDelta += progressToCenter * rightDistance;
                 }
-                if (remainingDelta < 0 && nextProgress > minProgress && nextProgress <= 0) {
-                    const leftDistance = Math.max(1, sideSwipeDragDistanceForDirection("left"));
-                    nextProgress = Math.max(minProgress, nextProgress + remainingDelta / leftDistance);
-                }
             }
 
             return Math.max(minProgress, Math.min(maxProgress, nextProgress));
@@ -973,20 +968,10 @@ PanelWindow {
             let settleProgress = sideSwipeRestProgressForProgress(startProgress);
             let settleWidth = sideSwipeRestWidthForProgress(startProgress);
 
-            if (hasCustomLeftItems && finalProgress <= -0.56) {
-                settleAction = "custom";
-                settleProgress = -1;
-                settleWidth = customCapsuleWidth;
-            } else if (finalProgress >= 0.56) {
+            if (finalProgress >= 0.56) {
                 settleAction = "utilities";
                 settleProgress = 1;
                 settleWidth = utilitiesCapsuleWidth;
-            } else if (startProgress <= -0.5) {
-                if (finalProgress >= -0.44) {
-                    settleAction = "time";
-                    settleProgress = 0;
-                    settleWidth = 140;
-                }
             } else if (startProgress >= 0.5) {
                 if (finalProgress <= 0.44) {
                     settleAction = "time";
@@ -1371,6 +1356,14 @@ PanelWindow {
             readonly property real targetHeight: {
                 if (root.overviewVisible) return root.overviewCapsuleHeight;
 
+                // Dynamic height scaling during swiping/settling towards utilities
+                if (capsuleMouseArea.sideSwipeInteractive && islandContainer.swipeTransitionProgress > 0) {
+                    return 35 + (84 - 35) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
+                if (islandContainer.sideSwipeSettling && islandContainer.swipeTransitionProgress > 0) {
+                    return 35 + (84 - 35) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
+
                 switch (islandContainer.islandState) {
                 case "control_center":
                     return 408 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
@@ -1386,12 +1379,22 @@ PanelWindow {
                     return notificationLoader.item
                         ? Math.max(56, Math.min(68, notificationLoader.item.preferredHeight))
                         : 56;
+                case "utilities":
+                    return 84;
                 default:
                     return 35;
                 }
             }
             readonly property real targetRadius: {
                 if (root.overviewVisible) return root.overviewCapsuleRadius;
+
+                // Dynamic radius scaling during swiping/settling towards utilities
+                if (capsuleMouseArea.sideSwipeInteractive && islandContainer.swipeTransitionProgress > 0) {
+                    return 19 + (24 - 19) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
+                if (islandContainer.sideSwipeSettling && islandContainer.swipeTransitionProgress > 0) {
+                    return 19 + (24 - 19) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
 
                 switch (islandContainer.islandState) {
                 case "control_center":
@@ -1405,6 +1408,8 @@ PanelWindow {
                     return 40;
                 case "notification":
                     return mainCapsule.targetHeight / 2;
+                case "utilities":
+                    return 24;
                 default:
                     return 19;
                 }
@@ -1444,7 +1449,7 @@ PanelWindow {
                 enabled: !(controlCenterLoader.item && controlCenterLoader.item.batteryDrawerMoving)
 
                 NumberAnimation {
-                    duration: mainCapsule.morphDuration
+                    duration: capsuleMouseArea.sideSwipeInteractive ? 0 : mainCapsule.morphDuration
                     easing.type: Easing.OutQuint
                 }
             }

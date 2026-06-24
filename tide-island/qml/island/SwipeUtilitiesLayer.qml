@@ -10,10 +10,10 @@ Item {
     property bool showCondition: false
     property bool showSecondaryText: true
     property real transitionProgress: 0
-    property real minimumWidth: 328
-    property real maximumWidth: 360
+    property real minimumWidth: 470
+    property real maximumWidth: 490
     property real horizontalPadding: 16
-    property real spacing: 12
+    property real spacing: 10
     property int textPixelSize: 16
 
     readonly property real clampedProgress: Math.max(0, Math.min(1, transitionProgress))
@@ -46,13 +46,13 @@ Item {
 
     ListModel {
         id: utilitiesModel
-        ListElement { name: "screenshot"; icon: "\uf030"; tooltip: "Screenshot" }
-        ListElement { name: "wallpaper"; icon: "\uf03e"; tooltip: "Wallpaper" }
-        ListElement { name: "screenrecord"; icon: "\uf03d"; tooltip: "Screen Record" }
-        ListElement { name: "colorpicker"; icon: "\uf1fb"; tooltip: "Color Picker" }
-        ListElement { name: "ocr"; icon: "\uf031"; tooltip: "Extract Text (OCR)" }
-        ListElement { name: "search"; icon: "\uf1a0"; tooltip: "Visual Search" }
-        ListElement { name: "qr"; icon: "\uf029"; tooltip: "Scan QR/Barcode" }
+        ListElement { name: "screenshot"; icon: "\uf030"; label: "Screen" }
+        ListElement { name: "wallpaper"; icon: "\uf03e"; label: "Wall" }
+        ListElement { name: "screenrecord"; icon: "\uf03d"; label: "Record" }
+        ListElement { name: "colorpicker"; icon: "\uf1fb"; label: "Picker" }
+        ListElement { name: "ocr"; icon: "\uf031"; label: "OCR" }
+        ListElement { name: "search"; icon: "\uf1a0"; label: "Search" }
+        ListElement { name: "qr"; icon: "\uf029"; label: "Scan" }
     }
 
     // The Clock (Visible in normal/resting state, slides out to the right)
@@ -73,7 +73,7 @@ Item {
         wrapMode: Text.NoWrap
     }
 
-    // The Utilities Icons (Slides in from the left)
+    // The Utilities Cards (Slides in from the left)
     Row {
         id: contentRow
         x: itemsX
@@ -89,16 +89,16 @@ Item {
 
                 required property string name
                 required property string icon
-                required property string tooltip
+                required property string label
 
-                width: 32
-                height: 32
-                radius: 16
-                color: mouseArea.containsMouse ? "#33ffffff" : "#11ffffff"
+                width: 54
+                height: 54
+                radius: 14
+                color: mouseArea.containsMouse ? (StyleTokens.accent || "#00f0c2") : "#222222"
                 border.width: 1
                 border.color: mouseArea.containsMouse ? "#55ffffff" : "transparent"
 
-                scale: mouseArea.pressed ? 0.9 : (mouseArea.containsMouse ? 1.1 : 1.0)
+                scale: mouseArea.pressed ? 0.92 : (mouseArea.containsMouse ? 1.08 : 1.0)
 
                 Behavior on scale {
                     NumberAnimation { duration: 150; easing.type: Easing.OutBack }
@@ -110,15 +110,29 @@ Item {
                     ColorAnimation { duration: 150 }
                 }
 
-                Text {
+                Column {
                     anchors.centerIn: parent
-                    text: buttonRect.icon
-                    font.family: root.iconFontFamily
-                    font.pixelSize: 16
-                    color: mouseArea.containsMouse ? "#ffffff" : "#dddddd"
+                    spacing: 4
 
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: buttonRect.icon
+                        font.family: root.iconFontFamily
+                        font.pixelSize: 18
+                        color: mouseArea.containsMouse ? "#000000" : "#ffffff"
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: buttonRect.label
+                        font.family: root.textFontFamily
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                        color: mouseArea.containsMouse ? "#000000" : "#a0a0a0"
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
                     }
                 }
 
