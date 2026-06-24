@@ -202,7 +202,10 @@ FloatingWindow {
 
     Process {
         id: generalReadProcess
-        command: ["cat", "/home/pirate/.local/src/HyprDots/hypr/hyprlua/gui.lua"]
+        command: [
+            "cat",
+            Qt.getenv("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
+        ]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -222,7 +225,10 @@ FloatingWindow {
 
     Process {
         id: decorationReadProcess
-        command: ["cat", "/home/pirate/.local/src/HyprDots/hypr/hyprlua/gui.lua"]
+        command: [
+            "cat",
+            Qt.getenv("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
+        ]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
