@@ -149,6 +149,7 @@ FloatingWindow {
         { keys: "Super+W", desc: "Browser (zen)" },
         { keys: "Super+Shift+C", desc: "Color picker" },
         { keys: "Super+Shift+O", desc: "OCR text capture" },
+        { keys: "Super+Shift+V", desc: "Visual search (Lens)" },
         { keys: "Super+Shift+S", desc: "Snip area" },
         { keys: "Print", desc: "Snip screen" },
         { keys: "Super+Shift+W", desc: "Snip window" },
