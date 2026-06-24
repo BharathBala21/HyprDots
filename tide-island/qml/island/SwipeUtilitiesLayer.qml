@@ -1,8 +1,10 @@
 import QtQuick
+import IslandBackend
 
 Item {
     id: root
 
+    property var shellRootController: null
     property string iconFontFamily: ""
     property string textFontFamily: ""
     property string timeFontFamily: ""
@@ -10,11 +12,14 @@ Item {
     property bool showCondition: false
     property bool showSecondaryText: true
     property real transitionProgress: 0
-    property real minimumWidth: 470
-    property real maximumWidth: 490
+    property real minimumWidth: 454
+    property real maximumWidth: 480
     property real horizontalPadding: 16
-    property real spacing: 10
+    property real spacing: 12
     property int textPixelSize: 16
+
+    readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
+    readonly property color activeColor: themeColors ? themeColors.primary : (StyleTokens.accent || "#00f0c2")
 
     readonly property real clampedProgress: Math.max(0, Math.min(1, transitionProgress))
     readonly property real preferredWidth: minimumWidth
@@ -46,13 +51,13 @@ Item {
 
     ListModel {
         id: utilitiesModel
-        ListElement { name: "screenshot"; icon: "\uf030"; label: "Screen" }
-        ListElement { name: "wallpaper"; icon: "\uf03e"; label: "Wall" }
-        ListElement { name: "screenrecord"; icon: "\uf03d"; label: "Record" }
-        ListElement { name: "colorpicker"; icon: "\uf1fb"; label: "Picker" }
-        ListElement { name: "ocr"; icon: "\uf031"; label: "OCR" }
-        ListElement { name: "search"; icon: "\uf1a0"; label: "Search" }
-        ListElement { name: "qr"; icon: "\uf029"; label: "Scan" }
+        ListElement { name: "screenshot"; icon: "\uf030" }
+        ListElement { name: "wallpaper"; icon: "\uf03e" }
+        ListElement { name: "screenrecord"; icon: "\uf03d" }
+        ListElement { name: "colorpicker"; icon: "\uf1fb" }
+        ListElement { name: "ocr"; icon: "T" }
+        ListElement { name: "search"; icon: "\uf1a0" }
+        ListElement { name: "qr"; icon: "\uf029" }
     }
 
     // The Clock (Visible in normal/resting state, slides out to the right)
@@ -73,7 +78,7 @@ Item {
         wrapMode: Text.NoWrap
     }
 
-    // The Utilities Cards (Slides in from the left)
+    // The Utilities squircle cards (Slides in from the left)
     Row {
         id: contentRow
         x: itemsX
@@ -89,12 +94,11 @@ Item {
 
                 required property string name
                 required property string icon
-                required property string label
 
-                width: 54
-                height: 54
-                radius: 14
-                color: mouseArea.containsMouse ? (StyleTokens.accent || "#00f0c2") : "#222222"
+                width: 50
+                height: 50
+                radius: 12
+                color: mouseArea.containsMouse ? root.activeColor : "#222222"
                 border.width: 1
                 border.color: mouseArea.containsMouse ? "#55ffffff" : "transparent"
 
@@ -110,29 +114,16 @@ Item {
                     ColorAnimation { duration: 150 }
                 }
 
-                Column {
+                Text {
                     anchors.centerIn: parent
-                    spacing: 4
+                    text: buttonRect.icon
+                    font.family: buttonRect.name === "ocr" ? root.textFontFamily : root.iconFontFamily
+                    font.pixelSize: 28
+                    font.weight: buttonRect.name === "ocr" ? Font.Bold : Font.Normal
+                    color: mouseArea.containsMouse ? "#000000" : "#ffffff"
 
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: buttonRect.icon
-                        font.family: root.iconFontFamily
-                        font.pixelSize: 18
-                        color: mouseArea.containsMouse ? "#000000" : "#ffffff"
-
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                    }
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: buttonRect.label
-                        font.family: root.textFontFamily
-                        font.pixelSize: 9
-                        font.weight: Font.DemiBold
-                        color: mouseArea.containsMouse ? "#000000" : "#a0a0a0"
-
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
                     }
                 }
 

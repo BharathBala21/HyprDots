@@ -231,6 +231,13 @@ Scope {
             });
         }
 
+        function toggleUtilities() {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.toggleUtilities)
+                    window.toggleUtilities();
+            });
+        }
+
         function toggleCheatsheet() {
             shellRoot.toggleCheatsheetAll();
         }

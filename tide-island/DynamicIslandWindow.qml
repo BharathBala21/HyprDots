@@ -322,6 +322,10 @@ PanelWindow {
         islandContainer.toggleLauncher();
     }
 
+    function toggleUtilities() {
+        islandContainer.toggleUtilities();
+    }
+
     function toggleClipboard() {
         islandContainer.toggleClipboard();
     }
@@ -463,12 +467,12 @@ PanelWindow {
         id: timeObj
     }
 
-    IslandRootGestureArea {
-        anchors.fill: parent
-        enabled: root.topGestureInputActive
-        islandController: islandContainer
-        capsule: mainCapsule
-    }
+    // IslandRootGestureArea {
+    //     anchors.fill: parent
+    //     enabled: root.topGestureInputActive
+    //     islandController: islandContainer
+    //     capsule: mainCapsule
+    // }
 
     // --- 灵动岛主容器与全局状态 ---
     FocusScope {
@@ -501,7 +505,7 @@ PanelWindow {
         property bool expandedByPlayerAutoOpen: false
         property real customCapsuleWidth: 220
         property real lyricsCapsuleWidth: 220
-        property real utilitiesCapsuleWidth: 328
+        property real utilitiesCapsuleWidth: 454
         property bool sideSwipeSettling: false
         readonly property int defaultAutoHideInterval: 1250
         readonly property int notificationAutoHideInterval: 4200
@@ -521,11 +525,7 @@ PanelWindow {
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
         readonly property bool splitUsesExtendedLayout: splitShowsProgress || splitShowsText
         readonly property real splitCapsuleWidth: splitShowsProgress ? 248 : (splitShowsText ? 220 : 140)
-        readonly property bool canShowSideSwipe: islandState === "normal"
-            || islandState === "custom"
-            || islandState === "lyrics"
-            || islandState === "utilities"
-            || (islandState === "long_capsule" && workspaceOriginSide === "none")
+        readonly property bool canShowSideSwipe: false
         readonly property real rightSwipeProgress: Math.max(0, swipeTransitionProgress)
         readonly property var customLeftItems: systemState.customLeftItems
         readonly property bool hasCustomLeftItems: systemState.hasCustomLeftItems
@@ -1200,6 +1200,22 @@ PanelWindow {
                 showWallpapers();
         }
 
+        function showUtilities() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "utilities";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function toggleUtilities() {
+            if (islandState === "utilities")
+                smartRestoreState();
+            else
+                showUtilities();
+        }
+
         function showCustomCapsule() {
             if (!hasCustomLeftItems) {
                 showTimeCapsule();
@@ -1636,7 +1652,7 @@ PanelWindow {
                 id: twoFingerTouchArea
                 anchors.fill: parent
                 z: 0
-                enabled: !root.overviewVisible
+                enabled: false
                 mouseEnabled: false
                 minimumTouchPoints: 2
                 maximumTouchPoints: 2
@@ -1776,13 +1792,14 @@ PanelWindow {
 
                 sourceComponent: Component {
                     SwipeUtilitiesLayer {
+                        shellRootController: root.shellRootController
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         timeFontFamily: root.timeFontFamily
                         timeText: timeObj.currentTime
                         showSecondaryText: islandContainer.workspaceOriginSide !== "right"
                             && islandContainer.splitOriginSide !== "right"
-                        transitionProgress: islandContainer.rightSwipeProgress
+                        transitionProgress: islandContainer.islandState === "utilities" ? 1.0 : islandContainer.rightSwipeProgress
                         showCondition: true
                         onPreferredWidthChanged: islandContainer.syncUtilitiesCapsuleWidth()
                     }

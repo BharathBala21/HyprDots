@@ -89,6 +89,13 @@ hl.bind(
     { release = true }
 )
 
+hl.bind(
+    "SUPER + U",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleUtilities"
+    )
+)
+
 
 --application binds
 -- hl.bind(mainMod .. " +ALT+E", hl.dsp.exec_cmd("kitty yazi"))
