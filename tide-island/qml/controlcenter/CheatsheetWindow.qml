@@ -153,10 +153,7 @@ FloatingWindow {
         { keys: "Super+Shift+S", desc: "Snip area" },
         { keys: "Print", desc: "Snip screen" },
         { keys: "Super+Shift+W", desc: "Snip window" },
-        { keys: "Super+R", desc: "Screen recording" },
-        { keys: "Vol Up/Down", desc: "Adjust volume" },
-        { keys: "Mute/Mic Mute", desc: "Toggle audio/mic" },
-        { keys: "Bright Up/Down", desc: "Adjust brightness" }
+        { keys: "Super+R", desc: "Screen recording" }
     ]
 
     // Background styling with custom rounding to match tide-island theme

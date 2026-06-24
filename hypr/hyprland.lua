@@ -11,6 +11,7 @@ require("hyprlua.input")
 require("hyprlua.misc")
 require("hyprlua.layout")
 require("hyprlua.gui")
+require("hyprlua.custom.exec")
 
 hl.env("HYPRCURSOR_THEME", "Moga")
 hl.env("HYPRCURSOR_SIZE", "24")
