@@ -6,4 +6,4 @@ kitty/themes/Matugen.conf
 yazi/theme.toml
 fish/fish_variables
 hypr/hyprlua/gui.lua
-hypr/hyprlua/custom/exec.lua
+hypr/hyprlua/custom/*

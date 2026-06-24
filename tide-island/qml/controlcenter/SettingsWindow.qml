@@ -202,7 +202,10 @@ FloatingWindow {
 
     Process {
         id: generalReadProcess
-        command: ["cat", "/home/pirate/.local/src/HyprDots/hypr/hyprlua/gui.lua"]
+        command: [
+            "cat",
+            Qt.getenv("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
+        ]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -222,7 +225,10 @@ FloatingWindow {
 
     Process {
         id: decorationReadProcess
-        command: ["cat", "/home/pirate/.local/src/HyprDots/hypr/hyprlua/gui.lua"]
+        command: [
+            "cat",
+            Qt.getenv("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
+        ]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -274,7 +280,7 @@ FloatingWindow {
 
     Process {
         id: rulesReadProcess
-        command: ["python3", "/home/pirate/.local/src/HyprDots/tide-island/bin/update_hypr_config.py", "--get-window-rules"]
+        command: ["python3", "~/.local/src/HyprDots/tide-island/bin/update_hypr_config.py", "--get-window-rules"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {

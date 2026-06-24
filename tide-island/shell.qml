@@ -16,12 +16,16 @@ Scope {
     property bool cheatsheetWindowOpen: false
 
     function getHomePath() {
+        const envHome = Quickshell.env("HOME") || "";
+        if (envHome) {
+            return envHome;
+        }
         const configPath = UserConfig.userConfigPath || "";
         const idx = configPath.indexOf("/.config/");
         if (idx !== -1) {
             return configPath.substring(0, idx);
         }
-        return "/home/aashiq";
+        return "/home/" + (Quickshell.env("USER") || "user");
     }
 
     FileView {
