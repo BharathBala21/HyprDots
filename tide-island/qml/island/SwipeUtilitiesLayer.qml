@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import IslandBackend
 
 Item {
@@ -14,10 +13,10 @@ Item {
     property bool showCondition: false
     property bool showSecondaryText: true
     property real transitionProgress: 0
-    property real minimumWidth: 454
-    property real maximumWidth: 480
+    property real minimumWidth: 470
+    property real maximumWidth: 490
     property real horizontalPadding: 16
-    property real spacing: 12
+    property real spacing: 10
     property int textPixelSize: 16
     property int selectedIdx: 0
 
@@ -88,13 +87,13 @@ Item {
 
     ListModel {
         id: utilitiesModel
-        ListElement { name: "screenshot"; icon: "\uf030"; tooltip: "Screenshot" }
-        ListElement { name: "wallpaper"; icon: "\uf03e"; tooltip: "Wallpaper Picker" }
-        ListElement { name: "screenrecord"; icon: "\uf03d"; tooltip: "Screen Recorder" }
-        ListElement { name: "colorpicker"; icon: "\uf1fb"; tooltip: "Color Picker" }
-        ListElement { name: "ocr"; icon: "T"; tooltip: "Extract Text (OCR)" }
-        ListElement { name: "search"; icon: "\uf1a0"; tooltip: "Visual Search" }
-        ListElement { name: "qr"; icon: "\uf029"; tooltip: "Scan QR/Barcode" }
+        ListElement { name: "screenshot"; icon: "\uf030"; label: "Screen" }
+        ListElement { name: "wallpaper"; icon: "\uf03e"; label: "Wallpaper" }
+        ListElement { name: "screenrecord"; icon: "\uf03d"; label: "Record" }
+        ListElement { name: "colorpicker"; icon: "\uf1fb"; label: "Picker" }
+        ListElement { name: "ocr"; icon: "T"; label: "OCR" }
+        ListElement { name: "search"; icon: "\uf1a0"; label: "Search" }
+        ListElement { name: "qr"; icon: "\uf029"; label: "Scan" }
     }
 
     // The Clock (Visible in normal/resting state, slides out to the right)
@@ -132,13 +131,13 @@ Item {
                 required property string name
                 required property string icon
                 required property int index
-                required property string tooltip
+                required property string label
 
                 readonly property bool isActive: (root.selectedIdx === index) || mouseArea.containsMouse
 
-                width: 50
-                height: 50
-                radius: 12
+                width: 54
+                height: 54
+                radius: 14
                 color: isActive ? root.activeColor : "#222222"
                 border.width: 1
                 border.color: isActive ? "#55ffffff" : "transparent"
@@ -155,16 +154,34 @@ Item {
                     ColorAnimation { duration: 150 }
                 }
 
-                Text {
+                Column {
                     anchors.centerIn: parent
-                    text: buttonRect.icon
-                    font.family: buttonRect.name === "ocr" ? root.textFontFamily : root.iconFontFamily
-                    font.pixelSize: 28
-                    font.weight: buttonRect.name === "ocr" ? Font.Bold : Font.Normal
-                    color: isActive ? "#000000" : "#ffffff"
+                    spacing: 3
 
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: buttonRect.icon
+                        font.family: buttonRect.name === "ocr" ? root.textFontFamily : root.iconFontFamily
+                        font.pixelSize: 16
+                        font.weight: buttonRect.name === "ocr" ? Font.Medium : Font.Normal
+                        color: isActive ? "#000000" : "#ffffff"
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: buttonRect.label
+                        font.family: root.textFontFamily
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                        color: isActive ? "#000000" : "#a0a0a0"
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
                     }
                 }
 
@@ -181,45 +198,6 @@ Item {
 
                     onClicked: {
                         root.triggerUtility(index);
-                    }
-                }
-
-                ToolTip {
-                    id: controlToolTip
-                    visible: mouseArea.containsMouse || (root.activeFocus && root.selectedIdx === index)
-                    delay: mouseArea.containsMouse ? 150 : 0
-                    timeout: 5000
-                    text: buttonRect.tooltip
-                    x: (parent.width - width) / 2
-                    y: parent.height + 8
-                    leftPadding: 12
-                    rightPadding: 12
-                    topPadding: 8
-                    bottomPadding: 8
-
-                    contentItem: Text {
-                        text: controlToolTip.text
-                        font.family: root.textFontFamily
-                        font.pixelSize: 11
-                        font.weight: Font.DemiBold
-                        color: "#ffffff"
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-
-                    background: Rectangle {
-                        color: "#18181b"
-                        border.color: Qt.rgba(1, 1, 1, 0.15)
-                        border.width: 1
-                        radius: 8
-                        clip: true
-
-                        Rectangle {
-                            anchors.top: parent.top
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            height: 2
-                            color: root.activeColor
-                        }
                     }
                 }
             }
