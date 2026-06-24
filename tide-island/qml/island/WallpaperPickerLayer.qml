@@ -84,7 +84,8 @@ FocusScope {
 
     function confirmWallpaper(path) {
         previewWallpaper(path);
-        root.initialWallpaper = path; // Confirm it as the active wallpaper (reverting won't change it back)
+        Quickshell.execDetached(["matugen", "image", "-v", "--source-color-index", "0", path]);
+        root.initialWallpaper = path; // Confirm it as the active wallpaper (reverting won't change it back)    
         root.closeRequested();
     }
 
