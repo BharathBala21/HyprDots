@@ -518,7 +518,7 @@ PanelWindow {
         property bool expandedByPlayerAutoOpen: false
         property real customCapsuleWidth: 220
         property real lyricsCapsuleWidth: 220
-        property real utilitiesCapsuleWidth: 470
+        property real utilitiesCapsuleWidth: 614
         property bool sideSwipeSettling: false
         readonly property int defaultAutoHideInterval: 1250
         readonly property int notificationAutoHideInterval: 4200

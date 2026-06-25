@@ -13,8 +13,8 @@ Item {
     property bool showCondition: false
     property bool showSecondaryText: true
     property real transitionProgress: 0
-    property real minimumWidth: 470
-    property real maximumWidth: 490
+    property real minimumWidth: 614
+    property real maximumWidth: 640
     property real horizontalPadding: 16
     property real spacing: 10
     property int textPixelSize: 16
@@ -87,13 +87,14 @@ Item {
 
     ListModel {
         id: utilitiesModel
-        ListElement { name: "screenshot"; icon: "\uf030"; label: "Screen" }
+        ListElement { name: "screenshot"; icon: "\uf030"; label: "Screenshot" }
         ListElement { name: "wallpaper"; icon: "\uf03e"; label: "Wallpaper" }
         ListElement { name: "screenrecord"; icon: "\uf03d"; label: "Record" }
         ListElement { name: "colorpicker"; icon: "\uf1fb"; label: "Picker" }
         ListElement { name: "ocr"; icon: "T"; label: "OCR" }
         ListElement { name: "search"; icon: "\uf1a0"; label: "Search" }
         ListElement { name: "qr"; icon: "\uf029"; label: "Scan" }
+        ListElement { name: "mirror"; icon: ""; label: "Mirror" }
     }
 
     // The Clock (Visible in normal/resting state, slides out to the right)
@@ -135,9 +136,9 @@ Item {
 
                 readonly property bool isActive: (root.selectedIdx === index) || mouseArea.containsMouse
 
-                width: 54
-                height: 54
-                radius: 14
+                width: 64
+                height: 64
+                radius: 16
                 color: isActive ? root.activeColor : "#222222"
                 border.width: 1
                 border.color: isActive ? "#55ffffff" : "transparent"
@@ -156,18 +157,90 @@ Item {
 
                 Column {
                     anchors.centerIn: parent
-                    spacing: 3
+                    spacing: 4
 
                     Text {
+                        id: iconText
+                        visible: buttonRect.name !== "mirror"
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: buttonRect.icon
                         font.family: buttonRect.name === "ocr" ? root.textFontFamily : root.iconFontFamily
-                        font.pixelSize: 16
+                        font.pixelSize: 18
                         font.weight: buttonRect.name === "ocr" ? Font.Medium : Font.Normal
                         color: isActive ? "#000000" : "#ffffff"
 
                         Behavior on color {
                             ColorAnimation { duration: 150 }
+                        }
+                    }
+
+                    Item {
+                        id: webcamIcon
+                        visible: buttonRect.name === "mirror"
+                        width: 18
+                        height: 18
+                        anchors.horizontalCenter: parent.horizontalCenter
+
+                        property color iconColor: isActive ? "#000000" : "#ffffff"
+
+                        Behavior on iconColor {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        // Outer ring of the webcam body
+                        Rectangle {
+                            id: outerRing
+                            width: 12
+                            height: 12
+                            radius: 6
+                            color: "transparent"
+                            border.color: webcamIcon.iconColor
+                            border.width: 1.5
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top
+                            anchors.topMargin: 1
+
+                            // Inner ring / lens aperture
+                            Rectangle {
+                                width: 6
+                                height: 6
+                                radius: 3
+                                color: "transparent"
+                                border.color: webcamIcon.iconColor
+                                border.width: 1
+                                anchors.centerIn: parent
+
+                                // Center lens dot
+                                Rectangle {
+                                    width: 2
+                                    height: 2
+                                    radius: 1
+                                    color: webcamIcon.iconColor
+                                    anchors.centerIn: parent
+                                }
+                            }
+                        }
+
+                        // Stand leg (stem)
+                        Rectangle {
+                            id: stem
+                            width: 1.5
+                            height: 3
+                            color: webcamIcon.iconColor
+                            anchors.top: outerRing.bottom
+                            anchors.topMargin: -0.5
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+
+                        // Stand base
+                        Rectangle {
+                            width: 12
+                            height: 1.5
+                            radius: 0.75
+                            color: webcamIcon.iconColor
+                            anchors.top: stem.bottom
+                            anchors.topMargin: -0.5
+                            anchors.horizontalCenter: parent.horizontalCenter
                         }
                     }
 
