@@ -69,6 +69,8 @@ Item {
                     anchors.fill: parent
                     source: delegateRoot.itemData.icon ? delegateRoot.itemData.icon : ""
                     fillMode: Image.PreserveAspectFit
+                    sourceSize: Qt.size(20, 20)
+                    asynchronous: true
                 }
 
                 // Fallback text if the icon is not available

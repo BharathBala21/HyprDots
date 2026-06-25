@@ -646,7 +646,7 @@ PanelWindow {
         Behavior on osdProgress {
             enabled: islandContainer.osdProgressAnimationEnabled
 
-            SmoothedAnimation { velocity: 1.2; duration: 180; easing.type: Easing.InOutQuad }
+            NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
         }
         Behavior on swipeTransitionProgress {
             NumberAnimation {

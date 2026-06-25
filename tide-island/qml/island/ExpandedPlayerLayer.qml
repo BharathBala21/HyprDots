@@ -99,6 +99,7 @@ Item {
                         fillMode: Image.PreserveAspectCrop
                         visible: source.toString() !== ""
                         sourceSize: Qt.size(120, 120)
+                        asynchronous: true
                     }
                 }
 

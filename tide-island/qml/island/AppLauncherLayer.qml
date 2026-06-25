@@ -353,6 +353,7 @@ FocusScope {
                                     smooth: true
                                     mipmap: true
                                     sourceSize: Qt.size(40, 40)
+                                    asynchronous: true
                                     
                                     onStatusChanged: {
                                         if (status === Image.Error) {

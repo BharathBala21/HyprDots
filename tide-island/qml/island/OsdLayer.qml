@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 import IslandBackend
 
 Item {
@@ -94,37 +95,41 @@ Item {
                 border.width: 1
             }
 
-            Canvas {
+            Shape {
                 anchors.fill: parent
-                antialiasing: true
-                property real progressValue: Math.max(0, Math.min(1, progress))
+                layer.enabled: true
+                layer.samples: 4
 
-                onProgressValueChanged: requestPaint()
-                onWidthChanged: requestPaint()
-                onHeightChanged: requestPaint()
+                ShapePath {
+                    strokeColor: Qt.rgba(1, 1, 1, 0.16)
+                    strokeWidth: 3.5
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
 
-                onPaint: {
-                    var ctx = getContext("2d");
-                    var size = Math.min(width, height);
-                    var lineWidth = 3.5;
-                    var center = size / 2;
-                    var radius = (size - lineWidth) / 2 - 0.5;
-                    var startAngle = -Math.PI / 2;
-                    var endAngle = startAngle + (Math.PI * 2 * progressValue);
+                    PathAngleArc {
+                        centerX: 15
+                        centerY: 15
+                        radiusX: 12.75
+                        radiusY: 12.75
+                        startAngle: 0
+                        sweepAngle: 360
+                    }
+                }
 
-                    ctx.clearRect(0, 0, width, height);
-                    ctx.lineCap = "round";
-                    ctx.lineWidth = lineWidth;
+                ShapePath {
+                    strokeColor: "#ffffff"
+                    strokeWidth: 3.5
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
 
-                    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
-                    ctx.beginPath();
-                    ctx.arc(center, center, radius, 0, Math.PI * 2, false);
-                    ctx.stroke();
-
-                    ctx.strokeStyle = "#ffffff";
-                    ctx.beginPath();
-                    ctx.arc(center, center, radius, startAngle, endAngle, false);
-                    ctx.stroke();
+                    PathAngleArc {
+                        centerX: 15
+                        centerY: 15
+                        radiusX: 12.75
+                        radiusY: 12.75
+                        startAngle: -90
+                        sweepAngle: 360 * Math.max(0, Math.min(1, progress))
+                    }
                 }
             }
         }
