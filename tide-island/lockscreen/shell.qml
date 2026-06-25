@@ -32,7 +32,7 @@ ShellRoot {
     // Process to terminate Quickshell when successfully unlocked
     Process {
         id: terminator
-        command: ["sh", "-c", "kill -9 $PPID"]
+        command: ["sh", "-c", "kill $PPID"]
     }
 
     // Matugen Colors Integration
@@ -63,12 +63,22 @@ ShellRoot {
 
     readonly property var themeColors: parseColorsQml(colorsWatcher.text())
 
+    Timer {
+        id: quitTimer
+        interval: 200 // 200ms delay to allow Wayland round-trip to complete before exit
+        running: false
+        repeat: false
+        onTriggered: {
+            terminator.running = true;
+        }
+    }
+
     function unlockSession() {
         console.log("Unlocking session and quitting...");
         if (!testMode && lockLoader.item) {
             lockLoader.item.locked = false;
         }
-        terminator.running = true;
+        quitTimer.start();
     }
 
     // --- TEST MODE (Runs in a Window overlay for validation) ---
