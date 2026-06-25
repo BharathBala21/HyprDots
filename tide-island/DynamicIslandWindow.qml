@@ -463,12 +463,7 @@ PanelWindow {
         id: timeObj
     }
 
-    // IslandRootGestureArea {
-    //     anchors.fill: parent
-    //     enabled: root.topGestureInputActive
-    //     islandController: islandContainer
-    //     capsule: mainCapsule
-    // }
+
 
     // --- 灵动岛主容器与全局状态 ---
     FocusScope {
