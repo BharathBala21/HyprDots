@@ -28,7 +28,7 @@ LOG_FILE = os.path.join(cache_dir, "visual_search_lens", "visual_search.log")
 
 BANNER = f"""
 {BLUE}{BOLD}┌────────────────────────────────────────────────────────┐
-│             👁️   ANTIGRAVITY VISUAL LENS   👁️             │
+│             👁️  VISUAL LENS   👁️             │
 │        Auto-Detecting Browser & Google Lens Search     │
 └────────────────────────────────────────────────────────┘{RESET}
 """
@@ -296,7 +296,7 @@ def upload_image(file_path):
             raise Exception(f"Upload failed: {res_json}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Antigravity Visual Lens - Google Lens visual search and OCR.")
+    parser = argparse.ArgumentParser(description="Visual Lens - Google Lens visual search and OCR.")
     parser.add_argument("-f", "--file", help="Path to an existing image file (skip screen cropping).")
     parser.add_argument("-o", "--ocr-only", action="store_true", help="Perform offline OCR only; do not upload to Google Lens.")
     parser.add_argument("-l", "--lens-only", action="store_true", help="Perform Google Lens visual search only; skip offline OCR.")
@@ -304,7 +304,7 @@ def main():
     
     args = parser.parse_args()
     
-    log_debug("--- Starting Antigravity Visual Search ---")
+    log_debug("--- Starting Visual Search ---")
     
     # 1. Acquire Image
     image_path = None
