@@ -188,7 +188,7 @@ hl.bind("CTRL + SHIFT + code:9",
 )
 
 -- Lock screen
-hl.bind("SUPER + L", hl.dsp.exec_cmd("~/.local/share/quickshell-lockscreen/lock.sh"))
+hl.bind("SUPER + L", hl.dsp.exec_cmd("~/.local/src/HyprDots/tide-island/lockscreen/lock.sh"))
 
 -- Cheatsheet toggle
 hl.bind(
