@@ -58,3 +58,12 @@ hl.window_rule({
     no_blur=true,
     dim_around  = true
 })
+
+-- Float and center the Mirror & Camera Recorder window
+hl.window_rule({
+    match = { title = "Mirror & Camera Recorder" },
+    float = true,
+    size = { 960, 540 },
+    center = true
+})
+
