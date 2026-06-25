@@ -243,14 +243,15 @@ ApplicationWindow {
 
                             // Popup drop list container
                             popup: Popup {
+                                id: comboPopup
                                 y: cameraSelect.height + 4
                                 width: cameraSelect.width
-                                implicitHeight: Math.min(200, contentItem.contentHeight) // Fixed: use contentHeight
+                                height: Math.min(200, comboListView.contentHeight + 8) // Fixed: height resolved dynamically from list view
                                 padding: 4
 
                                 contentItem: ListView {
+                                    id: comboListView
                                     clip: true
-                                    implicitHeight: contentHeight
                                     model: cameraSelect.popup.visible ? cameraSelect.delegateModel : null
                                     currentIndex: cameraSelect.highlightedIndex
 
@@ -273,7 +274,7 @@ ApplicationWindow {
                                 height: 32
                                 
                                 contentItem: Text {
-                                    text: modelData ? (modelData.description || modelData) : description // Robust property resolution
+                                    text: model[cameraSelect.textRole] // Fixed: retrieve textual value directly from textual key mapping
                                     color: highlighted ? root.activeTheme.background : root.activeTheme.on_surface
                                     font.family: root.textFont
                                     font.pointSize: 9
@@ -438,7 +439,7 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignHCenter
                         spacing: 15
 
-                        // Pause Button (calls record() to resume recording natively)
+                        // Custom Vector Pause Button
                         Rectangle {
                             id: btnPause
                             width: 36
@@ -450,12 +451,40 @@ ApplicationWindow {
                             visible: root.recording || root.paused
                             enabled: root.recording || root.paused
 
-                            Text {
+                            // Vector drawn pause lines (highly precise spacing and dimension)
+                            Item {
                                 anchors.centerIn: parent
-                                text: root.paused ? "▶" : "‖"
-                                color: parent.enabled ? root.activeTheme.on_surface : "#4cffffff"
-                                font.family: root.textFont
-                                font.pointSize: 9
+                                width: 14
+                                height: 14
+
+                                // Play triangle (displayed when paused)
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "▶"
+                                    color: btnPause.enabled ? root.activeTheme.on_surface : "#4cffffff"
+                                    font.pointSize: 9
+                                    visible: root.paused
+                                }
+
+                                // Shorter, slimmer pause bars with 4px gap (displayed when recording)
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 4
+                                    visible: !root.paused
+
+                                    Rectangle {
+                                        width: 3
+                                        height: 12
+                                        radius: 1
+                                        color: btnPause.enabled ? root.activeTheme.on_surface : "#4cffffff"
+                                    }
+                                    Rectangle {
+                                        width: 3
+                                        height: 12
+                                        radius: 1
+                                        color: btnPause.enabled ? root.activeTheme.on_surface : "#4cffffff"
+                                    }
+                                }
                             }
 
                             MouseArea {
