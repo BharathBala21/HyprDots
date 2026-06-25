@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Services.Pam
+import Quickshell.Services.Mpris
 
 Item {
     id: rootItem
@@ -24,6 +25,25 @@ Item {
     readonly property color colorSecondaryContainer: themeColors ? themeColors.secondary_container : Qt.rgba(1, 1, 1, 0.08)
     readonly property color colorOnSecondaryContainer: themeColors ? themeColors.on_secondary_container : "#f8fafc"
     readonly property color colorError: themeColors ? themeColors.error : "#f43f5e"
+
+    // Evaluate and track the currently active media player
+    readonly property var activePlayer: {
+        if (!Mpris.players || !Mpris.players.values || Mpris.players.values.length === 0) return null;
+        for (let i = 0; i < Mpris.players.values.length; i++) {
+            let p = Mpris.players.values[i];
+            if (p && (p.playbackState === MprisPlaybackState.Playing || p.playbackState === 1 || p.isPlaying)) {
+                return p;
+            }
+        }
+        // Fallback to the first player that has a title
+        for (let i = 0; i < Mpris.players.values.length; i++) {
+            let p = Mpris.players.values[i];
+            if (p && p.trackTitle) {
+                return p;
+            }
+        }
+        return null;
+    }
 
     // Format date and time
     function updateTime() {
@@ -96,6 +116,14 @@ Item {
         anchors.fill: parent
         color: "black"
         opacity: 0.45
+    }
+
+    // Background interaction to trigger password field
+    MouseArea {
+        anchors.fill: parent
+        onClicked: {
+            rootItem.showPasswordField();
+        }
     }
 
 
@@ -275,7 +303,7 @@ Item {
                     color: colorOnSurface
                     echoMode: TextInput.Password
                     passwordCharacter: "•"
-                    passwordMaskDelay: 600
+                    passwordMaskDelay: 0
                     selectByMouse: true
                     
                     focus: false
@@ -394,7 +422,7 @@ Item {
         if (!passwordFieldVisible) {
             passwordFieldVisible = true;
             passwordInput.forceActiveFocus();
-            statusText.text = qsTr("Enter password to unlock");
+            statusText.text = qsTr("Enter Password");
             statusText.color = colorOnSurfaceVariant;
         }
     }
@@ -407,6 +435,7 @@ Item {
             }
             passwordFieldVisible = false;
             passwordInput.text = "";
+            passwordInput.echoMode = TextInput.Password;
             passwordInput.focus = false;
             rootItem.forceActiveFocus();
         }
@@ -458,13 +487,7 @@ Item {
         }
     }
 
-    // Background interaction to trigger password field
-    MouseArea {
-        anchors.fill: parent
-        onClicked: {
-            rootItem.showPasswordField();
-        }
-    }
+
 
     // PAM Authentication Context
     PamContext {
@@ -493,6 +516,7 @@ Item {
                 statusText.color = colorError; // Error color
                 shakeAnimation.start();
                 passwordInput.text = "";
+                passwordInput.echoMode = TextInput.Password;
                 passwordInput.forceActiveFocus();
                 
                 // Reset authentication context state
@@ -667,6 +691,224 @@ Item {
                 hoverEnabled: true
                 onClicked: {
                     Quickshell.execDetached(["systemctl", "poweroff"]);
+                }
+            }
+        }
+    }
+
+    // Media Player Card Wrapper (handles animations and positioning)
+    Item {
+        id: mediaContainer
+        width: 320
+        height: 76
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.margins: 32
+
+        // Fade and slide transition when active player exists
+        opacity: activePlayer !== null ? 1.0 : 0.0
+        visible: opacity > 0.0
+
+        transform: Translate {
+            y: activePlayer !== null ? 0 : 20
+            Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        }
+
+        Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutQuad } }
+
+        // Soft Ambient Glow behind the card (matches the clock's glow using primary Matugen color)
+        Rectangle {
+            id: glowEffect
+            anchors.fill: parent
+            anchors.margins: -8
+            radius: 24
+            color: colorPrimary
+            opacity: 0.12
+            
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                blurEnabled: true
+                blurMax: 32
+                blur: 1.0
+            }
+        }
+
+        // Main Glassmorphic Card with top-to-bottom subtle gradient
+        Rectangle {
+            id: mediaCard
+            anchors.fill: parent
+            radius: 16
+            
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.rgba(colorSecondaryContainer.r, colorSecondaryContainer.g, colorSecondaryContainer.b, 0.45) }
+                GradientStop { position: 1.0; color: Qt.rgba(colorSecondaryContainer.r, colorSecondaryContainer.g, colorSecondaryContainer.b, 0.15) }
+            }
+
+            border.width: 1
+            border.color: Qt.rgba(colorOutline.r, colorOutline.g, colorOutline.b, 0.5)
+
+            Row {
+                id: contentRow
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 12
+
+                // Cover Art Container
+                Rectangle {
+                    width: 56
+                    height: 56
+                    radius: 8
+                    color: Qt.rgba(1, 1, 1, 0.05)
+                    border.width: 1
+                    border.color: Qt.rgba(colorOutline.r, colorOutline.g, colorOutline.b, 0.3)
+                    clip: true
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Image {
+                        id: coverArtImage
+                        anchors.fill: parent
+                        source: {
+                            if (!activePlayer || !activePlayer.trackArtUrl) return "";
+                            let url = activePlayer.trackArtUrl.toString();
+                            // Correct deprecated Spotify cover art domains
+                            if (url.indexOf("open.spotify.com/image/") !== -1) {
+                                return url.replace("open.spotify.com/image/", "i.scdn.co/image/");
+                            }
+                            return url;
+                        }
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                    }
+
+                    Text {
+                        text: "" // Music symbol
+                        font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
+                        font.pixelSize: 20
+                        color: colorPrimary
+                        anchors.centerIn: parent
+                        visible: coverArtImage.status !== Image.Ready
+                    }
+                }
+
+                // Info & Controls Column
+                Column {
+                    width: parent.width - 56 - 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
+
+                    // Track Title & Artist Info
+                    Column {
+                        width: parent.width
+                        spacing: 1
+
+                        Text {
+                            width: parent.width
+                            text: activePlayer ? activePlayer.trackTitle : ""
+                            color: colorOnSurface
+                            font.family: "Noto Sans, sans-serif"
+                            font.pixelSize: 13
+                            font.weight: Font.Bold
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: activePlayer ? activePlayer.trackArtist : ""
+                            color: colorOnSurfaceVariant
+                            font.family: "Noto Sans, sans-serif"
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    // Control Buttons Row
+                    Row {
+                        spacing: 10
+
+                        // Previous Button
+                        Item {
+                            width: 24
+                            height: 24
+                            scale: mouseAreaPrev.containsMouse ? 1.15 : 1.0
+                            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+                            Text {
+                                text: ""
+                                font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
+                                font.pixelSize: 14
+                                color: mouseAreaPrev.containsMouse ? colorOnSurfaceVariant : colorPrimary
+                                anchors.centerIn: parent
+                                style: Text.Outline
+                                styleColor: "#22000000"
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: mouseAreaPrev
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    if (activePlayer) activePlayer.previous();
+                                }
+                            }
+                        }
+
+                        // Play / Pause Button
+                        Item {
+                            width: 24
+                            height: 24
+                            scale: mouseAreaPlay.containsMouse ? 1.15 : 1.0
+                            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+                            Text {
+                                text: activePlayer && (activePlayer.playbackState === MprisPlaybackState.Playing || activePlayer.playbackState === 1 || activePlayer.isPlaying) ? "" : ""
+                                font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
+                                font.pixelSize: 14
+                                color: mouseAreaPlay.containsMouse ? colorOnSurfaceVariant : colorPrimary
+                                anchors.centerIn: parent
+                                style: Text.Outline
+                                styleColor: "#22000000"
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: mouseAreaPlay
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    if (activePlayer) activePlayer.togglePlaying();
+                                }
+                            }
+                        }
+
+                        // Next Button
+                        Item {
+                            width: 24
+                            height: 24
+                            scale: mouseAreaNext.containsMouse ? 1.15 : 1.0
+                            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+                            Text {
+                                text: ""
+                                font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
+                                font.pixelSize: 14
+                                color: mouseAreaNext.containsMouse ? colorOnSurfaceVariant : colorPrimary
+                                anchors.centerIn: parent
+                                style: Text.Outline
+                                styleColor: "#22000000"
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: mouseAreaNext
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    if (activePlayer) activePlayer.next();
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
