@@ -558,4 +558,117 @@ Item {
             }
         }
     }
+
+    // Power Options Dock in the bottom-right corner
+    Row {
+        id: powerDock
+        spacing: 12
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 32
+
+        opacity: 0.0
+        transform: Translate {
+            id: powerDockTranslate
+            y: 30
+            Behavior on y { NumberAnimation { duration: 800; easing.type: Easing.OutCubic } }
+        }
+
+        Component.onCompleted: {
+            powerDock.opacity = 1.0;
+            powerDockTranslate.y = 0;
+        }
+
+        Behavior on opacity { NumberAnimation { duration: 600; easing.type: Easing.OutQuad } }
+
+        // Sleep Button
+        Item {
+            width: 36
+            height: 36
+            scale: mouseAreaSleep.containsMouse ? 1.15 : 1.0
+            
+            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+            Text {
+                text: "" // Nerd Font Moon/Sleep icon
+                font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
+                font.pixelSize: 22
+                color: mouseAreaSleep.containsMouse ? colorPrimary : colorOnSurfaceVariant
+                anchors.centerIn: parent
+                
+                style: Text.Outline
+                styleColor: "#22000000"
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+
+            MouseArea {
+                id: mouseAreaSleep
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: {
+                    Quickshell.execDetached(["systemctl", "suspend"]);
+                }
+            }
+        }
+
+        // Reboot Button
+        Item {
+            width: 36
+            height: 36
+            scale: mouseAreaReboot.containsMouse ? 1.15 : 1.0
+            
+            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+            Text {
+                text: "" // Nerd Font Sync/Reboot icon
+                font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
+                font.pixelSize: 22
+                color: mouseAreaReboot.containsMouse ? colorPrimary : colorOnSurfaceVariant
+                anchors.centerIn: parent
+                
+                style: Text.Outline
+                styleColor: "#22000000"
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+
+            MouseArea {
+                id: mouseAreaReboot
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: {
+                    Quickshell.execDetached(["systemctl", "reboot"]);
+                }
+            }
+        }
+
+        // Shutdown Button
+        Item {
+            width: 36
+            height: 36
+            scale: mouseAreaShutdown.containsMouse ? 1.15 : 1.0
+            
+            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+            Text {
+                text: "" // Nerd Font Power/Shutdown icon
+                font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
+                font.pixelSize: 22
+                color: mouseAreaShutdown.containsMouse ? colorPrimary : colorOnSurfaceVariant
+                anchors.centerIn: parent
+                
+                style: Text.Outline
+                styleColor: "#22000000"
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+
+            MouseArea {
+                id: mouseAreaShutdown
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: {
+                    Quickshell.execDetached(["systemctl", "poweroff"]);
+                }
+            }
+        }
+    }
 }
