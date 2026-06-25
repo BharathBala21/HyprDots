@@ -160,6 +160,7 @@ hl.bind("Print", hl.dsp.exec_cmd("hyprshot -z -m output"))
 hl.bind(mainMod .. " +SHIFT + W", hl.dsp.exec_cmd("hyprshot -z -m window"))
 hl.bind(mainMod .. " +SHIFT + O", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/ocr.sh"))
 hl.bind(mainMod .. " +SHIFT + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/visual_search.sh"))
+hl.bind(mainMod .. " +SHIFT + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/qr_barcode.sh"))
 
 --wf-Recorder
 hl.bind(mainMod .. " + R", function()
