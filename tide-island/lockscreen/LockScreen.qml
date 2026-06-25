@@ -593,7 +593,7 @@ Item {
                 text: "" // Nerd Font Moon/Sleep icon
                 font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
                 font.pixelSize: 22
-                color: mouseAreaSleep.containsMouse ? colorPrimary : colorOnSurfaceVariant
+                color: mouseAreaSleep.containsMouse ? colorOnSurfaceVariant : colorPrimary
                 anchors.centerIn: parent
                 
                 style: Text.Outline
@@ -623,7 +623,7 @@ Item {
                 text: "" // Nerd Font Sync/Reboot icon
                 font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
                 font.pixelSize: 22
-                color: mouseAreaReboot.containsMouse ? colorPrimary : colorOnSurfaceVariant
+                color: mouseAreaReboot.containsMouse ? colorOnSurfaceVariant : colorPrimary
                 anchors.centerIn: parent
                 
                 style: Text.Outline
@@ -653,7 +653,7 @@ Item {
                 text: "" // Nerd Font Power/Shutdown icon
                 font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
                 font.pixelSize: 22
-                color: mouseAreaShutdown.containsMouse ? colorPrimary : colorOnSurfaceVariant
+                color: mouseAreaShutdown.containsMouse ? colorOnSurfaceVariant : colorPrimary
                 anchors.centerIn: parent
                 
                 style: Text.Outline
