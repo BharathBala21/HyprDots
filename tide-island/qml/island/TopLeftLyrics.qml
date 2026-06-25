@@ -10,6 +10,22 @@ Item {
     property string textFontFamily: ""
     property string iconFontFamily: ""
     property real maxAllowedWidth: 300
+    property string islandState: "normal"
+    property bool transitionActive: false
+
+    onIslandStateChanged: {
+        transitionActive = true;
+        transitionTimer.restart();
+    }
+
+    Timer {
+        id: transitionTimer
+        interval: 500
+        repeat: false
+        onTriggered: {
+            transitionActive = false;
+        }
+    }
 
     implicitHeight: 32
     height: implicitHeight
@@ -33,6 +49,7 @@ Item {
     }
     width: implicitWidth
     Behavior on width {
+        enabled: !root.transitionActive && (root.islandState === "normal" || root.islandState === "lyrics")
         NumberAnimation {
             duration: 350
             easing.type: Easing.OutQuint

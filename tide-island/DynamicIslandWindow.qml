@@ -111,13 +111,7 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: root.overviewVisible
-        ? Math.max(
-            Math.ceil(4 + root.connectivityDetailHeight + 12),
-            Math.ceil(4 + root.overviewCapsuleHeight + 8),
-            Math.ceil(root.controlCenterWindowHeight)
-        )
-        : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
+    implicitHeight: 560
     exclusiveZone: 38
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers")
@@ -2044,6 +2038,7 @@ PanelWindow {
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
             maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32
+            islandState: islandContainer.islandState
         }
 
         TopRightTray {
