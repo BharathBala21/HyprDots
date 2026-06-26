@@ -52,6 +52,10 @@ Item {
     property bool wifiPanelOpen: false
     property bool bluetoothPanelOpen: false
     property bool batteryPanelOpen: false
+    property bool audioPanelOpen: false
+    property string activeSinkName: ""
+    property string activeSinkDescription: "Default Output"
+    property var audioSinks: []
     property bool batteryDrawerOpen: false
     property bool batteryDrawerDragging: false
     property real batteryDrawerProgress: 0
@@ -115,8 +119,8 @@ Item {
     readonly property string volumeIconGlyph: "\u{F057E}"
     readonly property var batteryModeGlyphs: ["", "", ""]
     property var notificationModel: null
-    readonly property real controlCenterExtraHeight: 230
-    readonly property real controlCenterMaximumExtraHeight: 230
+    readonly property real controlCenterExtraHeight: 306
+    readonly property real controlCenterMaximumExtraHeight: 306
     readonly property bool bluetoothAvailable: !!bluetoothAdapter
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
     readonly property var bluetoothDeviceValues: bluetoothAdapter ? bluetoothAdapter.devices.values : []
@@ -152,7 +156,7 @@ Item {
     readonly property string bluetoothPairingMessage: bluetoothPairingAgent ? bluetoothPairingAgent.promptMessage : ""
     readonly property string bluetoothPairingDisplayedCode: bluetoothPairingAgent ? bluetoothPairingAgent.displayedCode : ""
     readonly property bool hasConnectivityPrompt: wifiPendingPasswordSsid.length > 0 || bluetoothPairingActive
-    readonly property bool anyConnectivityPanelOpen: wifiPanelOpen || bluetoothPanelOpen || batteryPanelOpen
+    readonly property bool anyConnectivityPanelOpen: wifiPanelOpen || bluetoothPanelOpen || batteryPanelOpen || audioPanelOpen
     readonly property string wifiStatusText: wifiController ? wifiController.statusText : "Unavailable"
     readonly property string bluetoothStatusText: buildBluetoothStatusText()
     readonly property string bluetoothAvailabilityMessage: bluetoothAvailable ? "" : "No Bluetooth adapter is available."
@@ -406,6 +410,7 @@ Item {
         if (kind === "wifi") return wifiPanelOpen;
         if (kind === "bluetooth") return bluetoothPanelOpen;
         if (kind === "battery") return batteryPanelOpen;
+        if (kind === "audio") return audioPanelOpen;
         return false;
     }
 
@@ -447,6 +452,15 @@ Item {
         } else if (kind === "battery") {
             changed = batteryPanelOpen !== nextOpen;
             batteryPanelOpen = nextOpen;
+        } else if (kind === "audio") {
+            changed = audioPanelOpen !== nextOpen;
+            audioPanelOpen = nextOpen;
+
+            if (nextOpen) {
+                if (showCondition) {
+                    refreshAudioSinks();
+                }
+            }
         } else {
             return;
         }
@@ -466,6 +480,7 @@ Item {
         setConnectivityPanelOpen("wifi", false, emitSignals);
         setConnectivityPanelOpen("bluetooth", false, emitSignals);
         setConnectivityPanelOpen("battery", false, emitSignals);
+        setConnectivityPanelOpen("audio", false, emitSignals);
         clearWifiPrompt();
         clearWifiMessages();
         clearBluetoothMessages();
@@ -877,6 +892,7 @@ Item {
             sliderIntroTimer.interval = sliderIntroDelay;
             sliderIntroTimer.restart();
             refreshBatteryModeState();
+            controlCenter.refreshAudioSinks();
             requestWifiStateRefresh();
             checkHypridleProcess.running = true;
             queryHyprsunsetProcess.running = true;
@@ -900,6 +916,7 @@ Item {
         SystemServices.requestBrightness();
         SystemServices.requestVolume();
         refreshBatteryModeState();
+        controlCenter.refreshAudioSinks();
         checkHypridleProcess.running = true;
         queryHyprsunsetProcess.running = true;
     }
@@ -991,6 +1008,67 @@ Item {
             if (controlCenter.batteryModeStateRunning && !controlCenter.batteryTlpChecked) {
                 console.log("Power profiles state request timed out, assuming power-profiles-daemon is not installed.");
                 controlCenter.applyBatteryModeState(false, "", "", "power-profiles-daemon is not installed.");
+            }
+        }
+    }
+
+    function refreshAudioSinks() {
+        audioQueryProcess.running = true;
+    }
+
+    function selectAudioSink(sinkName) {
+        audioSetProcess.pendingSink = sinkName;
+        audioSetProcess.running = true;
+    }
+
+    Process {
+        id: audioQueryProcess
+        command: ["sh", "-c", "pactl get-default-sink && echo '---' && pactl -f json list sinks"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    const parts = this.text.split("---");
+                    if (parts.length >= 2) {
+                        const defaultSink = parts[0].trim();
+                        const jsonText = parts[1].trim();
+                        try {
+                            const list = JSON.parse(jsonText);
+                            let cleanedSinks = [];
+                            let activeDesc = "Default Output";
+                            for (let i = 0; i < list.length; i++) {
+                                const s = list[i];
+                                const isDefault = (s.name === defaultSink);
+                                if (isDefault) {
+                                    activeDesc = s.description;
+                                }
+                                cleanedSinks.push({
+                                    name: s.name,
+                                    description: s.description,
+                                    connected: isDefault,
+                                    deviceType: (s.name.indexOf("bluez") !== -1 || s.description.toLowerCase().indexOf("headset") !== -1 || s.description.toLowerCase().indexOf("headphone") !== -1 || s.description.toLowerCase().indexOf("buds") !== -1) ? "headset" : "speaker"
+                                });
+                            }
+                            controlCenter.audioSinks = cleanedSinks;
+                            controlCenter.activeSinkName = defaultSink;
+                            controlCenter.activeSinkDescription = activeDesc;
+                        } catch (e) {
+                            console.log("Error parsing audio sinks: " + e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Process {
+        id: audioSetProcess
+        property string pendingSink: ""
+        command: ["pactl", "set-default-sink", pendingSink]
+        running: false
+        onExited: (exitCode) => {
+            if (exitCode === 0) {
+                controlCenter.refreshAudioSinks();
             }
         }
     }
@@ -1412,8 +1490,117 @@ Item {
             }
 
             Rectangle {
-                id: bluetoothCard
+                id: audioCard
                 width: (tilesRow1.width - 12) / 2
+                height: 64
+                radius: 20
+                color: "#1e222b"
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
+
+                Rectangle {
+                    id: audioIconCircle
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 36
+                    height: 36
+                    radius: 18
+                    color: "#2d323f"
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf028"
+                        color: "#ffffff"
+                        font.pixelSize: 16
+                        font.family: iconFontFamily
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+                    }
+                }
+
+                Column {
+                    anchors.left: audioIconCircle.right
+                    anchors.leftMargin: 10
+                    anchors.right: audioChevronArea.left
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        width: parent.width
+                        text: "Audio"
+                        color: "#ffffff"
+                        font.pixelSize: 13
+                        font.family: textFontFamily
+                        font.weight: Font.DemiBold
+                        elide: Text.ElideRight
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: controlCenter.activeSinkDescription
+                        color: "#a5aab5"
+                        font.pixelSize: 10
+                        font.family: textFontFamily
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+                    }
+                }
+
+                Item {
+                    id: audioChevronArea
+                    anchors.right: parent.right
+                    width: 36
+                    height: parent.height
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "›"
+                        color: "#a5aab5"
+                        font.pixelSize: 18
+                        font.family: textFontFamily
+                        font.weight: Font.Bold
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        controlCenter.toggleConnectivityOverlay("audio");
+                    }
+                }
+            }
+        }
+
+        Row {
+            id: tilesRow2
+            width: parent.width
+            spacing: 12
+
+            Rectangle {
+                id: bluetoothCard
+                width: (tilesRow2.width - 12) / 2
                 height: 64
                 radius: 20
                 color: bluetoothEnabled ? "#3bc99d" : "#1e222b"
@@ -1509,16 +1696,83 @@ Item {
                     }
                 }
             }
+
+            Rectangle {
+                id: caffeineCard
+                width: (tilesRow2.width - 12) / 2
+                height: 64
+                radius: 20
+                color: caffeineMode ? "#3bc99d" : "#1e222b"
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
+
+                Rectangle {
+                    id: caffeineIconCircle
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 36
+                    height: 36
+                    radius: 18
+                    color: caffeineMode ? "#2aa881" : "#2d323f"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf0f4"
+                        color: caffeineMode ? "#121418" : "#ffffff"
+                        font.pixelSize: 16
+                        font.family: iconFontFamily
+                    }
+                }
+
+                Column {
+                    anchors.left: caffeineIconCircle.right
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        width: parent.width
+                        text: "Caffeine"
+                        color: caffeineMode ? "#121418" : "#ffffff"
+                        font.pixelSize: 13
+                        font.family: textFontFamily
+                        font.weight: Font.DemiBold
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: caffeineMode ? "Active" : "Off"
+                        color: caffeineMode ? "#2c3e35" : "#a5aab5"
+                        font.pixelSize: 10
+                        font.family: textFontFamily
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        controlCenter.toggleCaffeineMode();
+                    }
+                }
+            }
         }
 
         Row {
-            id: tilesRow2
+            id: tilesRow3
             width: parent.width
             spacing: 12
 
             Rectangle {
                 id: powerModeCard
-                width: (tilesRow2.width - 12) / 2
+                width: tilesRow3.width
                 height: 64
                 radius: 20
                 color: {
@@ -1623,73 +1877,6 @@ Item {
                     anchors.fill: parent
                     onClicked: {
                         controlCenter.toggleConnectivityOverlay("battery");
-                    }
-                }
-            }
-
-            Rectangle {
-                id: caffeineCard
-                width: (tilesRow2.width - 12) / 2
-                height: 64
-                radius: 20
-                color: caffeineMode ? "#3bc99d" : "#1e222b"
-
-                Behavior on color {
-                    ColorAnimation { duration: 150 }
-                }
-
-                Rectangle {
-                    id: caffeineIconCircle
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: caffeineMode ? "#2aa881" : "#2d323f"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf0f4"
-                        color: caffeineMode ? "#121418" : "#ffffff"
-                        font.pixelSize: 16
-                        font.family: iconFontFamily
-                    }
-                }
-
-                Column {
-                    anchors.left: caffeineIconCircle.right
-                    anchors.leftMargin: 10
-                    anchors.right: parent.right
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        text: "Caffeine"
-                        color: caffeineMode ? "#121418" : "#ffffff"
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: caffeineMode ? "Active" : "Off"
-                        color: caffeineMode ? "#2c3e35" : "#a5aab5"
-                        font.pixelSize: 10
-                        font.family: textFontFamily
-                        font.weight: Font.Medium
-                        elide: Text.ElideRight
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        controlCenter.toggleCaffeineMode();
                     }
                 }
             }

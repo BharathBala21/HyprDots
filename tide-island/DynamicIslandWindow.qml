@@ -102,6 +102,14 @@ PanelWindow {
 
         Region {
             intersection: Intersection.Combine
+            x: Math.floor(audioConnectivityDetailShell.x)
+            y: Math.floor(audioConnectivityDetailShell.y)
+            width: audioConnectivityDetailShell.visible ? Math.ceil(audioConnectivityDetailShell.width) : 0
+            height: audioConnectivityDetailShell.visible ? Math.ceil(audioConnectivityDetailShell.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
             x: Math.floor(topRightComponent.x)
             y: Math.floor(topRightComponent.y)
             width: topRightComponent.visible ? Math.ceil(topRightComponent.width) : 0
@@ -124,7 +132,7 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: 680
+    implicitHeight: 760
     exclusiveZone: 38
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
@@ -175,7 +183,9 @@ PanelWindow {
     property bool bluetoothConnectivityDetailMounted: false
     property bool batteryConnectivityDetailOpen: false
     property bool batteryConnectivityDetailMounted: false
-    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted || batteryConnectivityDetailMounted
+    property bool audioConnectivityDetailOpen: false
+    property bool audioConnectivityDetailMounted: false
+    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted || batteryConnectivityDetailMounted || audioConnectivityDetailMounted
     readonly property real connectivityDetailWidth: 318
     readonly property real connectivityDetailHeight: 404
     readonly property real controlCenterMaximumExtraHeight: controlCenterLoader.item
@@ -282,6 +292,20 @@ PanelWindow {
                 batteryConnectivityDetailOpen = false;
                 batteryConnectivityDetailCleanupTimer.restart();
             }
+            return;
+        }
+
+        if (kind === "audio") {
+            if (nextOpen) {
+                audioConnectivityDetailCleanupTimer.stop();
+                audioConnectivityDetailMounted = true;
+                audioConnectivityDetailOpen = true;
+            } else {
+                if (!audioConnectivityDetailMounted && !audioConnectivityDetailOpen)
+                    return;
+                audioConnectivityDetailOpen = false;
+                audioConnectivityDetailCleanupTimer.restart();
+            }
         }
     }
 
@@ -289,6 +313,7 @@ PanelWindow {
         setConnectivityDetailVisible("wifi", false);
         setConnectivityDetailVisible("bluetooth", false);
         setConnectivityDetailVisible("battery", false);
+        setConnectivityDetailVisible("audio", false);
     }
 
     function openOverviewEverywhere() {
@@ -517,6 +542,13 @@ PanelWindow {
         interval: root.connectivityDetailAnimationDuration
         repeat: false
         onTriggered: root.batteryConnectivityDetailMounted = false
+    }
+
+    Timer {
+        id: audioConnectivityDetailCleanupTimer
+        interval: root.connectivityDetailAnimationDuration
+        repeat: false
+        onTriggered: root.audioConnectivityDetailMounted = false
     }
 
     OverviewWallpaperCacheController {
@@ -1424,7 +1456,7 @@ PanelWindow {
                 case "utilities":
                     return islandContainer.utilitiesCapsuleWidth;
                 case "control_center":
-                    return 440;
+                    return 480;
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -2216,6 +2248,24 @@ PanelWindow {
             mounted: root.batteryConnectivityDetailMounted
             rightSide: true
             panelKind: "battery"
+            provider: controlCenterLoader.item
+            mainCapsule: mainCapsule
+            availableWidth: root.width
+            detailWidth: root.connectivityDetailWidth
+            detailHeight: root.connectivityDetailHeight
+            detailGap: root.connectivityDetailGap
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+            heroFontFamily: root.heroFontFamily
+        }
+
+        ConnectivityDetailShell {
+            id: audioConnectivityDetailShell
+
+            open: root.audioConnectivityDetailOpen
+            mounted: root.audioConnectivityDetailMounted
+            rightSide: true
+            panelKind: "audio"
             provider: controlCenterLoader.item
             mainCapsule: mainCapsule
             availableWidth: root.width

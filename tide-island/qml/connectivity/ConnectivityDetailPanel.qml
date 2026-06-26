@@ -14,6 +14,7 @@ Item {
     readonly property bool isWifi: panelKind === "wifi"
     readonly property bool isBluetooth: panelKind === "bluetooth"
     readonly property bool isBattery: panelKind === "battery"
+    readonly property bool isAudio: panelKind === "audio"
     readonly property var bluetoothDevices: provider ? provider.bluetoothDeviceValues || [] : []
     readonly property var bluetoothConnectedDevices: bluetoothDevicesForSection("connected")
     readonly property var bluetoothPairedDevices: bluetoothDevicesForSection("paired")
@@ -109,7 +110,7 @@ Item {
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.isWifi ? "Wi-Fi" : (root.isBluetooth ? "Bluetooth" : "Power Mode")
+                text: root.isWifi ? "Wi-Fi" : (root.isBluetooth ? "Bluetooth" : (root.isAudio ? "Audio Output" : "Power Mode"))
                 color: StyleTokens.textPrimary
                 font.pixelSize: 15
                 font.family: root.heroFontFamily
@@ -673,6 +674,97 @@ Item {
                                 font.pixelSize: 15
                                 font.weight: Font.DemiBold
                                 opacity: (root.provider && root.provider.batteryModeIndex === index) ? 1.0 : 0.0
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 150 }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Repeater {
+                    model: root.isAudio && root.provider ? root.provider.audioSinks : null
+
+                    delegate: Rectangle {
+                        width: contentColumn.width
+                        height: 52
+                        radius: 14
+                        color: modelData.connected ? "#1c1f26" : "transparent"
+                        border.width: 1
+                        border.color: modelData.connected ? "#3bc99d" : "transparent"
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        Behavior on border.color {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (root.provider) {
+                                    root.provider.selectAudioSink(modelData.name);
+                                }
+                            }
+                        }
+
+                        Item {
+                            anchors.fill: parent
+                            anchors.margins: 12
+
+                            Text {
+                                id: itemIcon
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.deviceType === "headset" ? "\uf025" : "\uf028"
+                                color: modelData.connected ? "#3bc99d" : "#ffffff"
+                                font.pixelSize: 14
+                                font.family: root.iconFontFamily
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 150 }
+                                }
+                            }
+
+                            Text {
+                                anchors.left: itemIcon.right
+                                anchors.leftMargin: 10
+                                anchors.top: parent.top
+                                anchors.right: rightAudioCheck.left
+                                anchors.rightMargin: 8
+                                text: modelData.description
+                                color: StyleTokens.textPrimary
+                                font.pixelSize: 12
+                                font.family: root.textFontFamily
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                anchors.left: itemIcon.right
+                                anchors.leftMargin: 10
+                                anchors.bottom: parent.bottom
+                                anchors.right: rightAudioCheck.left
+                                anchors.rightMargin: 8
+                                text: modelData.name.indexOf("bluez") !== -1 ? "Bluetooth Device" : "System Output"
+                                color: StyleTokens.textMuted
+                                font.pixelSize: 10
+                                font.family: root.textFontFamily
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                id: rightAudioCheck
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "✓"
+                                color: "#3bc99d"
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                opacity: modelData.connected ? 1.0 : 0.0
 
                                 Behavior on opacity {
                                     NumberAnimation { duration: 150 }
