@@ -139,7 +139,8 @@ FloatingWindow {
         { keys: "Super+Tab", desc: "Workspace overview" },
         { keys: "Super+A", desc: "Control center" },
         { keys: "Super+L", desc: "Lock screen" },
-        { keys: "Ctrl+Shift+Esc", desc: "System monitor" }
+        { keys: "Ctrl+Shift+Esc", desc: "System monitor" },
+        { keys: "Super+U", desc: "Utilities" }
     ]
 
     readonly property var appsMediaBinds: [
