@@ -2285,7 +2285,7 @@ PanelWindow {
 
             open: root.bluetoothConnectivityDetailOpen
             mounted: root.bluetoothConnectivityDetailMounted
-            rightSide: true
+            rightSide: false
             panelKind: "bluetooth"
             provider: controlCenterLoader.item
             mainCapsule: mainCapsule

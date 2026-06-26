@@ -1528,7 +1528,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: wifiGlyph
-                        color: wifiEnabled ? "#121418" : "#ffffff"
+                        color: wifiEnabled ? "#121418" : cardAccent
                         font.pixelSize: 16
                         font.family: iconFontFamily
                     }
@@ -1545,7 +1545,7 @@ Item {
                     Text {
                         width: parent.width
                         text: "Wi-Fi"
-                        color: wifiEnabled ? "#121418" : "#ffffff"
+                        color: wifiEnabled ? "#121418" : cardAccent
                         font.pixelSize: 13
                         font.family: textFontFamily
                         font.weight: Font.DemiBold
@@ -1608,7 +1608,7 @@ Item {
                 width: parent.width - wifiCard.width - 12
                 height: 64
                 radius: 20
-                color: moduleColor
+                color: (!isMuted && displayedVolume > 0) ? cardAccent : moduleColor
 
                 Behavior on color {
                     ColorAnimation { duration: 150 }
@@ -1622,7 +1622,7 @@ Item {
                     width: 36
                     height: 36
                     radius: 18
-                    color: themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f"
+                    color: (!isMuted && displayedVolume > 0) ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
 
                     Behavior on color {
                         ColorAnimation { duration: 150 }
@@ -1631,7 +1631,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: controlCenter.volumeIconGlyph
-                        color: "#ffffff"
+                        color: (!isMuted && displayedVolume > 0) ? "#121418" : cardAccent
                         font.pixelSize: 16
                         font.family: iconFontFamily
 
@@ -1661,7 +1661,7 @@ Item {
                     Text {
                         width: parent.width
                         text: "Audio"
-                        color: "#ffffff"
+                        color: (!isMuted && displayedVolume > 0) ? "#121418" : "#ffffff"
                         font.pixelSize: 13
                         font.family: textFontFamily
                         font.weight: Font.DemiBold
@@ -1675,7 +1675,7 @@ Item {
                     Text {
                         width: parent.width
                         text: controlCenter.activeSinkDescription
-                        color: "#a5aab5"
+                        color: (!isMuted && displayedVolume > 0) ? "#2c3e35" : "#a5aab5"
                         font.pixelSize: 10
                         font.family: textFontFamily
                         font.weight: Font.Medium
@@ -1696,7 +1696,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "›"
-                        color: "#a5aab5"
+                        color: (!isMuted && displayedVolume > 0) ? "#121418" : "#a5aab5"
                         font.pixelSize: 18
                         font.family: textFontFamily
                         font.weight: Font.Bold
@@ -1748,7 +1748,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: bluetoothGlyph
-                        color: bluetoothEnabled ? "#121418" : "#ffffff"
+                        color: bluetoothEnabled ? "#121418" : cardAccent
                         font.pixelSize: 16
                         font.family: iconFontFamily
                     }
@@ -1847,7 +1847,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf0f4"
-                        color: caffeineMode ? "#121418" : "#ffffff"
+                        color: caffeineMode ? "#121418" : cardAccent
                         font.pixelSize: 16
                         font.family: iconFontFamily
                     }
@@ -1926,7 +1926,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: controlCenter.batteryModeGlyphs[controlCenter.batteryModeIndex]
-                        color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : "#ffffff"
+                        color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : cardAccent
                         font.pixelSize: 16
                         font.family: iconFontFamily
 

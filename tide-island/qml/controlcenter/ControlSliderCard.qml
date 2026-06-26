@@ -63,7 +63,7 @@ Rectangle {
         anchors.leftMargin: 16
         anchors.verticalCenter: parent.verticalCenter
         text: root.iconText
-        color: (parent.width * root.value > 45) ? "#121418" : "#ffffff"
+        color: (parent.width * root.value > 45) ? "#121418" : cardAccent
         font.pixelSize: 15
         font.family: root.iconFontFamily
 
