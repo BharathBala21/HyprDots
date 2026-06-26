@@ -14,6 +14,8 @@ PanelWindow {
     id: root
     property var shellRootController: null
     property real nightLightTemp: 0.0
+    property int cachedBatteryModeIndex: 1
+    property bool dndActive: false
     property string overviewPhase: "closed"
     property bool overviewPreloading: false
     readonly property bool overviewPreparing: overviewPhase === "preparing"
@@ -371,7 +373,9 @@ PanelWindow {
         if (notificationHistory.count > 50) {
             notificationHistory.remove(0);
         }
-        islandContainer.showNotificationCapsule(appName, summary, body);
+        if (!root.dndActive) {
+            islandContainer.showNotificationCapsule(appName, summary, body);
+        }
     }
 
     function toggleControlCenter() {
@@ -2077,6 +2081,8 @@ PanelWindow {
                         volumeLevel: islandContainer.currentVolume
                         brightnessLevel: islandContainer.currentBrightness
                         tempLevel: root.nightLightTemp
+                        batteryModeInitialIndex: root.cachedBatteryModeIndex
+                        dndActive: root.dndActive
                         currentWorkspace: islandContainer.currentWs
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
@@ -2087,6 +2093,12 @@ PanelWindow {
                         }
                         onTempChanged: function(val) {
                             root.nightLightTemp = val;
+                        }
+                        onBatteryModeIndexChangedExternal: function(index) {
+                            root.cachedBatteryModeIndex = index;
+                        }
+                        onDndToggleRequested: {
+                            root.dndActive = !root.dndActive;
                         }
                     }
                 }

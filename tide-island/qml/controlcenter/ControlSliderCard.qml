@@ -20,6 +20,8 @@ Rectangle {
     property color trackColor: StyleTokens.track
     property color textPrimary: StyleTokens.textPrimary
     property color textSecondary: StyleTokens.textSecondary
+    property color activeColor: "#3bc99d"
+    property color activeHover: "#45e0af"
     readonly property bool pressed: sliderArea.pressed
 
     function clamp01(nextValue) {
@@ -46,7 +48,7 @@ Rectangle {
             width: root.width
             height: root.height
             radius: root.radius
-            color: sliderArea.containsMouse ? "#45e0af" : "#3bc99d" // Sleek bright cyan/teal
+            color: sliderArea.containsMouse ? root.activeHover : root.activeColor
 
             Behavior on color {
                 ColorAnimation { duration: 100 }

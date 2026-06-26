@@ -69,8 +69,17 @@ Item {
     property bool batteryModeSliderDragging: false
     property bool batteryTlpAvailable: false
     property bool batteryTlpChecked: false
-    property int batteryModeIndex: 1
-    property int batteryModeAppliedIndex: 1
+    property int batteryModeInitialIndex: 1
+    property int batteryModeIndex: batteryModeInitialIndex
+    property int batteryModeAppliedIndex: batteryModeInitialIndex
+    property bool dndActive: false
+
+    signal batteryModeIndexChangedExternal(int index)
+    signal dndToggleRequested()
+
+    onBatteryModeIndexChanged: {
+        batteryModeIndexChangedExternal(batteryModeIndex);
+    }
     property int batteryModePendingIndex: 1
     property real batteryModeDragOffset: 0
     property string batteryModeInfoMessage: ""
@@ -105,20 +114,22 @@ Item {
     readonly property var bluetoothPairingAgent: BluetoothPairingAgent
     readonly property var wifiNetworks: wifiController ? wifiController.networks : null
 
+    readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
+
     readonly property real sliderKnobSize: 24
-    readonly property color panelColor: StyleTokens.panel
-    readonly property color moduleColor: StyleTokens.module
-    readonly property color moduleHover: StyleTokens.moduleHover
-    readonly property color trackColor: StyleTokens.track
-    readonly property color textPrimary: StyleTokens.textPrimary
-    readonly property color textSecondary: StyleTokens.textSecondary
-    readonly property color cardAccent: StyleTokens.accent
-    readonly property color cardAccentPressed: StyleTokens.accentPressed
-    readonly property color cardFillActive: StyleTokens.cardFillActive
-    readonly property color cardFillHover: StyleTokens.cardFillHover
-    readonly property color buttonFill: StyleTokens.buttonFill
-    readonly property color buttonFillHover: StyleTokens.buttonFillHover
-    readonly property color buttonFillPressed: StyleTokens.buttonFillPressed
+    readonly property color panelColor: themeColors ? themeColors.background : StyleTokens.panel
+    readonly property color moduleColor: themeColors ? themeColors.secondary_container : StyleTokens.module
+    readonly property color moduleHover: themeColors ? Qt.lighter(themeColors.secondary_container, 1.15) : StyleTokens.moduleHover
+    readonly property color trackColor: themeColors ? themeColors.secondary_container : StyleTokens.track
+    readonly property color textPrimary: themeColors ? themeColors.on_surface : StyleTokens.textPrimary
+    readonly property color textSecondary: themeColors ? themeColors.on_surface_variant : StyleTokens.textSecondary
+    readonly property color cardAccent: themeColors ? themeColors.primary : StyleTokens.accent
+    readonly property color cardAccentPressed: themeColors ? Qt.darker(themeColors.primary, 1.15) : StyleTokens.accentPressed
+    readonly property color cardFillActive: themeColors ? themeColors.primary : StyleTokens.cardFillActive
+    readonly property color cardFillHover: themeColors ? Qt.lighter(themeColors.primary, 1.1) : StyleTokens.cardFillHover
+    readonly property color buttonFill: themeColors ? themeColors.secondary_container : StyleTokens.buttonFill
+    readonly property color buttonFillHover: themeColors ? Qt.lighter(themeColors.secondary_container, 1.15) : StyleTokens.buttonFillHover
+    readonly property color buttonFillPressed: themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : StyleTokens.buttonFillPressed
     readonly property string wifiGlyph: ""
     readonly property string bluetoothGlyph: ""
     readonly property string chargingIconGlyph: "\uf0e7"
@@ -1412,7 +1423,7 @@ Item {
                 width: shortTileWidth
                 height: 64
                 radius: 20
-                color: wifiEnabled ? "#3bc99d" : "#1e222b"
+                color: wifiEnabled ? cardAccent : moduleColor
 
                 Behavior on color {
                     ColorAnimation { duration: 150 }
@@ -1426,7 +1437,7 @@ Item {
                     width: 36
                     height: 36
                     radius: 18
-                    color: wifiEnabled ? "#2aa881" : "#2d323f"
+                    color: wifiEnabled ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
 
                     Text {
                         anchors.centerIn: parent
@@ -1511,7 +1522,7 @@ Item {
                 width: parent.width - wifiCard.width - 12
                 height: 64
                 radius: 20
-                color: "#1e222b"
+                color: moduleColor
 
                 Behavior on color {
                     ColorAnimation { duration: 150 }
@@ -1525,7 +1536,7 @@ Item {
                     width: 36
                     height: 36
                     radius: 18
-                    color: "#2d323f"
+                    color: themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f"
 
                     Behavior on color {
                         ColorAnimation { duration: 150 }
@@ -1620,7 +1631,7 @@ Item {
                 width: shortTileWidth
                 height: 64
                 radius: 20
-                color: bluetoothEnabled ? "#3bc99d" : "#1e222b"
+                color: bluetoothEnabled ? cardAccent : moduleColor
 
                 Behavior on color {
                     ColorAnimation { duration: 150 }
@@ -1634,7 +1645,7 @@ Item {
                     width: 36
                     height: 36
                     radius: 18
-                    color: bluetoothEnabled ? "#2aa881" : "#2d323f"
+                    color: bluetoothEnabled ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
 
                     Text {
                         anchors.centerIn: parent
@@ -1719,7 +1730,7 @@ Item {
                 width: shortTileWidth
                 height: 64
                 radius: 20
-                color: caffeineMode ? "#3bc99d" : "#1e222b"
+                color: caffeineMode ? cardAccent : moduleColor
 
                 Behavior on color {
                     ColorAnimation { duration: 150 }
@@ -1733,7 +1744,7 @@ Item {
                     width: 36
                     height: 36
                     radius: 18
-                    color: caffeineMode ? "#2aa881" : "#2d323f"
+                    color: caffeineMode ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
 
                     Text {
                         anchors.centerIn: parent
@@ -1787,9 +1798,9 @@ Item {
                 height: 64
                 radius: 20
                 color: {
-                    if (batteryModeIndex === 0) return "#3bc99d";
+                    if (batteryModeIndex === 0) return cardAccent;
                     if (batteryModeIndex === 2) return "#ff9f0a";
-                    return "#1e222b";
+                    return moduleColor;
                 }
 
                 Behavior on color {
@@ -1805,9 +1816,9 @@ Item {
                     height: 36
                     radius: 18
                     color: {
-                        if (batteryModeIndex === 0) return "#2aa881";
+                        if (batteryModeIndex === 0) return (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881");
                         if (batteryModeIndex === 2) return "#cc7f08";
-                        return "#2d323f";
+                        return (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f");
                     }
 
                     Behavior on color {
@@ -1908,6 +1919,8 @@ Item {
             trackColor: controlCenter.trackColor
             textPrimary: controlCenter.textPrimary
             textSecondary: controlCenter.textSecondary
+            activeColor: controlCenter.cardAccent
+            activeHover: controlCenter.cardFillHover
 
             onInteractionStarted: {
                 if (controlCenter.sliderIntroPending) {
@@ -1943,6 +1956,8 @@ Item {
             trackColor: controlCenter.trackColor
             textPrimary: controlCenter.textPrimary
             textSecondary: controlCenter.textSecondary
+            activeColor: controlCenter.cardAccent
+            activeHover: controlCenter.cardFillHover
 
             onInteractionStarted: {
                 if (controlCenter.sliderIntroPending) {
@@ -1978,6 +1993,8 @@ Item {
             trackColor: controlCenter.trackColor
             textPrimary: controlCenter.textPrimary
             textSecondary: controlCenter.textSecondary
+            activeColor: controlCenter.cardAccent
+            activeHover: controlCenter.cardFillHover
 
             onInteractionStarted: {
                 if (controlCenter.sliderIntroPending) {
@@ -2019,14 +2036,54 @@ Item {
                 width: parent.width
                 height: 20
 
-                Text {
+                Row {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Notifications"
-                    color: StyleTokens.textMuted
-                    font.pixelSize: 11
-                    font.family: textFontFamily
-                    font.weight: Font.Medium
+                    spacing: 8
+
+                    Text {
+                        text: "Notifications"
+                        color: StyleTokens.textMuted
+                        font.pixelSize: 11
+                        font.family: textFontFamily
+                        font.weight: Font.Medium
+                    }
+
+                    // DND Toggle Button
+                    Item {
+                        width: 20
+                        height: 20
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 10
+                            color: dndActive ? "#ff453a" : (themeColors ? themeColors.secondary_container : "#2c2c2e")
+                            opacity: dndMouseArea.containsMouse ? 1.0 : 0.8
+                            
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: dndActive ? "\u{F00A0}" : "\uf0f3" // bell-sleep (bell with zzz's) or normal bell
+                            font.family: iconFontFamily
+                            font.pixelSize: 11
+                            color: dndActive ? "#ffffff" : StyleTokens.textMuted
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+
+                        MouseArea {
+                            id: dndMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                controlCenter.dndToggleRequested();
+                            }
+                        }
+                    }
                 }
 
                 Text {
