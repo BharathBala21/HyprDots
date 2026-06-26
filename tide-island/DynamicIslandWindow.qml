@@ -116,7 +116,7 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: 560
+    implicitHeight: 680
     exclusiveZone: 38
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")

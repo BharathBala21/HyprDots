@@ -1764,20 +1764,30 @@ Item {
             height: parent.height - y - 20
             clip: true
 
+            Rectangle {
+                id: notificationsDivider
+                width: parent.width
+                height: 1
+                color: "#2c3038"
+                opacity: 0.8
+                anchors.top: parent.top
+            }
+
             Item {
                 id: notificationsHeader
+                anchors.top: notificationsDivider.bottom
+                anchors.topMargin: 12
                 width: parent.width
-                height: 24
-                visible: notificationModel && notificationModel.count > 0
+                height: 20
 
                 Text {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Notifications"
-                    color: StyleTokens.textPrimary
-                    font.pixelSize: 13
+                    color: StyleTokens.textMuted
+                    font.pixelSize: 11
                     font.family: textFontFamily
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Medium
                 }
 
                 Text {
@@ -1788,6 +1798,7 @@ Item {
                     font.pixelSize: 11
                     font.family: textFontFamily
                     font.weight: Font.Medium
+                    visible: notificationModel && notificationModel.count > 0
 
                     MouseArea {
                         anchors.fill: parent
@@ -1802,6 +1813,7 @@ Item {
 
             Text {
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: 10
                 text: "No new notifications"
                 color: StyleTokens.textMuted
                 font.pixelSize: 12
