@@ -16,7 +16,7 @@ RESET = '\033[0m'
 
 BANNER = f"""
 {BLUE}{BOLD}┌────────────────────────────────────────────────────────┐
-│             📷   ANTIGRAVITY QR/BARCODE SCANNER   📷        │
+│             📷   QR/BARCODE SCANNER   📷        │
 │          Extracts & Scans QR/Barcodes to Clipboard     │
 └────────────────────────────────────────────────────────┘{RESET}
 """
@@ -84,7 +84,7 @@ def check_dependencies():
     return False, "Missing dependency: 'zbar' package is required. Install it using:\n  sudo pacman -S zbar (Arch)\n  sudo apt install zbar-tools (Ubuntu/Debian)"
 
 def main():
-    parser = argparse.ArgumentParser(description="Antigravity QR/Barcode Scanner - Scan QR/Barcodes from screen region or file.")
+    parser = argparse.ArgumentParser(description="QR/Barcode Scanner - Scan QR/Barcodes from screen region or file.")
     parser.add_argument("-f", "--file", help="Path to an existing image file (skip screen cropping).")
     parser.add_argument("-n", "--no-notify", action="store_true", help="Disable desktop system notifications.")
     
