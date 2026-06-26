@@ -47,6 +47,10 @@ PanelWindow {
 
     readonly property var userConfig: UserConfig
 
+    ListModel {
+        id: notificationHistory
+    }
+
     HyprlandDispatch {
         id: hyprDispatch
     }
@@ -168,7 +172,7 @@ PanelWindow {
         ? controlCenterLoader.item.controlCenterMaximumExtraHeight
         : 120
     readonly property real controlCenterWindowHeight: islandContainer.controlCenterLayerVisible
-        ? 4 + 408 + root.controlCenterMaximumExtraHeight + 12
+        ? 4 + 350 + root.controlCenterMaximumExtraHeight + 12
         : 0
     readonly property real connectivityDetailGap: 16
     readonly property int connectivityDetailAnimationDuration: 360
@@ -306,6 +310,16 @@ PanelWindow {
     }
 
     function showNotification(appName, summary, body) {
+        let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
+        notificationHistory.append({
+            "appName": displayAppName,
+            "summary": summary,
+            "body": body,
+            "timestamp": new Date().toLocaleTimeString(Qt.locale(), "hh:mm")
+        });
+        if (notificationHistory.count > 50) {
+            notificationHistory.remove(0);
+        }
         islandContainer.showNotificationCapsule(appName, summary, body);
     }
 
@@ -1410,7 +1424,7 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 408 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                    return 350 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -2001,6 +2015,7 @@ PanelWindow {
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
                         showCondition: islandContainer.controlCenterLayerVisible
+                        notificationModel: notificationHistory
                         onConnectivityPanelRequested: function(kind, open) {
                             root.setConnectivityDetailVisible(kind, open);
                         }

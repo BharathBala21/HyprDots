@@ -26,95 +26,59 @@ Rectangle {
         return Math.max(0, Math.min(1, nextValue));
     }
 
-    radius: 24
-    color: sliderArea.containsMouse ? moduleHover : moduleColor
+    radius: height / 2
+    color: root.trackColor
+    clip: true
 
-    Behavior on color {
-        ColorAnimation {
-            duration: StyleTokens.durationControl
+    // Fill Rectangle
+    Rectangle {
+        id: fillRect
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: parent.width * root.value
+        radius: parent.radius
+        color: sliderArea.containsMouse ? "#45e0af" : "#3bc99d" // Sleek bright cyan/teal
+
+        Behavior on color {
+            ColorAnimation { duration: 100 }
         }
     }
 
-    Item {
+    // Icon Text
+    Text {
+        id: iconTextItem
+        anchors.left: parent.left
+        anchors.leftMargin: 16
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.iconText
+        color: (parent.width * root.value > 45) ? "#121418" : "#ffffff"
+        font.pixelSize: 15
+        font.family: root.iconFontFamily
+
+        Behavior on color {
+            ColorAnimation { duration: 100 }
+        }
+    }
+
+    MouseArea {
+        id: sliderArea
         anchors.fill: parent
-        anchors.margins: 12
+        hoverEnabled: true
 
-        Text {
-            anchors.left: parent.left
-            anchors.top: parent.top
-            text: root.title
-            color: root.textPrimary
-            font.pixelSize: 13
-            font.family: root.textFontFamily
-            font.weight: Font.DemiBold
+        function update(mouseX) {
+            root.valueMoved(root.clamp01(mouseX / width));
         }
 
-        Rectangle {
-            id: sliderTrack
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: 22
-            radius: 11
-            color: root.trackColor
-            clip: true
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: 10
-                width: 18
-                height: 18
-                radius: 9
-                color: StyleTokens.transparent
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.iconText
-                    color: root.textSecondary
-                    font.pixelSize: 13
-                    font.family: root.iconFontFamily
-                }
-            }
-
-            Rectangle {
-                width: root.value <= 0.001
-                    ? 0
-                    : Math.max(34, Math.min(sliderTrack.width, sliderTrack.width * root.value + 1))
-                height: parent.height
-                radius: parent.radius
-                color: StyleTokens.textPrimary
-            }
-
-            Rectangle {
-                x: Math.max(0, Math.min(parent.width - width, parent.width * root.value - width / 2))
-                y: -1
-                width: root.knobSize
-                height: root.knobSize
-                radius: root.knobSize / 2
-                color: StyleTokens.white
-            }
-
-            MouseArea {
-                id: sliderArea
-                anchors.fill: parent
-                hoverEnabled: true
-
-                function update(mouseX) {
-                    root.valueMoved(root.clamp01(mouseX / width));
-                }
-
-                onPressed: function(mouse) {
-                    root.interactionStarted();
-                    update(mouse.x);
-                }
-                onPositionChanged: function(mouse) {
-                    if (pressed)
-                        update(mouse.x);
-                }
-                onReleased: root.commitRequested()
-                onCanceled: root.cancelRequested()
-            }
+        onPressed: function(mouse) {
+            root.interactionStarted();
+            update(mouse.x);
         }
+        onPositionChanged: function(mouse) {
+            if (pressed)
+                update(mouse.x);
+        }
+        onReleased: root.commitRequested()
+        onCanceled: root.cancelRequested()
     }
 }
