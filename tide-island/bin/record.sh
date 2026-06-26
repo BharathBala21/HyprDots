@@ -29,7 +29,7 @@ fi
 mkdir -p "$HOME/Videos/Recordings"
 
 # Generate filename with timestamp
-OUTPUT_FILE="$HOME/Videos/Recordings/recording-$(date +%F_%H-%M).mkv"
+OUTPUT_FILE="$HOME/Videos/Recordings/recording-$(date +%F_%H-%M).mp4"
 
 # Get default sink monitor or fallback
 DEFAULT_SINK=$(pactl get-default-sink 2>/dev/null)
