@@ -89,6 +89,19 @@ ApplicationWindow {
                 console.log("RECORDER ERROR: " + error + " - " + errorString);
             }
         }
+        imageCapture: ImageCapture {
+            id: imageCapture
+            onImageSaved: (id, fileName) => {
+                var path = fileName.toString();
+                if (path.indexOf("file://") === 0) {
+                    path = path.substring(7);
+                }
+                console.log("NOTIFICATION: Photo Saved | Photo saved to: " + path);
+            }
+            onErrorOccurred: (id, error, errorString) => {
+                console.log("PHOTO CAPTURE ERROR: " + errorString);
+            }
+        }
         videoOutput: videoOutput
     }
 
@@ -105,6 +118,21 @@ ApplicationWindow {
             transform: Scale {
                 xScale: root.mirrorEnabled ? -1 : 1
                 origin.x: videoOutput.width / 2
+            }
+        }
+
+        // Shutter flash effect overlay
+        Rectangle {
+            id: flashOverlay
+            anchors.fill: parent
+            color: "#ffffff"
+            opacity: 0.0
+            z: 5
+
+            SequentialAnimation on opacity {
+                id: flashAnimation
+                running: false
+                NumberAnimation { from: 0.8; to: 0.0; duration: 220; easing.type: Easing.OutQuad }
             }
         }
 
@@ -434,12 +462,44 @@ ApplicationWindow {
                         }
                     }
 
-                    // Center Group: Controls (Record / Pause)
+                    // Center Group: Controls (Record / Pause / Photo)
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter
                         spacing: 15
 
-                        // Custom Vector Pause Button
+                        // Shutter / Photo Capture Button (visible when not recording)
+                        Rectangle {
+                            id: btnPhoto
+                            width: 36
+                            height: 36
+                            radius: 18
+                            color: enabled ? "#22" + root.activeTheme.on_surface.toString().substring(1) : "#05ffffff"
+                            border.color: root.activeTheme.outline
+                            border.width: 1
+                            visible: !root.recording && !root.paused
+                            enabled: !root.recording && !root.paused
+
+                            // Vector camera icon
+                            Image {
+                                anchors.centerIn: parent
+                                width: 18
+                                height: 18
+                                source: {
+                                    var color = root.activeTheme.on_surface.toString();
+                                    var encodedColor = color.replace("#", "%23");
+                                    return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='" + encodedColor + "'><circle cx='12' cy='12' r='3.2'/><path d='M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z'/></svg>";
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    takePhoto();
+                                }
+                            }
+                        }
+
+                        // Custom Vector Pause Button (visible only when recording)
                         Rectangle {
                             id: btnPause
                             width: 36
@@ -451,7 +511,6 @@ ApplicationWindow {
                             visible: root.recording || root.paused
                             enabled: root.recording || root.paused
 
-                            // Vector drawn pause lines (highly precise spacing and dimension)
                             Item {
                                 anchors.centerIn: parent
                                 width: 14
@@ -534,7 +593,7 @@ ApplicationWindow {
                         }
                     }
 
-                    // Right Group: Settings Toggle Button (Perfect vector centered Gear SVG icon)
+                    // Right Group: Settings Toggle Button (Gear icon in circular layout)
                     RowLayout {
                         Layout.alignment: Qt.AlignRight
                         Layout.preferredWidth: 100
@@ -597,9 +656,34 @@ ApplicationWindow {
         return baseDir + "record_" + yyyy + mm + dd + "_" + hh + min + sec + ".mp4";
     }
 
+    // Creating target Pictures path
+    function getUniquePhotoFilename() {
+        var date = new Date();
+        var yyyy = date.getFullYear();
+        var mm = String(date.getMonth() + 1).padStart(2, '0');
+        var dd = String(date.getDate()).padStart(2, '0');
+        var hh = String(date.getHours()).padStart(2, '0');
+        var min = String(date.getMinutes()).padStart(2, '0');
+        var sec = String(date.getSeconds()).padStart(2, '0');
+        var baseDir = StandardPaths.writableLocation(StandardPaths.PicturesLocation).toString();
+        if (baseDir.indexOf("file://") === 0) {
+            baseDir = baseDir.substring(7);
+        }
+        if (!baseDir.endsWith("/")) {
+            baseDir += "/";
+        }
+        return baseDir + "photo_" + yyyy + mm + dd + "_" + hh + min + sec + ".jpg";
+    }
+
     function startRecording() {
         var fileUrl = getUniqueFilename();
         recorder.outputLocation = fileUrl;
         recorder.record();
+    }
+
+    function takePhoto() {
+        var filePath = getUniquePhotoFilename();
+        imageCapture.captureToFile(filePath);
+        flashAnimation.start();
     }
 }
