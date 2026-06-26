@@ -2079,6 +2079,7 @@ PanelWindow {
                         batteryCapacity: islandContainer.batteryCapacity
                         isCharging: islandContainer.isCharging
                         volumeLevel: islandContainer.currentVolume
+                        isMuted: islandContainer.isMuted
                         brightnessLevel: islandContainer.currentBrightness
                         tempLevel: root.nightLightTemp
                         batteryModeInitialIndex: root.cachedBatteryModeIndex

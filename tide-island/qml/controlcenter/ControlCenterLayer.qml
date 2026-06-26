@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Io
@@ -32,6 +33,7 @@ Item {
     property int batteryCapacity: 0
     property bool isCharging: false
     property real volumeLevel: -1
+    property bool isMuted: false
     property real brightnessLevel: -1
     property int sliderIntroDelay: 400
     property int currentWorkspace: 1
@@ -114,6 +116,39 @@ Item {
     readonly property var bluetoothPairingAgent: BluetoothPairingAgent
     readonly property var wifiNetworks: wifiController ? wifiController.networks : null
 
+    property int wifiSignal: -1
+
+    Instantiator {
+        id: wifiSignalTracker
+        model: wifiController ? wifiController.networks : null
+        onObjectAdded: (index, object) => {
+            updateSignal();
+        }
+        onObjectRemoved: (index, object) => {
+            updateSignal();
+        }
+
+        delegate: QtObject {
+            required property bool connected
+            required property int signal
+            onConnectedChanged: wifiSignalTracker.updateSignal()
+            onSignalChanged: wifiSignalTracker.updateSignal()
+        }
+
+        function updateSignal() {
+            let found = -1;
+            for (let i = 0; i < count; i++) {
+                let obj = objectAt(i);
+                if (obj && obj.connected) {
+                    found = obj.signal;
+                    break;
+                }
+            }
+            controlCenter.wifiSignal = found;
+            console.log("[WifiTracker] Connected SSID:", wifiCurrentSsid, "Signal Strength:", found);
+        }
+    }
+
     readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
 
     readonly property real sliderKnobSize: 24
@@ -130,11 +165,24 @@ Item {
     readonly property color buttonFill: themeColors ? themeColors.secondary_container : StyleTokens.buttonFill
     readonly property color buttonFillHover: themeColors ? Qt.lighter(themeColors.secondary_container, 1.15) : StyleTokens.buttonFillHover
     readonly property color buttonFillPressed: themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : StyleTokens.buttonFillPressed
-    readonly property string wifiGlyph: ""
+    readonly property string wifiGlyph: {
+        if (!wifiEnabled) return "\u{F05AE}"; // wifi-strength-off
+        if (wifiCurrentSsid.length === 0 || wifiSignal < 0) return "\u{F05AD}"; // wifi-strength-outline
+        if (wifiSignal >= 75) return "\u{F05AC}"; // wifi-strength-4
+        if (wifiSignal >= 50) return "\u{F05AB}"; // wifi-strength-3
+        if (wifiSignal >= 25) return "\u{F05AA}"; // wifi-strength-2
+        return "\u{F05A9}"; // wifi-strength-1
+    }
     readonly property string bluetoothGlyph: ""
     readonly property string chargingIconGlyph: "\uf0e7"
     readonly property string brightnessIconGlyph: "\u{F00DF}"
-    readonly property string volumeIconGlyph: "\u{F057E}"
+    readonly property string volumeIconGlyph: {
+        if (isMuted) return "\uf6a9"; // volume-mute
+        if (displayedVolume === 0) return "\uf026"; // volume-off
+        if (displayedVolume < 0.5) return "\uf027"; // volume-down
+        return "\uf028"; // volume-up
+    }
+
     readonly property var batteryModeGlyphs: ["", "", ""]
     property var notificationModel: null
     readonly property real controlCenterExtraHeight: 230
@@ -438,6 +486,18 @@ Item {
             emitSignal = true;
 
         const nextOpen = !!open;
+
+        if (nextOpen) {
+            if (kind !== "wifi" && wifiPanelOpen)
+                setConnectivityPanelOpen("wifi", false, emitSignal);
+            if (kind !== "bluetooth" && bluetoothPanelOpen)
+                setConnectivityPanelOpen("bluetooth", false, emitSignal);
+            if (kind !== "battery" && batteryPanelOpen)
+                setConnectivityPanelOpen("battery", false, emitSignal);
+            if (kind !== "audio" && audioPanelOpen)
+                setConnectivityPanelOpen("audio", false, emitSignal);
+        }
+
         let changed = false;
 
         if (kind === "wifi") {
@@ -1102,6 +1162,13 @@ Item {
     }
 
     Process {
+        id: audioToggleMuteProcess
+        command: ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"]
+        running: false
+    }
+
+
+    Process {
         id: ppQueryProcess
         command: ["powerprofilesctl", "get"]
         running: false
@@ -1544,7 +1611,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "\uf028"
+                        text: controlCenter.volumeIconGlyph
                         color: "#ffffff"
                         font.pixelSize: 16
                         font.family: iconFontFamily
@@ -1553,7 +1620,16 @@ Item {
                             ColorAnimation { duration: 150 }
                         }
                     }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            audioToggleMuteProcess.running = true;
+                        }
+                    }
                 }
+
 
                 Column {
                     anchors.left: audioIconCircle.right
@@ -1613,7 +1689,10 @@ Item {
                 }
 
                 MouseArea {
-                    anchors.fill: parent
+                    anchors.left: audioIconCircle.right
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
                     onClicked: {
                         controlCenter.toggleConnectivityOverlay("audio");
                     }

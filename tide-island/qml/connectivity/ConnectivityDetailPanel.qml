@@ -32,6 +32,14 @@ Item {
         return !(connected && root.provider.wifiEnabled && safeString(root.provider.wifiCurrentSsid).length > 0);
     }
 
+    function getWifiGlyphForSignal(signalVal) {
+        if (signalVal < 0) return "\u{F05AD}"; // wifi-strength-outline
+        if (signalVal >= 75) return "\u{F05AC}"; // wifi-strength-4
+        if (signalVal >= 50) return "\u{F05AB}"; // wifi-strength-3
+        if (signalVal >= 25) return "\u{F05AA}"; // wifi-strength-2
+        return "\u{F05A9}"; // wifi-strength-1
+    }
+
     function bluetoothDeviceVisible(device, section) {
         return root.provider && root.provider.bluetoothDeviceMatchesSection
             ? root.provider.bluetoothDeviceMatchesSection(device, section)
@@ -833,7 +841,7 @@ Item {
                             Text {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: root.provider ? root.provider.wifiGlyph : ""
+                                text: root.getWifiGlyphForSignal(signal)
                                 color: connected ? StyleTokens.accent : StyleTokens.disabledControl
                                 font.pixelSize: 14
                                 font.family: root.iconFontFamily
