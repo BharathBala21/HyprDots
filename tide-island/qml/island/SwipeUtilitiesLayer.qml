@@ -50,6 +50,19 @@ Item {
         event.accepted = true;
     }
 
+    Timer {
+        id: delayTriggerTimer
+        interval: 150
+        repeat: false
+        property var pendingCallback: null
+        onTriggered: {
+            if (pendingCallback) {
+                pendingCallback();
+                pendingCallback = null;
+            }
+        }
+    }
+
     function triggerUtility(index) {
         const item = utilitiesModel.get(index);
         if (!item) return;
@@ -65,26 +78,29 @@ Item {
 
         const home = Quickshell.env("HOME") || "";
 
-        if (item.name === "screenshot") {
-            Quickshell.execDetached(["hyprshot", "-z", "-m", "region"]);
-        } else if (item.name === "screenrecord") {
-            const recordScript = Quickshell.shellDir + "/bin/record.sh";
-            if (root.screenRecordingActive) {
-                Quickshell.execDetached([recordScript]);
-            } else {
-                Quickshell.execDetached([recordScript, "-r"]);
+        delayTriggerTimer.pendingCallback = () => {
+            if (item.name === "screenshot") {
+                Quickshell.execDetached(["hyprshot", "-z", "-m", "region"]);
+            } else if (item.name === "screenrecord") {
+                const recordScript = Quickshell.shellDir + "/bin/record.sh";
+                if (root.screenRecordingActive) {
+                    Quickshell.execDetached([recordScript]);
+                } else {
+                    Quickshell.execDetached([recordScript, "-r"]);
+                }
+            } else if (item.name === "colorpicker") {
+                Quickshell.execDetached(["hyprpicker", "-a"]);
+            } else if (item.name === "ocr") {
+                Quickshell.execDetached([home + "/.config/hypr/scripts/ocr.sh"]);
+            } else if (item.name === "search") {
+                Quickshell.execDetached([home + "/.config/hypr/scripts/visual_search.sh"]);
+            } else if (item.name === "qr") {
+                Quickshell.execDetached([home + "/.config/hypr/scripts/qr_barcode.sh"]);
+            } else if (item.name === "mirror") {
+                Quickshell.execDetached([home + "/.config/hypr/scripts/mirror.sh"]);
             }
-        } else if (item.name === "colorpicker") {
-            Quickshell.execDetached(["hyprpicker", "-a"]);
-        } else if (item.name === "ocr") {
-            Quickshell.execDetached([home + "/.config/hypr/scripts/ocr.sh"]);
-        } else if (item.name === "search") {
-            Quickshell.execDetached([home + "/.config/hypr/scripts/visual_search.sh"]);
-        } else if (item.name === "qr") {
-            Quickshell.execDetached([home + "/.config/hypr/scripts/qr_barcode.sh"]);
-        } else if (item.name === "mirror") {
-            Quickshell.execDetached([home + "/.config/hypr/scripts/mirror.sh"]);
-        }
+        };
+        delayTriggerTimer.restart();
     }
 
     readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
