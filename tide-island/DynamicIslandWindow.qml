@@ -13,6 +13,7 @@ import "qml/workspace"
 PanelWindow {
     id: root
     property var shellRootController: null
+    property real nightLightTemp: 0.0
     property string overviewPhase: "closed"
     property bool overviewPreloading: false
     readonly property bool overviewPreparing: overviewPhase === "preparing"
@@ -2075,6 +2076,7 @@ PanelWindow {
                         isCharging: islandContainer.isCharging
                         volumeLevel: islandContainer.currentVolume
                         brightnessLevel: islandContainer.currentBrightness
+                        tempLevel: root.nightLightTemp
                         currentWorkspace: islandContainer.currentWs
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
@@ -2082,6 +2084,9 @@ PanelWindow {
                         notificationModel: notificationHistory
                         onConnectivityPanelRequested: function(kind, open) {
                             root.setConnectivityDetailVisible(kind, open);
+                        }
+                        onTempChanged: function(val) {
+                            root.nightLightTemp = val;
                         }
                     }
                 }

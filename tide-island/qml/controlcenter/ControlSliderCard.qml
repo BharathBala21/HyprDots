@@ -31,17 +31,26 @@ Rectangle {
     clip: true
 
     // Fill Rectangle
-    Rectangle {
-        id: fillRect
+    Item {
+        id: clipContainer
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: parent.width * root.value
-        radius: Math.min(width / 2, parent.radius)
-        color: sliderArea.containsMouse ? "#45e0af" : "#3bc99d" // Sleek bright cyan/teal
+        clip: true
 
-        Behavior on color {
-            ColorAnimation { duration: 100 }
+        Rectangle {
+            id: fillRect
+            x: 0
+            y: 0
+            width: root.width
+            height: root.height
+            radius: root.radius
+            color: sliderArea.containsMouse ? "#45e0af" : "#3bc99d" // Sleek bright cyan/teal
+
+            Behavior on color {
+                ColorAnimation { duration: 100 }
+            }
         }
     }
 

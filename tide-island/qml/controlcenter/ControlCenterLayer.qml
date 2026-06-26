@@ -79,11 +79,18 @@ Item {
     property int batteryModeRefreshPollsRemaining: 0
     property bool caffeineMode: false
 
-    property real localTemp: 0.0
+    property real tempLevel: 0.0
+    property real localTemp: tempLevel
     property real displayedTemp: 0.0
     property real pendingTemp: 0.0
     property real lastAppliedTemp: 0.0
     property bool tempSetterRunning: false
+
+    signal tempChanged(real val)
+
+    onLocalTempChanged: {
+        tempChanged(localTemp);
+    }
 
     property string wifiLocalInfoMessage: ""
     property string wifiLocalError: ""
@@ -940,6 +947,15 @@ Item {
 
     Behavior on displayedVolume {
         enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending && !volumeCard.pressed
+
+        NumberAnimation {
+            duration: 130
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    Behavior on displayedTemp {
+        enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending && !tempCard.pressed
 
         NumberAnimation {
             duration: 130
