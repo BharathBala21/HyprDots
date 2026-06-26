@@ -177,10 +177,7 @@ Item {
     readonly property string chargingIconGlyph: "\uf0e7"
     readonly property string brightnessIconGlyph: "\u{F00DF}"
     readonly property string volumeIconGlyph: {
-        if (isMuted) return "\uf6a9"; // volume-mute
-        if (displayedVolume === 0) return "\uf026"; // volume-off
-        if (displayedVolume < 0.5) return "\uf027"; // volume-down
-        return "\uf028"; // volume-up
+        return volumeGlyph(displayedVolume, isMuted);
     }
 
     readonly property var batteryModeGlyphs: ["", "", ""]
@@ -677,6 +674,19 @@ Item {
             syncVolumeFromLevel(value);
     }
 
+    function applyVolumeSnapshotWithMute(value, muted) {
+        applyVolumeSnapshot(value);
+        isMuted = !!muted;
+    }
+
+    function volumeGlyph(value, muted) {
+        if (muted) return "\u{F075F}"; // volume-mute
+        if (value <= 0) return "\u{F0581}"; // volume-off
+        if (value < 0.33) return "\u{F057F}"; // volume-low
+        if (value < 0.66) return "\u{F0580}"; // volume-medium
+        return "\u{F057E}"; // volume-high
+    }
+
     function flushBrightness(force) {
         const nextValue = clamp01(pendingBrightness);
         if (!force && Math.abs(nextValue - lastAppliedBrightness) < 0.01) return;
@@ -1062,7 +1072,7 @@ Item {
 
         function onVolumeSnapshotReady(value, muted, errorString) {
             if (errorString === "")
-                controlCenter.applyVolumeSnapshot(value);
+                controlCenter.applyVolumeSnapshotWithMute(value, muted);
         }
 
         function onVolumeSetFinished(value, success, errorString) {
@@ -1107,6 +1117,11 @@ Item {
     function selectAudioSink(sinkName) {
         audioSetProcess.pendingSink = sinkName;
         audioSetProcess.running = true;
+    }
+
+    function toggleAudioMute() {
+        if (!audioToggleMuteProcess.running)
+            audioToggleMuteProcess.running = true;
     }
 
     Process {
@@ -1165,6 +1180,10 @@ Item {
         id: audioToggleMuteProcess
         command: ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"]
         running: false
+        onExited: (exitCode) => {
+            if (exitCode === 0)
+                SystemServices.requestVolume();
+        }
     }
 
 
@@ -1625,7 +1644,7 @@ Item {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            audioToggleMuteProcess.running = true;
+                            controlCenter.toggleAudioMute();
                         }
                     }
                 }

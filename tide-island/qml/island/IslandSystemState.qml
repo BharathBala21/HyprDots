@@ -87,7 +87,7 @@ Item {
 
     function getVolumeIcon(value, muted) {
         if (muted) return "\u{F075F}"; // volume-mute
-        if (value === 0) return "\u{F057C}"; // volume-off
+        if (value === 0) return "\u{F0581}"; // volume-off
         if (value < 0.33) return "\u{F057F}"; // volume-low
         if (value < 0.66) return "\u{F0580}"; // volume-medium
         return "\u{F057E}"; // volume-high

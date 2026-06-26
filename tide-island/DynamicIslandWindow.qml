@@ -47,6 +47,7 @@ PanelWindow {
     readonly property bool emojiPickerLayerVisible: islandContainer.islandState === "emojis"
     readonly property bool wallpapersLayerVisible: islandContainer.islandState === "wallpapers"
     readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
+    readonly property bool controlCenterLayerVisible: islandContainer.islandState === "control_center"
 
     readonly property var userConfig: UserConfig
 
@@ -63,6 +64,13 @@ PanelWindow {
     mask: Region {
         // Input is the union of the island's visible surfaces plus a compact top
         // gesture strip. The gesture strip must not grow with expanded content.
+        Region {
+            x: 0
+            y: 0
+            width: root.controlCenterLayerVisible ? root.width : 0
+            height: root.controlCenterLayerVisible ? root.height : 0
+        }
+
         Region {
             x: 0
             y: 0
@@ -138,9 +146,9 @@ PanelWindow {
     implicitHeight: 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
         ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
@@ -441,12 +449,17 @@ PanelWindow {
         if (utilitiesLayerVisible && monitorFocused)
             utilitiesFocusTimer.restart();
     }
+    onControlCenterLayerVisibleChanged: {
+        if (controlCenterLayerVisible && monitorFocused)
+            controlCenterFocusTimer.restart();
+    }
     onOverviewVisualReadyChanged: {
         if (overviewVisualReady) beginOverviewOpening();
     }
     onMonitorFocusedChanged: {
         if (overviewVisible && monitorFocused) overviewFocusTimer.restart();
         if (connectivityPromptActive && monitorFocused) connectivityPromptFocusTimer.restart();
+        if (controlCenterLayerVisible && monitorFocused) controlCenterFocusTimer.restart();
         if (launcherLayerVisible && monitorFocused) launcherFocusTimer.restart();
         if (clipboardLayerVisible && monitorFocused) clipboardFocusTimer.restart();
         if (emojiPickerLayerVisible && monitorFocused) emojisFocusTimer.restart();
@@ -463,6 +476,13 @@ PanelWindow {
 
     Timer {
         id: connectivityPromptFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: islandContainer.forceActiveFocus()
+    }
+
+    Timer {
+        id: controlCenterFocusTimer
         interval: 0
         repeat: false
         onTriggered: islandContainer.forceActiveFocus()
@@ -580,7 +600,7 @@ PanelWindow {
     FocusScope {
         id: islandContainer
         anchors.fill: parent
-        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers" || islandState === "utilities")
+        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "control_center" || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers" || islandState === "utilities")
 
         property string islandState: "normal"
         property string splitIcon: root.defaultSplitIcon
@@ -738,6 +758,19 @@ PanelWindow {
             }
         }
 
+        MouseArea {
+            id: controlCenterClickAwayArea
+
+            anchors.fill: parent
+            enabled: islandContainer.controlCenterLayerVisible
+            visible: enabled
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+            onClicked: {
+                islandContainer.smartRestoreState();
+            }
+        }
+
         HyprlandWorkspaceTracker {
             id: workspaceTracker
 
@@ -767,6 +800,12 @@ PanelWindow {
         }
 
         Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Escape && islandState === "control_center") {
+                smartRestoreState();
+                event.accepted = true;
+                return;
+            }
+
             if (!root.overviewVisible) return;
 
             if ((event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier)) || event.key === Qt.Key_Backtab) {

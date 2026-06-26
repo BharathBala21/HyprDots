@@ -40,6 +40,13 @@ Item {
         return "\u{F05A9}"; // wifi-strength-1
     }
 
+    function getAudioSinkGlyph(sink) {
+        if (sink && sink.connected && root.provider)
+            return root.provider.volumeGlyph(root.provider.displayedVolume, root.provider.isMuted);
+        if (sink && sink.deviceType === "headset") return "\u{F02CB}"; // headphones
+        return "\u{F057E}"; // volume-high
+    }
+
     function bluetoothDeviceVisible(device, section) {
         return root.provider && root.provider.bluetoothDeviceMatchesSection
             ? root.provider.bluetoothDeviceMatchesSection(device, section)
@@ -727,13 +734,24 @@ Item {
                                 id: itemIcon
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.deviceType === "headset" ? "\uf025" : "\uf028"
+                                text: root.getAudioSinkGlyph(modelData)
                                 color: modelData.connected ? "#3bc99d" : "#ffffff"
                                 font.pixelSize: 14
                                 font.family: root.iconFontFamily
 
                                 Behavior on color {
                                     ColorAnimation { duration: 150 }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.centerIn: itemIcon
+                                width: 32
+                                height: 32
+                                enabled: modelData.connected && root.provider
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.provider.toggleAudioMute();
                                 }
                             }
 
