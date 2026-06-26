@@ -168,7 +168,7 @@ def main():
             print(f"{GREEN}📋 Copied scanned content to clipboard using {BOLD}{clipboard_util}{RESET}!")
             # Truncate content in notification if it's very long
             display_text = decoded_text if len(decoded_text) <= 50 else decoded_text[:47] + "..."
-            send_notification("Scan Successful", f"Copied to clipboard:\n{display_text}", icon="edit-paste", disable=args.no_notify)
+            send_notification("Scan Successful,Copied to clipboard", f"Copied to clipboard:\n{display_text}", icon="edit-paste", disable=args.no_notify)
         else:
             print(f"{YELLOW}⚠️ Could not copy to clipboard. Clipboard utility not found.{RESET}")
             send_notification("Scan Successful", "QR/Barcode scanned successfully, but clipboard copy failed.", icon="dialog-warning", disable=args.no_notify)

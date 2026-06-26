@@ -49,7 +49,7 @@ Item {
     readonly property real dragDistance: Math.max(timeExitDistance, itemsEntryDistance)
     readonly property real itemsX: centeredItemsX + (1 - clampedProgress) * dragDistance
     readonly property real timeX: centeredTimeX - clampedProgress * dragDistance
-    readonly property real visibleTimeWidth: Math.min(textWidth, Math.max(0, timeMetrics.advanceWidth))
+    readonly property real visibleTimeWidth: Math.min(textWidth, Math.max(0, timeLabel.implicitWidth))
     readonly property real timeRecordingDotX: Math.max(
         4,
         timeX + (textWidth - visibleTimeWidth) / 2 - recordingDotSpacing - timeRecordingIndicator.width
@@ -70,13 +70,7 @@ Item {
         }
     }
 
-    TextMetrics {
-        id: timeMetrics
-        font.family: timeFontFamily
-        font.pixelSize: root.textPixelSize + 1
-        font.weight: Font.Bold
-        text: timeText
-    }
+
 
     Row {
         id: contentRow
@@ -222,6 +216,7 @@ Item {
     }
 
     Text {
+        id: timeLabel
         visible: timeText !== "" && showSecondaryText
         x: timeX
         width: textWidth

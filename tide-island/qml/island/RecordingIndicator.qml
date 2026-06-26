@@ -45,8 +45,9 @@ Item {
             duration: 110
         }
 
-        OpacityAnimator {
+        NumberAnimation {
             target: core
+            property: "opacity"
             to: 0.35
             duration: 980
             easing.type: Easing.InOutSine
@@ -56,8 +57,9 @@ Item {
             duration: 120
         }
 
-        OpacityAnimator {
+        NumberAnimation {
             target: core
+            property: "opacity"
             to: 1.0
             duration: 1040
             easing.type: Easing.InOutSine

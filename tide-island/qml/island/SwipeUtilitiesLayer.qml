@@ -123,6 +123,13 @@ Item {
     readonly property real dragDistance: Math.max(itemsEntryDistance, timeExitDistance)
     readonly property real timeX: centeredTimeX + clampedProgress * dragDistance
 
+    property int recordingDotSpacing: 12
+    readonly property real visibleTimeWidth: Math.min(textWidth, Math.max(0, timeLabel.implicitWidth))
+    readonly property real timeRecordingDotX: Math.max(
+        4,
+        timeX + (textWidth - visibleTimeWidth) / 2 - recordingDotSpacing - timeRecordingIndicator.width
+    )
+
     anchors.fill: parent
     clip: true
     opacity: showCondition ? 1 : 0
@@ -147,7 +154,19 @@ Item {
     }
 
     // The Clock (Visible in normal/resting state, slides out to the right)
+    RecordingIndicator {
+        id: timeRecordingIndicator
+        active: root.screenRecordingActive
+            && root.showSecondaryText
+            && root.timeText !== ""
+            && root.clampedProgress < 0.001
+        contentOpacity: 1 - root.clampedProgress
+        x: root.timeRecordingDotX
+        anchors.verticalCenter: parent.verticalCenter
+    }
+
     Text {
+        id: timeLabel
         visible: timeText !== "" && showSecondaryText
         x: timeX
         width: textWidth
