@@ -15,6 +15,10 @@ Scope {
     property bool settingsWindowOpen: false
     property bool cheatsheetWindowOpen: false
 
+    property real nightLightTemp: 0.0
+    property bool caffeineMode: false
+    property int batteryModeIndex: 1
+
     function getHomePath() {
         const envHome = Quickshell.env("HOME") || "";
         if (envHome) {
@@ -284,6 +288,54 @@ Scope {
         }
     }
 
+    Process {
+        id: startupCheckHypridleProcess
+        command: ["pgrep", "-x", "hypridle"]
+        running: false
+        onExited: (exitCode) => {
+            shellRoot.caffeineMode = (exitCode !== 0);
+        }
+    }
+
+    Process {
+        id: startupQueryHyprsunsetProcess
+        command: ["sh", "-c", "pgrep -fa hyprsunset || echo ''"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    const text = this.text.trim();
+                    const match = text.match(/-t\s+(\d+)/);
+                    if (match && match[1]) {
+                        const temp = parseInt(match[1]);
+                        shellRoot.nightLightTemp = (6500 - temp) / 4000;
+                    } else {
+                        shellRoot.nightLightTemp = 0;
+                    }
+                } else {
+                    shellRoot.nightLightTemp = 0;
+                }
+            }
+        }
+    }
+
+    Process {
+        id: startupPpQueryProcess
+        command: ["powerprofilesctl", "get"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    const profileName = this.text.trim();
+                    let idx = 1;
+                    if (profileName === "power-saver") idx = 0;
+                    else if (profileName === "performance") idx = 2;
+                    shellRoot.batteryModeIndex = idx;
+                }
+            }
+        }
+    }
+
     Component.onDestruction: {
         shuttingDown = true;
     }
@@ -291,6 +343,9 @@ Scope {
     Component.onCompleted: {
         SystemServices.ensureSetupComplete(Quickshell.shellDir);
         SystemServices.requestScreenRecordingSnapshot();
+        startupCheckHypridleProcess.running = true;
+        startupQueryHyprsunsetProcess.running = true;
+        startupPpQueryProcess.running = true;
     }
 
     Variants {

@@ -72,12 +72,16 @@ Rectangle {
         }
     }
 
+    Behavior on color { ColorAnimation { duration: 100 } }
+
     MouseArea {
         id: sliderArea
         anchors.fill: parent
         hoverEnabled: true
 
         function update(mouseX) {
+            // Guard against zero/negative width or hidden panel calculation glitching
+            if (width <= 0 || !controlCenter.showCondition) return;
             root.valueMoved(root.clamp01(mouseX / width));
         }
 

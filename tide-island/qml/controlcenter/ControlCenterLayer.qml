@@ -728,7 +728,7 @@ Item {
     }
 
     function syncBrightnessFromLevel(level) {
-        if (level < 0) return;
+        if (level < 0 || brightnessCard.pressed || sliderIntroPending) return;
         localBrightness = clamp01(level);
         if (showCondition && !sliderIntroPending) displayedBrightness = localBrightness;
         pendingBrightness = localBrightness;
@@ -736,7 +736,7 @@ Item {
     }
 
     function syncVolumeFromLevel(level) {
-        if (level < 0) return;
+        if (level < 0 || volumeCard.pressed || sliderIntroPending) return;
         localVolume = clamp01(level);
         if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
         pendingVolume = localVolume;
@@ -867,6 +867,7 @@ Item {
     }
 
     function syncTempFromSystem(value) {
+        if (tempCard.pressed || sliderIntroPending) return;
         console.log("[NightLight] syncTempFromSystem: value = " + value);
         localTemp = clamp01(value);
         if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
@@ -990,9 +991,9 @@ Item {
         } else {
             sliderIntroTimer.stop();
             sliderIntroPending = false;
-            displayedBrightness = localBrightness;
-            displayedVolume = localVolume;
-            displayedTemp = localTemp;
+            // displayedBrightness = localBrightness;
+            // displayedVolume = localVolume;
+            // displayedTemp = localTemp;
             closeConnectivityPanels();
         }
     }
@@ -1946,7 +1947,7 @@ Item {
 
                     Text {
                         width: parent.width
-                        text: "Power Mode"
+                        text: "Power "
                         color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : "#ffffff"
                         font.pixelSize: 13
                         font.family: textFontFamily

@@ -13,8 +13,18 @@ import "qml/workspace"
 PanelWindow {
     id: root
     property var shellRootController: null
-    property real nightLightTemp: 0.0
-    property int cachedBatteryModeIndex: 1
+    property real nightLightTemp: shellRootController ? shellRootController.nightLightTemp : 0.0
+    onNightLightTempChanged: {
+        if (shellRootController && shellRootController.nightLightTemp !== nightLightTemp) {
+            shellRootController.nightLightTemp = nightLightTemp;
+        }
+    }
+    property int cachedBatteryModeIndex: shellRootController ? shellRootController.batteryModeIndex : 1
+    onCachedBatteryModeIndexChanged: {
+        if (shellRootController && shellRootController.batteryModeIndex !== cachedBatteryModeIndex) {
+            shellRootController.batteryModeIndex = cachedBatteryModeIndex;
+        }
+    }
     property bool dndActive: false
     property string overviewPhase: "closed"
     property bool overviewPreloading: false
@@ -2122,6 +2132,7 @@ PanelWindow {
                         brightnessLevel: islandContainer.currentBrightness
                         tempLevel: root.nightLightTemp
                         batteryModeInitialIndex: root.cachedBatteryModeIndex
+                        caffeineMode: root.shellRootController ? root.shellRootController.caffeineMode : false
                         dndActive: root.dndActive
                         currentWorkspace: islandContainer.currentWs
                         currentTrack: islandContainer.currentTrack
@@ -2136,6 +2147,11 @@ PanelWindow {
                         }
                         onBatteryModeIndexChangedExternal: function(index) {
                             root.cachedBatteryModeIndex = index;
+                        }
+                        onCaffeineModeChanged: {
+                            if (root.shellRootController) {
+                                root.shellRootController.caffeineMode = caffeineMode;
+                            }
                         }
                         onDndToggleRequested: {
                             root.dndActive = !root.dndActive;
