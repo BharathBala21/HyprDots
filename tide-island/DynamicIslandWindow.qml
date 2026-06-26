@@ -1257,6 +1257,15 @@ PanelWindow {
             showRestingCapsule("normal");
         }
 
+        function closeUtilitiesInstantly() {
+            const oldDuration = mainCapsule.morphDuration;
+            mainCapsule.morphDuration = 0;
+            showTimeCapsule();
+            Qt.callLater(() => {
+                mainCapsule.morphDuration = oldDuration;
+            });
+        }
+
         function showWorkspaceCapsule(wsId) {
             currentWs = wsId;
             if (islandState === "control_center" || islandState === "notification" || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers") return;
@@ -1831,7 +1840,7 @@ PanelWindow {
                         showCondition: true
                         onPreferredWidthChanged: islandContainer.syncUtilitiesCapsuleWidth()
                         onCloseRequested: {
-                            islandContainer.islandState = "normal";
+                            islandContainer.closeUtilitiesInstantly();
                         }
                         onWallpaperRequested: {
                             islandContainer.showWallpapers();
