@@ -7,3 +7,4 @@ yazi/theme.toml
 fish/fish_variables
 hypr/hyprlua/gui.lua
 hypr/hyprlua/custom/*
+__pycache__/

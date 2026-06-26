@@ -39,7 +39,7 @@ Item {
     readonly property real lyricX: centeredX - (1 - clampedProgress) * dragDistance
     readonly property real timeX: centeredX + clampedProgress * dragDistance
     readonly property real visibleLyricWidth: Math.min(textWidth, Math.max(0, lyricMetrics.advanceWidth))
-    readonly property real visibleTimeWidth: Math.min(textWidth, Math.max(0, timeMetrics.advanceWidth))
+    readonly property real visibleTimeWidth: Math.min(textWidth, Math.max(0, timeLabel.implicitWidth))
     readonly property real timeRecordingDotX: Math.max(
         4,
         timeX + (textWidth - visibleTimeWidth) / 2 - recordingDotSpacing - timeRecordingIndicator.width
@@ -101,13 +101,7 @@ Item {
         text: activeLyricText !== "" ? activeLyricText : lyricText
     }
 
-    TextMetrics {
-        id: timeMetrics
-        font.family: timeFontFamily
-        font.pixelSize: textPixelSize + 1
-        font.weight: Font.Bold
-        text: timeText
-    }
+
 
     SequentialAnimation {
         id: lyricChangeAnimation
@@ -163,6 +157,7 @@ Item {
     }
 
     Text {
+        id: timeLabel
         visible: timeText !== "" && showSecondaryText
         x: timeX
         width: textWidth
