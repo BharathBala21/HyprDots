@@ -1,10 +1,12 @@
 import QtQuick
+import Quickshell
 import IslandBackend
 
 Item {
     id: root
 
     signal closeRequested()
+    signal wallpaperRequested()
     property var shellRootController: null
     property string iconFontFamily: ""
     property string textFontFamily: ""
@@ -19,6 +21,7 @@ Item {
     property real spacing: 10
     property int textPixelSize: 16
     property int selectedIdx: 0
+    property bool screenRecordingActive: false
 
     focus: true
 
@@ -49,8 +52,38 @@ Item {
 
     function triggerUtility(index) {
         const item = utilitiesModel.get(index);
-        if (item) {
-            console.log("Triggered utility: " + item.name);
+        if (!item) return;
+
+        console.log("Triggered utility: " + item.name);
+
+        if (item.name === "wallpaper") {
+            root.wallpaperRequested();
+            return;
+        }
+
+        root.closeRequested();
+
+        const home = Quickshell.env("HOME") || "";
+
+        if (item.name === "screenshot") {
+            Quickshell.execDetached(["hyprshot", "-z", "-m", "region"]);
+        } else if (item.name === "screenrecord") {
+            const recordScript = Quickshell.shellDir + "/bin/record.sh";
+            if (root.screenRecordingActive) {
+                Quickshell.execDetached([recordScript]);
+            } else {
+                Quickshell.execDetached([recordScript, "-r"]);
+            }
+        } else if (item.name === "colorpicker") {
+            Quickshell.execDetached(["hyprpicker", "-a"]);
+        } else if (item.name === "ocr") {
+            Quickshell.execDetached([home + "/.config/hypr/scripts/ocr.sh"]);
+        } else if (item.name === "search") {
+            Quickshell.execDetached([home + "/.config/hypr/scripts/visual_search.sh"]);
+        } else if (item.name === "qr") {
+            Quickshell.execDetached([home + "/.config/hypr/scripts/qr_barcode.sh"]);
+        } else if (item.name === "mirror") {
+            Quickshell.execDetached([home + "/.config/hypr/scripts/mirror.sh"]);
         }
     }
 

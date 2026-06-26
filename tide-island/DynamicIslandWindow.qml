@@ -363,6 +363,12 @@ PanelWindow {
             wallpapersFocusTimer.restart();
     }
     onUtilitiesLayerVisibleChanged: {
+        if (utilitiesLayerVisible) {
+            if (utilitiesSwipeLoader.item) {
+                utilitiesSwipeLoader.item.selectedIdx = 0;
+                utilitiesSwipeLoader.item.forceActiveFocus();
+            }
+        }
         if (utilitiesLayerVisible && monitorFocused)
             utilitiesFocusTimer.restart();
     }
@@ -1806,6 +1812,7 @@ PanelWindow {
                     islandContainer.syncUtilitiesCapsuleWidth();
                     if (item) {
                         item.selectedIdx = 0;
+                        item.forceActiveFocus();
                     }
                 }
 
@@ -1813,6 +1820,7 @@ PanelWindow {
                     SwipeUtilitiesLayer {
                         focus: true
                         shellRootController: root.shellRootController
+                        screenRecordingActive: root.screenRecordingActive
                         iconFontFamily: root.iconFontFamily
                         textFontFamily: root.textFontFamily
                         timeFontFamily: root.timeFontFamily
@@ -1824,6 +1832,9 @@ PanelWindow {
                         onPreferredWidthChanged: islandContainer.syncUtilitiesCapsuleWidth()
                         onCloseRequested: {
                             islandContainer.islandState = "normal";
+                        }
+                        onWallpaperRequested: {
+                            islandContainer.showWallpapers();
                         }
                     }
                 }
