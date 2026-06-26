@@ -51,6 +51,7 @@ Item {
     property bool sliderIntroPending: false
     property bool wifiPanelOpen: false
     property bool bluetoothPanelOpen: false
+    property bool batteryPanelOpen: false
     property bool batteryDrawerOpen: false
     property bool batteryDrawerDragging: false
     property real batteryDrawerProgress: 0
@@ -151,7 +152,7 @@ Item {
     readonly property string bluetoothPairingMessage: bluetoothPairingAgent ? bluetoothPairingAgent.promptMessage : ""
     readonly property string bluetoothPairingDisplayedCode: bluetoothPairingAgent ? bluetoothPairingAgent.displayedCode : ""
     readonly property bool hasConnectivityPrompt: wifiPendingPasswordSsid.length > 0 || bluetoothPairingActive
-    readonly property bool anyConnectivityPanelOpen: wifiPanelOpen || bluetoothPanelOpen
+    readonly property bool anyConnectivityPanelOpen: wifiPanelOpen || bluetoothPanelOpen || batteryPanelOpen
     readonly property string wifiStatusText: wifiController ? wifiController.statusText : "Unavailable"
     readonly property string bluetoothStatusText: buildBluetoothStatusText()
     readonly property string bluetoothAvailabilityMessage: bluetoothAvailable ? "" : "No Bluetooth adapter is available."
@@ -404,6 +405,7 @@ Item {
     function isConnectivityPanelOpen(kind) {
         if (kind === "wifi") return wifiPanelOpen;
         if (kind === "bluetooth") return bluetoothPanelOpen;
+        if (kind === "battery") return batteryPanelOpen;
         return false;
     }
 
@@ -442,6 +444,9 @@ Item {
                 bluetoothPendingSecretValue = "";
                 clearBluetoothMessages();
             }
+        } else if (kind === "battery") {
+            changed = batteryPanelOpen !== nextOpen;
+            batteryPanelOpen = nextOpen;
         } else {
             return;
         }
@@ -460,6 +465,7 @@ Item {
 
         setConnectivityPanelOpen("wifi", false, emitSignals);
         setConnectivityPanelOpen("bluetooth", false, emitSignals);
+        setConnectivityPanelOpen("battery", false, emitSignals);
         clearWifiPrompt();
         clearWifiMessages();
         clearBluetoothMessages();
@@ -1551,8 +1557,8 @@ Item {
                 Column {
                     anchors.left: powerIconCircle.right
                     anchors.leftMargin: 10
-                    anchors.right: parent.right
-                    anchors.rightMargin: 10
+                    anchors.right: powerChevronArea.left
+                    anchors.rightMargin: 4
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
 
@@ -1577,11 +1583,26 @@ Item {
                     }
                 }
 
+                Item {
+                    id: powerChevronArea
+                    anchors.right: parent.right
+                    width: 36
+                    height: parent.height
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "›"
+                        color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : "#a5aab5"
+                        font.pixelSize: 18
+                        font.family: textFontFamily
+                        font.weight: Font.Bold
+                    }
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        let nextIndex = (controlCenter.batteryModeIndex + 1) % 3;
-                        controlCenter.selectBatteryMode(nextIndex);
+                        controlCenter.toggleConnectivityOverlay("battery");
                     }
                 }
             }
@@ -1761,7 +1782,7 @@ Item {
 
         Item {
             width: parent.width
-            height: parent.height - y - 20
+            height: parent.height - y - 12
             clip: true
 
             Rectangle {

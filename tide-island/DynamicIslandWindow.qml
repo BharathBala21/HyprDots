@@ -94,6 +94,14 @@ PanelWindow {
 
         Region {
             intersection: Intersection.Combine
+            x: Math.floor(batteryConnectivityDetailShell.x)
+            y: Math.floor(batteryConnectivityDetailShell.y)
+            width: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.width) : 0
+            height: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
             x: Math.floor(topRightComponent.x)
             y: Math.floor(topRightComponent.y)
             width: topRightComponent.visible ? Math.ceil(topRightComponent.width) : 0
@@ -165,7 +173,9 @@ PanelWindow {
     property bool wifiConnectivityDetailMounted: false
     property bool bluetoothConnectivityDetailOpen: false
     property bool bluetoothConnectivityDetailMounted: false
-    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted
+    property bool batteryConnectivityDetailOpen: false
+    property bool batteryConnectivityDetailMounted: false
+    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted || batteryConnectivityDetailMounted
     readonly property real connectivityDetailWidth: 318
     readonly property real connectivityDetailHeight: 404
     readonly property real controlCenterMaximumExtraHeight: controlCenterLoader.item
@@ -258,12 +268,27 @@ PanelWindow {
                 bluetoothConnectivityDetailOpen = false;
                 bluetoothConnectivityDetailCleanupTimer.restart();
             }
+            return;
+        }
+
+        if (kind === "battery") {
+            if (nextOpen) {
+                batteryConnectivityDetailCleanupTimer.stop();
+                batteryConnectivityDetailMounted = true;
+                batteryConnectivityDetailOpen = true;
+            } else {
+                if (!batteryConnectivityDetailMounted && !batteryConnectivityDetailOpen)
+                    return;
+                batteryConnectivityDetailOpen = false;
+                batteryConnectivityDetailCleanupTimer.restart();
+            }
         }
     }
 
     function closeAllConnectivityDetails() {
         setConnectivityDetailVisible("wifi", false);
         setConnectivityDetailVisible("bluetooth", false);
+        setConnectivityDetailVisible("battery", false);
     }
 
     function openOverviewEverywhere() {
@@ -485,6 +510,13 @@ PanelWindow {
         interval: root.connectivityDetailAnimationDuration
         repeat: false
         onTriggered: root.bluetoothConnectivityDetailMounted = false
+    }
+
+    Timer {
+        id: batteryConnectivityDetailCleanupTimer
+        interval: root.connectivityDetailAnimationDuration
+        repeat: false
+        onTriggered: root.batteryConnectivityDetailMounted = false
     }
 
     OverviewWallpaperCacheController {
@@ -1392,7 +1424,7 @@ PanelWindow {
                 case "utilities":
                     return islandContainer.utilitiesCapsuleWidth;
                 case "control_center":
-                    return 420;
+                    return 440;
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -2166,6 +2198,24 @@ PanelWindow {
             mounted: root.bluetoothConnectivityDetailMounted
             rightSide: true
             panelKind: "bluetooth"
+            provider: controlCenterLoader.item
+            mainCapsule: mainCapsule
+            availableWidth: root.width
+            detailWidth: root.connectivityDetailWidth
+            detailHeight: root.connectivityDetailHeight
+            detailGap: root.connectivityDetailGap
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+            heroFontFamily: root.heroFontFamily
+        }
+
+        ConnectivityDetailShell {
+            id: batteryConnectivityDetailShell
+
+            open: root.batteryConnectivityDetailOpen
+            mounted: root.batteryConnectivityDetailMounted
+            rightSide: true
+            panelKind: "battery"
             provider: controlCenterLoader.item
             mainCapsule: mainCapsule
             availableWidth: root.width

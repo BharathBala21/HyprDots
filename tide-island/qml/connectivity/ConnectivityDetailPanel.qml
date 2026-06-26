@@ -13,6 +13,7 @@ Item {
 
     readonly property bool isWifi: panelKind === "wifi"
     readonly property bool isBluetooth: panelKind === "bluetooth"
+    readonly property bool isBattery: panelKind === "battery"
     readonly property var bluetoothDevices: provider ? provider.bluetoothDeviceValues || [] : []
     readonly property var bluetoothConnectedDevices: bluetoothDevicesForSection("connected")
     readonly property var bluetoothPairedDevices: bluetoothDevicesForSection("paired")
@@ -108,7 +109,7 @@ Item {
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.isWifi ? "Wi-Fi" : "Bluetooth"
+                text: root.isWifi ? "Wi-Fi" : (root.isBluetooth ? "Bluetooth" : "Power Mode")
                 color: StyleTokens.textPrimary
                 font.pixelSize: 15
                 font.family: root.heroFontFamily
@@ -586,6 +587,84 @@ Item {
                 id: contentColumn
                 width: contentFlick.width
                 spacing: 8
+
+                Repeater {
+                    model: root.isBattery ? 3 : 0
+
+                    delegate: Rectangle {
+                        width: contentColumn.width
+                        height: 52
+                        radius: 14
+                        color: (root.provider && root.provider.batteryModeIndex === index) ? "#1c1f26" : "transparent"
+                        border.width: (root.provider && root.provider.batteryModeIndex === index) ? 1 : 0
+                        border.color: "#3bc99d"
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (root.provider) {
+                                    root.provider.selectBatteryMode(index);
+                                }
+                            }
+                        }
+
+                        Item {
+                            anchors.fill: parent
+                            anchors.margins: 12
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.provider ? root.provider.batteryModeGlyphs[index] : ""
+                                color: (root.provider && root.provider.batteryModeIndex === index) ? "#3bc99d" : "#ffffff"
+                                font.pixelSize: 14
+                                font.family: root.iconFontFamily
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 26
+                                anchors.top: parent.top
+                                anchors.right: rightCheck.left
+                                anchors.rightMargin: 8
+                                text: root.provider ? root.provider.batteryModeLabel(index) : ""
+                                color: StyleTokens.textPrimary
+                                font.pixelSize: 12
+                                font.family: root.textFontFamily
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 26
+                                anchors.bottom: parent.bottom
+                                anchors.right: rightCheck.left
+                                anchors.rightMargin: 8
+                                text: {
+                                    if (index === 0) return "Reduce power consumption";
+                                    if (index === 1) return "Standard power level";
+                                    return "Maximum performance profile";
+                                }
+                                color: StyleTokens.textMuted
+                                font.pixelSize: 10
+                                font.family: root.textFontFamily
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                id: rightCheck
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "✓"
+                                color: "#3bc99d"
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                visible: root.provider && root.provider.batteryModeIndex === index
+                            }
+                        }
+                    }
+                }
 
                 Text {
                     width: parent.width
