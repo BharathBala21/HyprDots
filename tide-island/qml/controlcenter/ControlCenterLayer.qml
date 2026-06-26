@@ -119,8 +119,9 @@ Item {
     readonly property string volumeIconGlyph: "\u{F057E}"
     readonly property var batteryModeGlyphs: ["", "", ""]
     property var notificationModel: null
-    readonly property real controlCenterExtraHeight: 306
-    readonly property real controlCenterMaximumExtraHeight: 306
+    readonly property real controlCenterExtraHeight: 230
+    readonly property real controlCenterMaximumExtraHeight: 230
+    readonly property real shortTileWidth: (controlCenter.width - 24) / 3
     readonly property bool bluetoothAvailable: !!bluetoothAdapter
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
     readonly property var bluetoothDeviceValues: bluetoothAdapter ? bluetoothAdapter.devices.values : []
@@ -1392,7 +1393,7 @@ Item {
 
             Rectangle {
                 id: wifiCard
-                width: (tilesRow1.width - 12) / 2
+                width: shortTileWidth
                 height: 64
                 radius: 20
                 color: wifiEnabled ? "#3bc99d" : "#1e222b"
@@ -1491,7 +1492,7 @@ Item {
 
             Rectangle {
                 id: audioCard
-                width: (tilesRow1.width - 12) / 2
+                width: parent.width - wifiCard.width - 12
                 height: 64
                 radius: 20
                 color: "#1e222b"
@@ -1600,7 +1601,7 @@ Item {
 
             Rectangle {
                 id: bluetoothCard
-                width: (tilesRow2.width - 12) / 2
+                width: shortTileWidth
                 height: 64
                 radius: 20
                 color: bluetoothEnabled ? "#3bc99d" : "#1e222b"
@@ -1699,7 +1700,7 @@ Item {
 
             Rectangle {
                 id: caffeineCard
-                width: (tilesRow2.width - 12) / 2
+                width: shortTileWidth
                 height: 64
                 radius: 20
                 color: caffeineMode ? "#3bc99d" : "#1e222b"
@@ -1763,16 +1764,10 @@ Item {
                     }
                 }
             }
-        }
-
-        Row {
-            id: tilesRow3
-            width: parent.width
-            spacing: 12
 
             Rectangle {
                 id: powerModeCard
-                width: tilesRow3.width
+                width: shortTileWidth
                 height: 64
                 radius: 20
                 color: {

@@ -132,7 +132,7 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: 760
+    implicitHeight: 680
     exclusiveZone: 38
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
@@ -1456,7 +1456,7 @@ PanelWindow {
                 case "utilities":
                     return islandContainer.utilitiesCapsuleWidth;
                 case "control_center":
-                    return 480;
+                    return 540;
                 case "launcher":
                 case "clipboard":
                 case "emojis":

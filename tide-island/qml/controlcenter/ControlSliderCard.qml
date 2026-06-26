@@ -37,7 +37,7 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: parent.width * root.value
-        radius: parent.radius
+        radius: Math.min(width / 2, parent.radius)
         color: sliderArea.containsMouse ? "#45e0af" : "#3bc99d" // Sleek bright cyan/teal
 
         Behavior on color {
