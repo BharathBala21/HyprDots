@@ -1545,12 +1545,20 @@ Item {
                         return "#2d323f";
                     }
 
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+
                     Text {
                         anchors.centerIn: parent
                         text: controlCenter.batteryModeGlyphs[controlCenter.batteryModeIndex]
                         color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : "#ffffff"
                         font.pixelSize: 16
                         font.family: iconFontFamily
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
                     }
                 }
 
@@ -1570,6 +1578,10 @@ Item {
                         font.family: textFontFamily
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
                     }
 
                     Text {
@@ -1580,6 +1592,10 @@ Item {
                         font.family: textFontFamily
                         font.weight: Font.Medium
                         elide: Text.ElideRight
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
                     }
                 }
 
@@ -1596,6 +1612,10 @@ Item {
                         font.pixelSize: 18
                         font.family: textFontFamily
                         font.weight: Font.Bold
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
                     }
                 }
 

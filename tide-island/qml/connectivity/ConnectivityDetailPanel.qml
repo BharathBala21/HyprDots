@@ -596,8 +596,16 @@ Item {
                         height: 52
                         radius: 14
                         color: (root.provider && root.provider.batteryModeIndex === index) ? "#1c1f26" : "transparent"
-                        border.width: (root.provider && root.provider.batteryModeIndex === index) ? 1 : 0
-                        border.color: "#3bc99d"
+                        border.width: 1
+                        border.color: (root.provider && root.provider.batteryModeIndex === index) ? "#3bc99d" : "transparent"
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        Behavior on border.color {
+                            ColorAnimation { duration: 150 }
+                        }
 
                         MouseArea {
                             anchors.fill: parent
@@ -619,6 +627,10 @@ Item {
                                 color: (root.provider && root.provider.batteryModeIndex === index) ? "#3bc99d" : "#ffffff"
                                 font.pixelSize: 14
                                 font.family: root.iconFontFamily
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 150 }
+                                }
                             }
 
                             Text {
@@ -660,7 +672,11 @@ Item {
                                 color: "#3bc99d"
                                 font.pixelSize: 15
                                 font.weight: Font.DemiBold
-                                visible: root.provider && root.provider.batteryModeIndex === index
+                                opacity: (root.provider && root.provider.batteryModeIndex === index) ? 1.0 : 0.0
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 150 }
+                                }
                             }
                         }
                     }
