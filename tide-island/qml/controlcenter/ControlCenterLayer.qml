@@ -114,14 +114,8 @@ Item {
     readonly property string volumeIconGlyph: "\u{F057E}"
     readonly property var batteryModeGlyphs: ["", "", ""]
     property var notificationModel: null
-    readonly property real controlCenterExtraHeight: {
-        if (!notificationModel || notificationModel.count === 0) {
-            return 42;
-        } else {
-            return Math.min(196, 36 + notificationModel.count * 80);
-        }
-    }
-    readonly property real controlCenterMaximumExtraHeight: 196
+    readonly property real controlCenterExtraHeight: 230
+    readonly property real controlCenterMaximumExtraHeight: 230
     readonly property bool bluetoothAvailable: !!bluetoothAdapter
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
     readonly property var bluetoothDeviceValues: bluetoothAdapter ? bluetoothAdapter.devices.values : []
@@ -1767,7 +1761,7 @@ Item {
 
         Item {
             width: parent.width
-            height: controlCenter.controlCenterExtraHeight
+            height: parent.height - y - 20
             clip: true
 
             Item {
