@@ -70,7 +70,7 @@ hl.window_rule({
 -- Open Discord in its dedicated special workspace
 hl.window_rule({
     match = { class = "discord" },
-    workspace = "special:discord"
+    workspace = "special:discord_special"
 })
 
 
