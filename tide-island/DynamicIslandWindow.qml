@@ -13,6 +13,19 @@ import "qml/workspace"
 PanelWindow {
     id: root
     property var shellRootController: null
+    property real nightLightTemp: shellRootController ? shellRootController.nightLightTemp : 0.0
+    onNightLightTempChanged: {
+        if (shellRootController && shellRootController.nightLightTemp !== nightLightTemp) {
+            shellRootController.nightLightTemp = nightLightTemp;
+        }
+    }
+    property int cachedBatteryModeIndex: shellRootController ? shellRootController.batteryModeIndex : 1
+    onCachedBatteryModeIndexChanged: {
+        if (shellRootController && shellRootController.batteryModeIndex !== cachedBatteryModeIndex) {
+            shellRootController.batteryModeIndex = cachedBatteryModeIndex;
+        }
+    }
+    property bool dndActive: false
     property string overviewPhase: "closed"
     property bool overviewPreloading: false
     readonly property bool overviewPreparing: overviewPhase === "preparing"
@@ -44,8 +57,13 @@ PanelWindow {
     readonly property bool emojiPickerLayerVisible: islandContainer.islandState === "emojis"
     readonly property bool wallpapersLayerVisible: islandContainer.islandState === "wallpapers"
     readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
+    readonly property bool controlCenterLayerVisible: islandContainer.islandState === "control_center"
 
     readonly property var userConfig: UserConfig
+
+    ListModel {
+        id: notificationHistory
+    }
 
     HyprlandDispatch {
         id: hyprDispatch
@@ -56,6 +74,13 @@ PanelWindow {
     mask: Region {
         // Input is the union of the island's visible surfaces plus a compact top
         // gesture strip. The gesture strip must not grow with expanded content.
+        Region {
+            x: 0
+            y: 0
+            width: root.controlCenterLayerVisible ? root.width : 0
+            height: root.controlCenterLayerVisible ? root.height : 0
+        }
+
         Region {
             x: 0
             y: 0
@@ -90,6 +115,22 @@ PanelWindow {
 
         Region {
             intersection: Intersection.Combine
+            x: Math.floor(batteryConnectivityDetailShell.x)
+            y: Math.floor(batteryConnectivityDetailShell.y)
+            width: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.width) : 0
+            height: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(audioConnectivityDetailShell.x)
+            y: Math.floor(audioConnectivityDetailShell.y)
+            width: audioConnectivityDetailShell.visible ? Math.ceil(audioConnectivityDetailShell.width) : 0
+            height: audioConnectivityDetailShell.visible ? Math.ceil(audioConnectivityDetailShell.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
             x: Math.floor(topRightComponent.x)
             y: Math.floor(topRightComponent.y)
             width: topRightComponent.visible ? Math.ceil(topRightComponent.width) : 0
@@ -112,12 +153,12 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: 560
+    implicitHeight: 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
         ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
@@ -161,14 +202,18 @@ PanelWindow {
     property bool wifiConnectivityDetailMounted: false
     property bool bluetoothConnectivityDetailOpen: false
     property bool bluetoothConnectivityDetailMounted: false
-    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted
+    property bool batteryConnectivityDetailOpen: false
+    property bool batteryConnectivityDetailMounted: false
+    property bool audioConnectivityDetailOpen: false
+    property bool audioConnectivityDetailMounted: false
+    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted || batteryConnectivityDetailMounted || audioConnectivityDetailMounted
     readonly property real connectivityDetailWidth: 318
     readonly property real connectivityDetailHeight: 404
     readonly property real controlCenterMaximumExtraHeight: controlCenterLoader.item
         ? controlCenterLoader.item.controlCenterMaximumExtraHeight
         : 120
     readonly property real controlCenterWindowHeight: islandContainer.controlCenterLayerVisible
-        ? 4 + 408 + root.controlCenterMaximumExtraHeight + 12
+        ? 4 + 350 + root.controlCenterMaximumExtraHeight + 12
         : 0
     readonly property real connectivityDetailGap: 16
     readonly property int connectivityDetailAnimationDuration: 360
@@ -254,12 +299,42 @@ PanelWindow {
                 bluetoothConnectivityDetailOpen = false;
                 bluetoothConnectivityDetailCleanupTimer.restart();
             }
+            return;
+        }
+
+        if (kind === "battery") {
+            if (nextOpen) {
+                batteryConnectivityDetailCleanupTimer.stop();
+                batteryConnectivityDetailMounted = true;
+                batteryConnectivityDetailOpen = true;
+            } else {
+                if (!batteryConnectivityDetailMounted && !batteryConnectivityDetailOpen)
+                    return;
+                batteryConnectivityDetailOpen = false;
+                batteryConnectivityDetailCleanupTimer.restart();
+            }
+            return;
+        }
+
+        if (kind === "audio") {
+            if (nextOpen) {
+                audioConnectivityDetailCleanupTimer.stop();
+                audioConnectivityDetailMounted = true;
+                audioConnectivityDetailOpen = true;
+            } else {
+                if (!audioConnectivityDetailMounted && !audioConnectivityDetailOpen)
+                    return;
+                audioConnectivityDetailOpen = false;
+                audioConnectivityDetailCleanupTimer.restart();
+            }
         }
     }
 
     function closeAllConnectivityDetails() {
         setConnectivityDetailVisible("wifi", false);
         setConnectivityDetailVisible("bluetooth", false);
+        setConnectivityDetailVisible("battery", false);
+        setConnectivityDetailVisible("audio", false);
     }
 
     function openOverviewEverywhere() {
@@ -306,7 +381,19 @@ PanelWindow {
     }
 
     function showNotification(appName, summary, body) {
-        islandContainer.showNotificationCapsule(appName, summary, body);
+        let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
+        notificationHistory.append({
+            "appName": displayAppName,
+            "summary": summary,
+            "body": body,
+            "timestamp": new Date().toLocaleTimeString(Qt.locale(), "hh:mm")
+        });
+        if (notificationHistory.count > 50) {
+            notificationHistory.remove(0);
+        }
+        if (!root.dndActive) {
+            islandContainer.showNotificationCapsule(appName, summary, body);
+        }
     }
 
     function toggleControlCenter() {
@@ -372,12 +459,17 @@ PanelWindow {
         if (utilitiesLayerVisible && monitorFocused)
             utilitiesFocusTimer.restart();
     }
+    onControlCenterLayerVisibleChanged: {
+        if (controlCenterLayerVisible && monitorFocused)
+            controlCenterFocusTimer.restart();
+    }
     onOverviewVisualReadyChanged: {
         if (overviewVisualReady) beginOverviewOpening();
     }
     onMonitorFocusedChanged: {
         if (overviewVisible && monitorFocused) overviewFocusTimer.restart();
         if (connectivityPromptActive && monitorFocused) connectivityPromptFocusTimer.restart();
+        if (controlCenterLayerVisible && monitorFocused) controlCenterFocusTimer.restart();
         if (launcherLayerVisible && monitorFocused) launcherFocusTimer.restart();
         if (clipboardLayerVisible && monitorFocused) clipboardFocusTimer.restart();
         if (emojiPickerLayerVisible && monitorFocused) emojisFocusTimer.restart();
@@ -394,6 +486,13 @@ PanelWindow {
 
     Timer {
         id: connectivityPromptFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: islandContainer.forceActiveFocus()
+    }
+
+    Timer {
+        id: controlCenterFocusTimer
         interval: 0
         repeat: false
         onTriggered: islandContainer.forceActiveFocus()
@@ -473,6 +572,20 @@ PanelWindow {
         onTriggered: root.bluetoothConnectivityDetailMounted = false
     }
 
+    Timer {
+        id: batteryConnectivityDetailCleanupTimer
+        interval: root.connectivityDetailAnimationDuration
+        repeat: false
+        onTriggered: root.batteryConnectivityDetailMounted = false
+    }
+
+    Timer {
+        id: audioConnectivityDetailCleanupTimer
+        interval: root.connectivityDetailAnimationDuration
+        repeat: false
+        onTriggered: root.audioConnectivityDetailMounted = false
+    }
+
     OverviewWallpaperCacheController {
         id: overviewWallpaperCache
 
@@ -497,7 +610,7 @@ PanelWindow {
     FocusScope {
         id: islandContainer
         anchors.fill: parent
-        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers" || islandState === "utilities")
+        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "control_center" || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers" || islandState === "utilities")
 
         property string islandState: "normal"
         property string splitIcon: root.defaultSplitIcon
@@ -655,6 +768,19 @@ PanelWindow {
             }
         }
 
+        MouseArea {
+            id: controlCenterClickAwayArea
+
+            anchors.fill: parent
+            enabled: islandContainer.controlCenterLayerVisible
+            visible: enabled
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+            onClicked: {
+                islandContainer.smartRestoreState();
+            }
+        }
+
         HyprlandWorkspaceTracker {
             id: workspaceTracker
 
@@ -684,6 +810,12 @@ PanelWindow {
         }
 
         Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Escape && islandState === "control_center") {
+                smartRestoreState();
+                event.accepted = true;
+                return;
+            }
+
             if (!root.overviewVisible) return;
 
             if ((event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier)) || event.key === Qt.Key_Backtab) {
@@ -1378,7 +1510,7 @@ PanelWindow {
                 case "utilities":
                     return islandContainer.utilitiesCapsuleWidth;
                 case "control_center":
-                    return 420;
+                    return 540;
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -1410,7 +1542,7 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 408 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                    return 350 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -1996,13 +2128,33 @@ PanelWindow {
                         batteryCapacity: islandContainer.batteryCapacity
                         isCharging: islandContainer.isCharging
                         volumeLevel: islandContainer.currentVolume
+                        isMuted: islandContainer.isMuted
                         brightnessLevel: islandContainer.currentBrightness
+                        tempLevel: root.nightLightTemp
+                        batteryModeInitialIndex: root.cachedBatteryModeIndex
+                        caffeineMode: root.shellRootController ? root.shellRootController.caffeineMode : false
+                        dndActive: root.dndActive
                         currentWorkspace: islandContainer.currentWs
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
                         showCondition: islandContainer.controlCenterLayerVisible
+                        notificationModel: notificationHistory
                         onConnectivityPanelRequested: function(kind, open) {
                             root.setConnectivityDetailVisible(kind, open);
+                        }
+                        onTempChanged: function(val) {
+                            root.nightLightTemp = val;
+                        }
+                        onBatteryModeIndexChangedExternal: function(index) {
+                            root.cachedBatteryModeIndex = index;
+                        }
+                        onCaffeineModeChanged: {
+                            if (root.shellRootController) {
+                                root.shellRootController.caffeineMode = caffeineMode;
+                            }
+                        }
+                        onDndToggleRequested: {
+                            root.dndActive = !root.dndActive;
                         }
                     }
                 }
@@ -2149,8 +2301,44 @@ PanelWindow {
 
             open: root.bluetoothConnectivityDetailOpen
             mounted: root.bluetoothConnectivityDetailMounted
-            rightSide: true
+            rightSide: false
             panelKind: "bluetooth"
+            provider: controlCenterLoader.item
+            mainCapsule: mainCapsule
+            availableWidth: root.width
+            detailWidth: root.connectivityDetailWidth
+            detailHeight: root.connectivityDetailHeight
+            detailGap: root.connectivityDetailGap
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+            heroFontFamily: root.heroFontFamily
+        }
+
+        ConnectivityDetailShell {
+            id: batteryConnectivityDetailShell
+
+            open: root.batteryConnectivityDetailOpen
+            mounted: root.batteryConnectivityDetailMounted
+            rightSide: true
+            panelKind: "battery"
+            provider: controlCenterLoader.item
+            mainCapsule: mainCapsule
+            availableWidth: root.width
+            detailWidth: root.connectivityDetailWidth
+            detailHeight: root.connectivityDetailHeight
+            detailGap: root.connectivityDetailGap
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+            heroFontFamily: root.heroFontFamily
+        }
+
+        ConnectivityDetailShell {
+            id: audioConnectivityDetailShell
+
+            open: root.audioConnectivityDetailOpen
+            mounted: root.audioConnectivityDetailMounted
+            rightSide: true
+            panelKind: "audio"
             provider: controlCenterLoader.item
             mainCapsule: mainCapsule
             availableWidth: root.width
