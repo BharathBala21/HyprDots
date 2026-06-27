@@ -48,6 +48,9 @@ PanelWindow {
     readonly property int currentMonitorWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace
         ? hyprMonitor.activeWorkspace.id
         : 1
+    readonly property bool isWorkspaceFullscreen: hyprMonitor && hyprMonitor.activeWorkspace
+        ? !!hyprMonitor.activeWorkspace.hasFullscreen
+        : false
     readonly property bool screenRecordingActive: shellRootController
         && shellRootController.screenRecordingActive !== undefined
         ? !!shellRootController.screenRecordingActive
@@ -2352,6 +2355,7 @@ PanelWindow {
 
         TopRightStatus {
             id: topRightComponent
+            visible: !root.isWorkspaceFullscreen
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
@@ -2367,6 +2371,7 @@ PanelWindow {
 
         TopLeftLyrics {
             id: topLeftComponent
+            visible: !root.isWorkspaceFullscreen
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
@@ -2381,6 +2386,7 @@ PanelWindow {
 
         TopRightTray {
             id: topRightTray
+            visible: !root.isWorkspaceFullscreen
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top
