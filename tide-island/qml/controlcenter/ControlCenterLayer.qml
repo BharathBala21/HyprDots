@@ -1435,74 +1435,7 @@ Item {
 
 
 
-                Row {
-                    spacing: 5
-                    anchors.verticalCenter: parent.verticalCenter
 
-                    Text {
-                        text: controlCenter.chargingIconGlyph
-                        color: StyleTokens.white
-                        font.pixelSize: 13
-                        font.family: iconFontFamily
-                        visible: isCharging
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                        text: batteryCapacity + "%"
-                        color: StyleTokens.white
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Item {
-                        width: 28
-                        height: 14
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.rightMargin: 2
-                            radius: 4
-                            color: StyleTokens.transparent
-                            border.color: StyleTokens.textSecondary
-                            border.width: 1
-
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.top: parent.top
-                                anchors.bottom: parent.bottom
-                                anchors.margins: 2
-                                radius: 2
-                                width: (parent.width - 4) * (batteryCapacity / 100.0)
-                                color: {
-                                    if (isCharging) return StyleTokens.success;
-                                    if (batteryCapacity < 10) return StyleTokens.danger;
-                                    if (batteryCapacity < 20) return StyleTokens.warning;
-                                    return StyleTokens.success;
-                                }
-
-                                Behavior on width {
-                                    NumberAnimation {
-                                        duration: 300
-                                        easing.type: Easing.OutCubic
-                                    }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            width: 2
-                            height: 6
-                            radius: 1
-                            color: StyleTokens.textSecondary
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
             }
         }
 
