@@ -10,7 +10,7 @@ ShellRoot {
     property bool testMode: Quickshell.env("TEST_MODE") === "1"
 
     // Default fallback wallpaper path
-    property string wallpaperPath: "file:///home/pirate/Pictures/Wallpapers/cloudy-landscape.jpg"
+    property string wallpaperPath: "file://" + root.getHomePath() + "/Pictures/Wallpapers/cloudy-landscape.jpg"
 
     // Process to dynamically find the wallpaper path at startup (checking waypaper config first)
     Process {
@@ -47,7 +47,7 @@ ShellRoot {
     }
 
     function getHomePath() {
-        return Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "pirate");
+        return Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "user");
     }
 
     function parseColorsQml(qmlText) {
