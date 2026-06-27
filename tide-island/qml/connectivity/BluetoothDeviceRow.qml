@@ -1,5 +1,6 @@
 import QtQuick
 import IslandBackend
+import Quickshell.Services.UPower
 
 Rectangle {
     id: root
@@ -21,11 +22,42 @@ Rectangle {
         if (section === "paired") return "Connect";
         return pairing ? "Pairing" : "Pair";
     }
-    readonly property string subtitleText: section === "connected"
-        ? "Connected"
-        : (hasProvider && provider.bluetoothDeviceSubtitle
+
+    readonly property var upowerDevice: {
+        if (!device || !device.address) return null;
+        var addressUpper = "DEV_" + device.address.replace(/:/g, "_").toUpperCase();
+        for (var i = 0; i < UPower.devices.count; i++) {
+            var upDev = UPower.devices.get(i);
+            if (upDev && upDev.nativePath && upDev.nativePath.toUpperCase().indexOf(addressUpper) !== -1) {
+                return upDev;
+            }
+        }
+        return null;
+    }
+    readonly property bool isCharging: upowerDevice ? upowerDevice.state === UPowerDeviceState.Charging : false
+
+    readonly property string subtitleText: {
+        if (section === "connected") {
+            var parts = ["Connected"];
+            if (device && device.batteryAvailable) {
+                var bat = hasProvider ? provider.bluetoothBatteryPercent(device) : -1;
+                if (bat >= 0) {
+                    var batStr = bat + "%";
+                    if (isCharging) {
+                        batStr += " (Charging)";
+                    }
+                    parts.push(batStr);
+                }
+            } else if (isCharging) {
+                parts.push("Charging");
+            }
+            return parts.join(" • ");
+        }
+
+        return hasProvider && provider.bluetoothDeviceSubtitle
             ? provider.bluetoothDeviceSubtitle(device)
-            : "")
+            : "";
+    }
     readonly property color iconColor: section === "available" ? StyleTokens.textTertiary : StyleTokens.accent
 
     width: parent ? parent.width : 0
