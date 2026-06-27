@@ -1348,6 +1348,12 @@ Item {
         }
     }
 
+    MouseArea {
+        anchors.fill: parent
+        onPressed: (mouse) => { mouse.accepted = true; }
+        onClicked: (mouse) => { mouse.accepted = true; }
+    }
+
     Column {
         anchors.fill: parent
         spacing: 12
@@ -2229,10 +2235,31 @@ Item {
                 clip: true
 
                 delegate: Rectangle {
+                    id: notificationItem
                     width: notificationsList.width
                     height: 72
                     radius: 12
-                    color: "#1c1f26"
+                    color: notificationMouseArea.containsMouse ? "#272a34" : "#1c1f26"
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    MouseArea {
+                        id: notificationMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            console.log("[Notification] Clicked notification from app: " + appName);
+                            const home = controlCenter.shellRootController ? controlCenter.shellRootController.getHomePath() : "/home/aashiq";
+                            Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/redirect_app.py", appName]);
+                            if (controlCenter.shellRootController) {
+                                controlCenter.shellRootController.forEachWindow((w) => {
+                                    if (w && w.toggleControlCenter)
+                                        w.toggleControlCenter();
+                                });
+                            }
+                        }
+                    }
 
                     Rectangle {
                         anchors.right: parent.right
