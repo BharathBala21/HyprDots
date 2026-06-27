@@ -2249,9 +2249,9 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            console.log("[Notification] Clicked notification from app: " + appName);
-                            const home = controlCenter.shellRootController ? controlCenter.shellRootController.getHomePath() : "/home/aashiq";
-                            Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/redirect_app.py", appName]);
+                            console.log("[Notification] Clicked notification from app: " + appName + ", summary: " + summary);
+                            const home = controlCenter.shellRootController ? controlCenter.shellRootController.getHomePath() : (Quickshell.env("HOME") || "");
+                            Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/redirect_app.py", appName, summary, body]);
                             if (controlCenter.shellRootController) {
                                 controlCenter.shellRootController.forEachWindow((w) => {
                                     if (w && w.toggleControlCenter)

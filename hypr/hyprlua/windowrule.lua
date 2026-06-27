@@ -67,3 +67,10 @@ hl.window_rule({
     center = true
 })
 
+-- Open Discord in its dedicated special workspace
+hl.window_rule({
+    match = { class = "discord" },
+    workspace = "special:discord"
+})
+
+
