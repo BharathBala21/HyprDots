@@ -11,11 +11,28 @@ Item {
     property bool musicPlaying: false
     property string iconFontFamily: ""
     property string textFontFamily: ""
+    property real currentVolume: 0
 
     implicitWidth: contentRow.width + 24
     implicitHeight: 32
     width: implicitWidth
     height: implicitHeight
+
+    MouseArea {
+        id: scrollArea
+        anchors.fill: parent
+        enabled: root.musicPlaying
+        acceptedButtons: Qt.NoButton
+
+        onWheel: (wheel) => {
+            if (root.currentVolume < 0)
+                return;
+            var step = 0.02;
+            var nextVal = root.currentVolume + (wheel.angleDelta.y > 0 ? step : -step);
+            SystemServices.setVolume(Math.max(0.0, Math.min(1.0, nextVal)));
+            wheel.accepted = true;
+        }
+    }
 
     Rectangle {
         anchors.fill: parent

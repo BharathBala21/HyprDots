@@ -2360,6 +2360,7 @@ PanelWindow {
             batteryCapacity: islandContainer.batteryCapacity
             isCharging: islandContainer.isCharging
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
+            currentVolume: islandContainer.currentVolume
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
         }
