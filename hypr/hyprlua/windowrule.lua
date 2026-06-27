@@ -67,3 +67,11 @@ hl.window_rule({
     center = true
 })
 
+
+hl.window_rule({
+    match = { title = "Hyprland Customizer" },
+    float = true,
+    persistent_size = true
+})
+
+
