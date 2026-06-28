@@ -79,12 +79,11 @@ FocusScope {
     function previewWallpaper(path) {
         root.currentWallpaper = path;
         Quickshell.execDetached(["waypaper", "--wallpaper", path]);
-        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_wallpaper_config.py", path]);
+        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--wallpaper", path]);
     }
 
     function confirmWallpaper(path) {
         previewWallpaper(path);
-        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--wallpaper", path]);
         root.initialWallpaper = path; // Confirm it as the active wallpaper (reverting won't change it back)    
         root.closeRequested();
     }
@@ -92,7 +91,7 @@ FocusScope {
     function revertAndClose() {
         if (initialWallpaper !== "" && initialWallpaper !== currentWallpaper) {
             Quickshell.execDetached(["waypaper", "--wallpaper", initialWallpaper]);
-            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_wallpaper_config.py", initialWallpaper]);
+            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--wallpaper", initialWallpaper]);
         }
         root.closeRequested();
     }
