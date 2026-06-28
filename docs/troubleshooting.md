@@ -55,20 +55,6 @@ If Hyprland fails to start or crashes:
 - validate `hyprland.lua` syntax
 - temporarily comment out rules in `hypr/hyprlua/windowrule.lua`
 
-## Local docs preview issues
-
-If local docs preview does not work:
-
-- run:
-
-```bash
-cd /home/nishanth/HyprDots
-npx @docs.page/cli preview --port 43931
-```
-
-- open the exact preview URL printed by the CLI
-- if the remote preview page errors, check the terminal output for errors
-
 ## Useful diagnostics
 
 - `systemctl --user status wayland-session` — desktop session status
@@ -76,4 +62,4 @@ npx @docs.page/cli preview --port 43931
 - `journalctl --user -xe` — inspect service and application logs
 - `cat matugen/config.toml` — confirm theme sources
 
-If you still need help, use this documentation as a guide and inspect the repository layout in [Repository Structure](/structure).
+If you still need help, use this documentation as a guide and inspect the repository layout in [Repository Structure]({{ site.baseurl }}/structure/).

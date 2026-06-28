@@ -1,0 +1,17 @@
+title: HyerDOTS
+description: Curated Arch Linux and Hyprland dotfiles documentation
+url: https://bharathbala21.github.io
+baseurl: /HyprDots
+theme: minima
+permalink: pretty
+
+header_pages:
+  - index.md
+  - installation.md
+  - configuration.md
+  - customization.md
+  - features.md
+  - structure.md
+  - troubleshooting.md
+  - next-steps.md
+
