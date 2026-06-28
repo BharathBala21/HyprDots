@@ -9,10 +9,12 @@ import "qml/controlcenter"
 import "qml/connectivity"
 import "qml/island"
 import "qml/workspace"
+import "qml/sidebar"
 
 PanelWindow {
     id: root
     property var shellRootController: null
+    property bool sidebarOpen: false
     readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
     property real nightLightTemp: shellRootController ? shellRootController.nightLightTemp : 0.0
     onNightLightTempChanged: {
@@ -181,13 +183,29 @@ PanelWindow {
             width: topLeftComponent.visible ? Math.ceil(topLeftComponent.width) : 0
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
+
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(togglePill.x)
+            y: Math.floor(togglePill.y)
+            width: togglePill.visible ? Math.ceil(togglePill.width) : 0
+            height: togglePill.visible ? Math.ceil(togglePill.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(sidebar.panel.x)
+            y: Math.floor(sidebar.panel.y)
+            width: (sidebar.visible && root.sidebarOpen) ? Math.ceil(sidebar.panel.width) : 0
+            height: (sidebar.visible && root.sidebarOpen) ? Math.ceil(sidebar.panel.height) : 0
+        }
     }
-    implicitHeight: (islandContainer.islandState === "powermenu") ? screen.height : 680
+    implicitHeight: (islandContainer.islandState === "powermenu" || root.sidebarOpen) ? screen.height : 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu")
-    WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu")
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu" || root.sidebarOpen)
+    WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible && !root.sidebarOpen) ? WlrLayer.Top : WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu" || root.sidebarOpen)
         ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
@@ -2548,19 +2566,39 @@ PanelWindow {
             textFontFamily: root.textFontFamily
         }
 
+        PillButton {
+            id: togglePill
+            visible: !root.isWorkspaceFullscreen
+            theme: sidebar.theme
+            sidebarActive: root.sidebarOpen
+            anchors.left: parent.left
+            anchors.leftMargin: 16
+            anchors.top: parent.top
+            anchors.topMargin: 4
+            onClicked: root.sidebarOpen = !root.sidebarOpen
+        }
+
         TopLeftLyrics {
             id: topLeftComponent
             visible: !root.isWorkspaceFullscreen
-            anchors.left: parent.left
-            anchors.leftMargin: 16
+            anchors.left: togglePill.right
+            anchors.leftMargin: 12
             anchors.top: parent.top
             anchors.topMargin: 4
             lyricText: islandContainer.lyricsDisplayText
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
-            maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32
+            maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32 - 44
             islandState: islandContainer.islandState
+        }
+
+        Sidebar {
+            id: sidebar
+            visible: !root.isWorkspaceFullscreen
+            themeColors: root.themeColors
+            isOpen: root.sidebarOpen
+            anchors.fill: parent
         }
 
         TopRightTray {
