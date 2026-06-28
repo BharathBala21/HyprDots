@@ -206,3 +206,11 @@ hl.bind(
         "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleCheatsheet"
     )
 )
+
+-- Power menu toggle
+hl.bind(
+    mainMod .. " + Escape",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island togglePowerMenu"
+    )
+)
