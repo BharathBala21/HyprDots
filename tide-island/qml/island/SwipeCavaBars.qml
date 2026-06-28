@@ -47,12 +47,7 @@ Item {
                 color: root.barColor
                 anchors.verticalCenter: parent.verticalCenter
 
-                Behavior on height {
-                    NumberAnimation {
-                        duration: 90
-                        easing.type: Easing.InOutQuad
-                    }
-                }
+
             }
         }
     }

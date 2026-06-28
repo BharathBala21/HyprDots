@@ -141,6 +141,9 @@ FocusScope {
     function launchApp(app) {
         if (!app || !app.exec) return;
         Quickshell.execDetached(["sh", "-c", app.exec]);
+        if (app.filename) {
+            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/app_list.py", "--track", app.filename]);
+        }
         root.closeRequested();
     }
 
@@ -350,6 +353,7 @@ FocusScope {
                                     smooth: true
                                     mipmap: true
                                     sourceSize: Qt.size(40, 40)
+                                    asynchronous: true
                                     
                                     onStatusChanged: {
                                         if (status === Image.Error) {

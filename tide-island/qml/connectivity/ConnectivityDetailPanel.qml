@@ -13,6 +13,8 @@ Item {
 
     readonly property bool isWifi: panelKind === "wifi"
     readonly property bool isBluetooth: panelKind === "bluetooth"
+    readonly property bool isBattery: panelKind === "battery"
+    readonly property bool isAudio: panelKind === "audio"
     readonly property var bluetoothDevices: provider ? provider.bluetoothDeviceValues || [] : []
     readonly property var bluetoothConnectedDevices: bluetoothDevicesForSection("connected")
     readonly property var bluetoothPairedDevices: bluetoothDevicesForSection("paired")
@@ -28,6 +30,21 @@ Item {
     function wifiEntryVisible(connected) {
         if (!root.provider) return false;
         return !(connected && root.provider.wifiEnabled && safeString(root.provider.wifiCurrentSsid).length > 0);
+    }
+
+    function getWifiGlyphForSignal(signalVal) {
+        if (signalVal < 0) return "\u{F05AD}"; // wifi-strength-outline
+        if (signalVal >= 75) return "\u{F05AC}"; // wifi-strength-4
+        if (signalVal >= 50) return "\u{F05AB}"; // wifi-strength-3
+        if (signalVal >= 25) return "\u{F05AA}"; // wifi-strength-2
+        return "\u{F05A9}"; // wifi-strength-1
+    }
+
+    function getAudioSinkGlyph(sink) {
+        if (sink && sink.connected && root.provider)
+            return root.provider.volumeGlyph(root.provider.displayedVolume, root.provider.isMuted);
+        if (sink && sink.deviceType === "headset") return "\u{F02CB}"; // headphones
+        return "\u{F057E}"; // volume-high
     }
 
     function bluetoothDeviceVisible(device, section) {
@@ -108,7 +125,7 @@ Item {
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.isWifi ? "Wi-Fi" : "Bluetooth"
+                text: root.isWifi ? "Wi-Fi" : (root.isBluetooth ? "Bluetooth" : (root.isAudio ? "Audio Output" : "Power Mode"))
                 color: StyleTokens.textPrimary
                 font.pixelSize: 15
                 font.family: root.heroFontFamily
@@ -587,6 +604,202 @@ Item {
                 width: contentFlick.width
                 spacing: 8
 
+                Repeater {
+                    model: root.isBattery ? 3 : 0
+
+                    delegate: Rectangle {
+                        width: contentColumn.width
+                        height: 52
+                        radius: 14
+                        color: (root.provider && root.provider.batteryModeIndex === index) ? "#1c1f26" : "transparent"
+                        border.width: 1
+                        border.color: (root.provider && root.provider.batteryModeIndex === index) ? "#3bc99d" : "transparent"
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        Behavior on border.color {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (root.provider) {
+                                    root.provider.selectBatteryMode(index);
+                                }
+                            }
+                        }
+
+                        Item {
+                            anchors.fill: parent
+                            anchors.margins: 12
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.provider ? root.provider.batteryModeGlyphs[index] : ""
+                                color: (root.provider && root.provider.batteryModeIndex === index) ? "#3bc99d" : "#ffffff"
+                                font.pixelSize: 14
+                                font.family: root.iconFontFamily
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 150 }
+                                }
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 26
+                                anchors.top: parent.top
+                                anchors.right: rightCheck.left
+                                anchors.rightMargin: 8
+                                text: root.provider ? root.provider.batteryModeLabel(index) : ""
+                                color: StyleTokens.textPrimary
+                                font.pixelSize: 12
+                                font.family: root.textFontFamily
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 26
+                                anchors.bottom: parent.bottom
+                                anchors.right: rightCheck.left
+                                anchors.rightMargin: 8
+                                text: {
+                                    if (index === 0) return "Reduce power consumption";
+                                    if (index === 1) return "Standard power level";
+                                    return "Maximum performance profile";
+                                }
+                                color: StyleTokens.textMuted
+                                font.pixelSize: 10
+                                font.family: root.textFontFamily
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                id: rightCheck
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "✓"
+                                color: "#3bc99d"
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                opacity: (root.provider && root.provider.batteryModeIndex === index) ? 1.0 : 0.0
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 150 }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Repeater {
+                    model: root.isAudio && root.provider ? root.provider.audioSinks : null
+
+                    delegate: Rectangle {
+                        width: contentColumn.width
+                        height: 52
+                        radius: 14
+                        color: modelData.connected ? "#1c1f26" : "transparent"
+                        border.width: 1
+                        border.color: modelData.connected ? "#3bc99d" : "transparent"
+
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        Behavior on border.color {
+                            ColorAnimation { duration: 150 }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (root.provider) {
+                                    root.provider.selectAudioSink(modelData.name);
+                                }
+                            }
+                        }
+
+                        Item {
+                            anchors.fill: parent
+                            anchors.margins: 12
+
+                            Text {
+                                id: itemIcon
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: root.getAudioSinkGlyph(modelData)
+                                color: modelData.connected ? "#3bc99d" : "#ffffff"
+                                font.pixelSize: 14
+                                font.family: root.iconFontFamily
+
+                                Behavior on color {
+                                    ColorAnimation { duration: 150 }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.centerIn: itemIcon
+                                width: 32
+                                height: 32
+                                enabled: modelData.connected && root.provider
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.provider.toggleAudioMute();
+                                }
+                            }
+
+                            Text {
+                                anchors.left: itemIcon.right
+                                anchors.leftMargin: 10
+                                anchors.top: parent.top
+                                anchors.right: rightAudioCheck.left
+                                anchors.rightMargin: 8
+                                text: modelData.description
+                                color: StyleTokens.textPrimary
+                                font.pixelSize: 12
+                                font.family: root.textFontFamily
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                anchors.left: itemIcon.right
+                                anchors.leftMargin: 10
+                                anchors.bottom: parent.bottom
+                                anchors.right: rightAudioCheck.left
+                                anchors.rightMargin: 8
+                                text: modelData.name.indexOf("bluez") !== -1 ? "Bluetooth Device" : "System Output"
+                                color: StyleTokens.textMuted
+                                font.pixelSize: 10
+                                font.family: root.textFontFamily
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                id: rightAudioCheck
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "✓"
+                                color: "#3bc99d"
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                opacity: modelData.connected ? 1.0 : 0.0
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 150 }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Text {
                     width: parent.width
                     visible: root.isWifi && root.provider
@@ -646,7 +859,7 @@ Item {
                             Text {
                                 anchors.left: parent.left
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: root.provider ? root.provider.wifiGlyph : ""
+                                text: root.getWifiGlyphForSignal(signal)
                                 color: connected ? StyleTokens.accent : StyleTokens.disabledControl
                                 font.pixelSize: 14
                                 font.family: root.iconFontFamily

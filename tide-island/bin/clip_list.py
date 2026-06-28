@@ -56,6 +56,7 @@ def get_clipboard_history():
         
         pinned_descs = set(load_pinned_descriptions())
         
+        recent_count = 0
         for line in lines:
             if not line:
                 continue
@@ -64,6 +65,13 @@ def get_clipboard_history():
                 entry_id, content = parts
                 entry_id = entry_id.strip()
                 content = content.strip()
+                
+                is_pinned = content in pinned_descs
+                if not is_pinned and recent_count >= 150:
+                    continue
+                if not is_pinned:
+                    recent_count += 1
+                
                 is_image = content.startswith('[[ binary data')
                 thumbnail_path = ""
                 
@@ -87,8 +95,6 @@ def get_clipboard_history():
                 preview = "🖼️ [Image Data]" if is_image else content
                 if len(preview) > 120:
                     preview = preview[:120] + "..."
-                
-                is_pinned = content in pinned_descs
                 
                 entries.append({
                     'id': entry_id,

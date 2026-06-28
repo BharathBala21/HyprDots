@@ -176,6 +176,7 @@ Item {
             sourceSize: Qt.size(width, height)
             mipmap: true
             smooth: true
+            asynchronous: true
             opacity: 0.96
 
             onStatusChanged: {

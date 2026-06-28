@@ -9,7 +9,7 @@ FloatingWindow {
     title: "Hyprland Customizer"
     implicitWidth: 460
     implicitHeight: 560
-    color: "#121316" // Sleek dark panel background
+    color: colorBackground // Sleek dark panel background
 
     signal settingsClosed()
 
@@ -42,6 +42,33 @@ FloatingWindow {
 
     property bool addRulePanelOpen: false
     property real ruleOpacity: 1.0
+
+    // Matugen dynamic theme colors
+    readonly property var themeColors: shellRoot.matugenThemeColors
+
+    readonly property color colorBackground: themeColors ? themeColors.background : "#121316"
+    readonly property color colorPrimary: themeColors ? themeColors.primary : "#0a84ff"
+    readonly property color colorOnSurface: themeColors ? themeColors.on_surface : "#ffffff"
+    readonly property color colorOnSurfaceVariant: themeColors ? themeColors.on_surface_variant : "#8e8e93"
+    readonly property color colorOutline: themeColors ? themeColors.outline_variant : "#3a3a3c"
+    readonly property color colorSecondaryContainer: themeColors ? themeColors.secondary_container : "#2c2c2e"
+    readonly property color colorOnSecondaryContainer: themeColors ? themeColors.on_secondary_container : "#ffffff"
+
+    readonly property color colorCardBg: themeColors ? (themeColors.surface_container_low || themeColors.surface) : "#1c1d21"
+
+    readonly property color colorSwitchBgActive: themeColors ? themeColors.primary : "#30d158"
+    readonly property color colorSwitchBgInactive: themeColors ? themeColors.secondary_container : "#2c2c2e"
+    readonly property color colorSwitchBgDisabled: themeColors ? themeColors.surface_dim : "#1c1c1e"
+    readonly property color colorSwitchKnobActive: themeColors ? themeColors.on_primary : "#ffffff"
+    readonly property color colorSwitchKnobInactive: themeColors ? themeColors.on_secondary_container : "#ffffff"
+
+    readonly property color colorSliderTrackActive: colorPrimary
+    readonly property color colorSliderTrackInactive: themeColors ? themeColors.surface_variant : "#48484a"
+
+    readonly property color colorButtonBg: themeColors ? themeColors.secondary_container : "#24252a"
+    readonly property color colorButtonBgHover: themeColors ? Qt.lighter(themeColors.secondary_container, 1.15) : "#2e2f35"
+    readonly property color colorButtonText: themeColors ? themeColors.on_secondary_container : "#ffffff"
+    readonly property color colorButtonTextDisabled: themeColors ? themeColors.outline : "#4e4f55"
 
     function updateHyprRounding(val) {
         hyprRounding = val;
@@ -309,10 +336,10 @@ FloatingWindow {
         width: 38
         height: 22
         radius: 11
-        color: !active ? "#1c1c1e" : (checked ? "#30d158" : "#2c2c2e")
+        color: !active ? colorSwitchBgDisabled : (checked ? colorSwitchBgActive : colorSwitchBgInactive)
         opacity: active ? 1.0 : 0.4
         border.width: checked ? 0 : 1
-        border.color: "#3a3a3c"
+        border.color: colorOutline
         
         Behavior on color {
             ColorAnimation { duration: 140 }
@@ -324,7 +351,7 @@ FloatingWindow {
             radius: 9
             y: 2
             x: checked ? 18 : 2
-            color: "#ffffff"
+            color: checked ? colorSwitchKnobActive : colorSwitchKnobInactive
             
             Behavior on x {
                 NumberAnimation {
@@ -364,14 +391,14 @@ FloatingWindow {
             anchors.verticalCenter: parent.verticalCenter
             height: 6
             radius: 3
-            color: "#2c2c2e"
+            color: colorSecondaryContainer
             
             Rectangle {
                 anchors.left: parent.left
                 height: parent.height
                 radius: parent.radius
                 width: ((sliderRoot.to - sliderRoot.from) > 0) ? Math.max(0, Math.min(track.width, track.width * ((sliderRoot.value - sliderRoot.from) / (sliderRoot.to - sliderRoot.from)))) : 0
-                color: sliderRoot.active ? "#0a84ff" : "#48484a"
+                color: sliderRoot.active ? colorSliderTrackActive : colorSliderTrackInactive
             }
         }
         
@@ -380,12 +407,12 @@ FloatingWindow {
             width: 16
             height: 16
             radius: 8
-            color: "#ffffff"
+            color: sliderRoot.active ? (themeColors ? themeColors.on_primary : "#ffffff") : (themeColors ? themeColors.surface_dim : "#e2e2e7")
             anchors.verticalCenter: parent.verticalCenter
             x: ((sliderRoot.to - sliderRoot.from) > 0) ? Math.max(0, Math.min(track.width - width, (track.width - width) * ((sliderRoot.value - sliderRoot.from) / (sliderRoot.to - sliderRoot.from)))) : 0
             
             border.width: 1
-            border.color: "#8e8e93"
+            border.color: colorOutline
         }
         
         MouseArea {
@@ -427,11 +454,11 @@ FloatingWindow {
             width: 28
             height: 28
             radius: 14
-            color: (minusMouse.containsMouse && stepperRoot.active) ? "#2e2f35" : "#24252a"
+            color: (minusMouse.containsMouse && stepperRoot.active) ? colorButtonBgHover : colorButtonBg
             Text {
                 anchors.centerIn: parent
                 text: "-"
-                color: stepperRoot.active ? "#ffffff" : "#4e4f55"
+                color: stepperRoot.active ? colorButtonText : colorButtonTextDisabled
                 font.pixelSize: 15
             }
             MouseArea {
@@ -453,7 +480,7 @@ FloatingWindow {
             horizontalAlignment: Text.AlignHCenter
             anchors.verticalCenter: parent.verticalCenter
             text: stepperRoot.value + stepperRoot.suffix
-            color: stepperRoot.active ? "#ffffff" : "#8e8e93"
+            color: stepperRoot.active ? colorOnSurface : colorOnSurfaceVariant
             font.pixelSize: 13
             font.family: "Inter Display"
             font.weight: Font.DemiBold
@@ -463,11 +490,11 @@ FloatingWindow {
             width: 28
             height: 28
             radius: 14
-            color: (plusMouse.containsMouse && stepperRoot.active) ? "#2e2f35" : "#24252a"
+            color: (plusMouse.containsMouse && stepperRoot.active) ? colorButtonBgHover : colorButtonBg
             Text {
                 anchors.centerIn: parent
                 text: "+"
-                color: stepperRoot.active ? "#ffffff" : "#4e4f55"
+                color: stepperRoot.active ? colorButtonText : colorButtonTextDisabled
                 font.pixelSize: 15
             }
             MouseArea {
@@ -494,7 +521,7 @@ FloatingWindow {
         width: parent.width
         height: 52
         radius: 14
-        color: "#1c1d21"
+        color: colorCardBg
         opacity: active ? 1.0 : 0.4
         
         Behavior on opacity {
@@ -514,7 +541,7 @@ FloatingWindow {
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             text: cardRoot.title
-            color: "#e2e2e7"
+            color: colorOnSurface
             font.pixelSize: 13
             font.family: "Inter Display"
             font.weight: Font.Medium
@@ -530,9 +557,9 @@ FloatingWindow {
         width: 140
         height: 28
         radius: 6
-        color: "#2c2c2e"
+        color: colorSecondaryContainer
         border.width: textInput.activeFocus ? 1 : 0
-        border.color: "#0a84ff"
+        border.color: colorPrimary
         
         TextInput {
             id: textInput
@@ -540,7 +567,7 @@ FloatingWindow {
             anchors.leftMargin: 8
             anchors.rightMargin: 8
             verticalAlignment: TextInput.AlignVCenter
-            color: "#ffffff"
+            color: colorOnSurface
             font.pixelSize: 12
             font.family: "Inter Display"
             onAccepted: {
@@ -549,7 +576,7 @@ FloatingWindow {
             
             Text {
                 text: inputRoot.placeholder
-                color: "#8e8e93"
+                color: colorOnSurfaceVariant
                 font.pixelSize: 12
                 font.family: "Inter Display"
                 visible: textInput.text === "" && !textInput.activeFocus
@@ -571,9 +598,9 @@ FloatingWindow {
         width: 54
         height: 20
         radius: 4
-        color: textInput.activeFocus ? "#2c2c2e" : "transparent"
+        color: textInput.activeFocus ? colorSecondaryContainer : "transparent"
         border.width: textInput.activeFocus ? 1 : 0
-        border.color: "#0a84ff"
+        border.color: colorPrimary
         opacity: active ? 1.0 : 0.4
 
         TextInput {
@@ -581,7 +608,7 @@ FloatingWindow {
             anchors.fill: parent
             horizontalAlignment: TextInput.AlignHCenter
             verticalAlignment: TextInput.AlignVCenter
-            color: active ? "#ffffff" : "#8e8e93"
+            color: active ? colorOnSurface : colorOnSurfaceVariant
             font.pixelSize: 13
             font.family: "Inter Display"
             font.weight: Font.DemiBold
@@ -651,7 +678,7 @@ FloatingWindow {
 
             Text {
                 text: "Hyprland Styling"
-                color: "#ffffff"
+                color: colorOnSurface
                 font.pixelSize: 18
                 font.family: "Inter Display"
                 font.weight: Font.Bold
@@ -661,7 +688,7 @@ FloatingWindow {
 
             Text {
                 text: "General Settings"
-                color: "#8e8e93"
+                color: colorOnSurfaceVariant
                 font.pixelSize: 12
                 font.family: "Inter Display"
                 font.weight: Font.Bold
@@ -734,7 +761,7 @@ FloatingWindow {
 
             Text {
                 text: "Blur Settings"
-                color: "#8e8e93"
+                color: colorOnSurfaceVariant
                 font.pixelSize: 12
                 font.family: "Inter Display"
                 font.weight: Font.Bold
@@ -1008,7 +1035,7 @@ FloatingWindow {
 
             Text {
                 text: "Window Rules"
-                color: "#8e8e93"
+                color: colorOnSurfaceVariant
                 font.pixelSize: 12
                 font.family: "Inter Display"
                 font.weight: Font.Bold
@@ -1023,7 +1050,7 @@ FloatingWindow {
                     width: parent.width
                     height: 52
                     radius: 14
-                    color: "#1c1d21"
+                    color: colorCardBg
                     
                     MouseArea {
                         anchors.fill: parent
@@ -1040,7 +1067,7 @@ FloatingWindow {
                         
                         Text {
                             text: model.class ? "Class: " + model.class : (model.title ? "Title: " + model.title : "Any Window")
-                            color: "#e2e2e7"
+                            color: colorOnSurface
                             font.pixelSize: 13
                             font.family: "Inter Display"
                             font.weight: Font.Medium
@@ -1057,7 +1084,7 @@ FloatingWindow {
                                 if (model.rounding !== undefined && model.rounding !== null) effects.push("Rounding: " + model.rounding + "px");
                                 return effects.join(", ") || "No Effects";
                             }
-                            color: "#8e8e93"
+                            color: colorOnSurfaceVariant
                             font.pixelSize: 11
                             font.family: "Inter Display"
                         }
@@ -1071,14 +1098,14 @@ FloatingWindow {
                         width: 28
                         height: 28
                         radius: 14
-                        color: deleteMouse.containsMouse ? "#ff3b30" : "#2c2c2e"
+                        color: deleteMouse.containsMouse ? (themeColors ? themeColors.error : "#ff3b30") : colorSecondaryContainer
                         
                         Behavior on color { ColorAnimation { duration: 100 } }
                         
                         Text {
                             anchors.centerIn: parent
                             text: "×"
-                            color: "#ffffff"
+                            color: deleteMouse.containsMouse ? (themeColors ? themeColors.on_error : "#ffffff") : colorOnSurface
                             font.pixelSize: 18
                             font.weight: Font.Bold
                         }
@@ -1101,14 +1128,14 @@ FloatingWindow {
                 width: parent.width
                 height: 40
                 radius: 10
-                color: addRuleMouse.containsMouse ? "#2e2f35" : "#1c1d21"
+                color: addRuleMouse.containsMouse ? colorButtonBgHover : colorCardBg
                 border.width: 1
-                border.color: "#3a3a3c"
+                border.color: colorOutline
                 
                 Text {
                     anchors.centerIn: parent
                     text: "+ Add New Window Rule"
-                    color: "#0a84ff"
+                    color: colorPrimary
                     font.pixelSize: 13
                     font.family: "Inter Display"
                     font.weight: Font.Medium
@@ -1131,9 +1158,9 @@ FloatingWindow {
                 width: parent.width
                 height: 240
                 radius: 14
-                color: "#1c1d21"
+                color: colorCardBg
                 border.width: 1
-                border.color: "#3a3a3c"
+                border.color: colorOutline
                 
                 MouseArea {
                     anchors.fill: parent
@@ -1149,7 +1176,7 @@ FloatingWindow {
                     
                     Text {
                         text: "New Window Rule"
-                        color: "#ffffff"
+                        color: colorOnSurface
                         font.pixelSize: 13
                         font.family: "Inter Display"
                         font.weight: Font.Bold
@@ -1161,7 +1188,7 @@ FloatingWindow {
                         
                         Text {
                             text: "Match Class:"
-                            color: "#e2e2e7"
+                            color: colorOnSurface
                             font.pixelSize: 12
                             font.family: "Inter Display"
                             anchors.verticalCenter: parent.verticalCenter
@@ -1181,7 +1208,7 @@ FloatingWindow {
                         
                         Text {
                             text: "Opacity:"
-                            color: "#e2e2e7"
+                            color: colorOnSurface
                             font.pixelSize: 12
                             font.family: "Inter Display"
                             anchors.verticalCenter: parent.verticalCenter
@@ -1233,7 +1260,7 @@ FloatingWindow {
                                 }
                                 Text {
                                     text: "Float Window"
-                                    color: "#e2e2e7"
+                                    color: colorOnSurface
                                     font.pixelSize: 12
                                     font.family: "Inter Display"
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1263,7 +1290,7 @@ FloatingWindow {
                                 }
                                 Text {
                                     text: "Stay Focused"
-                                    color: "#e2e2e7"
+                                    color: colorOnSurface
                                     font.pixelSize: 12
                                     font.family: "Inter Display"
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1293,7 +1320,7 @@ FloatingWindow {
                                 }
                                 Text {
                                     text: "Force Opaque"
-                                    color: "#e2e2e7"
+                                    color: colorOnSurface
                                     font.pixelSize: 12
                                     font.family: "Inter Display"
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1323,7 +1350,7 @@ FloatingWindow {
                                 }
                                 Text {
                                     text: "Disable Blur"
-                                    color: "#e2e2e7"
+                                    color: colorOnSurface
                                     font.pixelSize: 12
                                     font.family: "Inter Display"
                                     anchors.verticalCenter: parent.verticalCenter
@@ -1348,17 +1375,19 @@ FloatingWindow {
                             width: 80
                             height: 28
                             radius: 6
-                            color: "#ff3b30"
+                            color: cancelMouse.containsMouse ? (themeColors ? Qt.darker(themeColors.error, 1.15) : "#e03025") : (themeColors ? themeColors.error : "#ff3b30")
                             Text {
                                 anchors.centerIn: parent
                                 text: "Cancel"
-                                color: "#ffffff"
+                                color: themeColors ? themeColors.on_error : "#ffffff"
                                 font.pixelSize: 12
                                 font.family: "Inter Display"
                                 font.weight: Font.Medium
                             }
                             MouseArea {
+                                id: cancelMouse
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 onClicked: {
                                     mainColumn.settingsWindow.resetAddRuleForm();
                                     addRulePanelOpen = false;
@@ -1370,17 +1399,19 @@ FloatingWindow {
                             width: 80
                             height: 28
                             radius: 6
-                            color: "#30d158"
+                            color: saveMouse.containsMouse ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#28b54c") : (themeColors ? themeColors.primary : "#30d158")
                             Text {
                                 anchors.centerIn: parent
                                 text: "Save"
-                                color: "#ffffff"
+                                color: themeColors ? themeColors.on_primary : "#ffffff"
                                 font.pixelSize: 12
                                 font.family: "Inter Display"
                                 font.weight: Font.Medium
                             }
                             MouseArea {
+                                id: saveMouse
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 onClicked: {
                                     if (classInput.text !== "") {
                                         rulesListModel.append({

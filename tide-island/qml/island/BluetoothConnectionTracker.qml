@@ -149,9 +149,12 @@ Item {
             property var bluetoothDevice: modelData
 
             Component.onCompleted: root.sync(true)
-            Component.onDestruction: Qt.callLater(function() {
-                root.sync(true);
-            })
+            Component.onDestruction: {
+                const tracker = root;
+                Qt.callLater(function() {
+                    tracker.sync(true);
+                });
+            }
 
             Connections {
                 target: bluetoothDevice

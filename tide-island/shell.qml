@@ -15,6 +15,33 @@ Scope {
     property bool settingsWindowOpen: false
     property bool cheatsheetWindowOpen: false
 
+    property real nightLightTemp: 0.0
+    onNightLightTempChanged: {
+        if (!shuttingDown) {
+            saveTempCacheTimer.restart();
+        }
+    }
+    property bool caffeineMode: false
+    property int batteryModeIndex: 1
+
+
+    Timer {
+        id: saveTempCacheTimer
+        interval: 500
+        repeat: false
+        onTriggered: {
+            console.log("[NightLight] saveTempCacheTimer triggered. Saving nightLightTemp = " + shellRoot.nightLightTemp);
+            Quickshell.execDetached(["sh", "-c", "mkdir -p ~/.cache/tide-island && echo '" + shellRoot.nightLightTemp + "' > ~/.cache/tide-island/night_light_temp"]);
+            const val = shellRoot.nightLightTemp;
+            if (val < 0.05) {
+                Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
+            } else {
+                const targetK = Math.round(6500 - (val * 4000));
+                Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
+            }
+        }
+    }
+
     function getHomePath() {
         const envHome = Quickshell.env("HOME") || "";
         if (envHome) {
@@ -54,7 +81,7 @@ Scope {
 
     Timer {
         id: checkWfRecorderTimer
-        interval: 1000
+        interval: 2500
         running: true
         repeat: true
         onTriggered: {
@@ -197,6 +224,7 @@ Scope {
         }
 
         function setNightLightTemp(value: double) {
+            shellRoot.nightLightTemp = value;
             shellRoot.forEachWindow((window) => {
                 if (window && window.setNightLightTemp)
                     window.setNightLightTemp(value);
@@ -228,6 +256,13 @@ Scope {
             shellRoot.forEachWindow((window) => {
                 if (window && window.toggleWallpapers)
                     window.toggleWallpapers();
+            });
+        }
+
+        function toggleUtilities() {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.toggleUtilities)
+                    window.toggleUtilities();
             });
         }
 
@@ -277,6 +312,70 @@ Scope {
         }
     }
 
+    Process {
+        id: startupCheckHypridleProcess
+        command: ["pgrep", "-x", "hypridle"]
+        running: false
+        onExited: (exitCode) => {
+            shellRoot.caffeineMode = (exitCode !== 0);
+        }
+    }
+
+    Process {
+        id: startupQueryHyprsunsetProcess
+        command: ["sh", "-c", "pgrep -x hyprsunset >/dev/null && ps -o command= -p $(pgrep -x hyprsunset) || cat " + getHomePath() + "/.cache/tide-island/night_light_temp 2>/dev/null || echo ''"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const text = this.text ? this.text.trim() : "";
+                console.log("[NightLight] startupQueryHyprsunsetProcess finished. stdout: '" + text + "'");
+                if (text !== "") {
+                    const match = text.match(/-t\s+(\d+)/);
+                    if (match && match[1]) {
+                        const temp = parseInt(match[1]);
+                        const calculatedTemp = (6500 - temp) / 4000;
+                        console.log("[NightLight] Found running hyprsunset with temp " + temp + "K. Setting nightLightTemp = " + calculatedTemp);
+                        shellRoot.nightLightTemp = calculatedTemp;
+                    } else {
+                        const val = parseFloat(text);
+                        if (!isNaN(val) && val >= 0.0 && val <= 1.0) {
+                            console.log("[NightLight] Found cached temperature " + val + ". Setting nightLightTemp.");
+                            shellRoot.nightLightTemp = val;
+                            if (val >= 0.05) {
+                                const targetK = Math.round(6500 - (val * 4000));
+                                console.log("[NightLight] Starting hyprsunset with cached temp " + targetK + "K");
+                                Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
+                            }
+                        } else {
+                            console.log("[NightLight] Cached value invalid: '" + text + "'. Setting nightLightTemp = 0");
+                            shellRoot.nightLightTemp = 0;
+                        }
+                    }
+                } else {
+                    console.log("[NightLight] No running process or cache found. Setting nightLightTemp = 0");
+                    shellRoot.nightLightTemp = 0;
+                }
+            }
+        }
+    }
+
+    Process {
+        id: startupPpQueryProcess
+        command: ["powerprofilesctl", "get"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    const profileName = this.text.trim();
+                    let idx = 1;
+                    if (profileName === "power-saver") idx = 0;
+                    else if (profileName === "performance") idx = 2;
+                    shellRoot.batteryModeIndex = idx;
+                }
+            }
+        }
+    }
+
     Component.onDestruction: {
         shuttingDown = true;
     }
@@ -284,6 +383,9 @@ Scope {
     Component.onCompleted: {
         SystemServices.ensureSetupComplete(Quickshell.shellDir);
         SystemServices.requestScreenRecordingSnapshot();
+        startupCheckHypridleProcess.running = true;
+        startupQueryHyprsunsetProcess.running = true;
+        startupPpQueryProcess.running = true;
     }
 
     Variants {

@@ -13,6 +13,19 @@ import "qml/workspace"
 PanelWindow {
     id: root
     property var shellRootController: null
+    property real nightLightTemp: shellRootController ? shellRootController.nightLightTemp : 0.0
+    onNightLightTempChanged: {
+        if (shellRootController && shellRootController.nightLightTemp !== nightLightTemp) {
+            shellRootController.nightLightTemp = nightLightTemp;
+        }
+    }
+    property int cachedBatteryModeIndex: shellRootController ? shellRootController.batteryModeIndex : 1
+    onCachedBatteryModeIndexChanged: {
+        if (shellRootController && shellRootController.batteryModeIndex !== cachedBatteryModeIndex) {
+            shellRootController.batteryModeIndex = cachedBatteryModeIndex;
+        }
+    }
+    property bool dndActive: false
     property string overviewPhase: "closed"
     property bool overviewPreloading: false
     readonly property bool overviewPreparing: overviewPhase === "preparing"
@@ -35,6 +48,9 @@ PanelWindow {
     readonly property int currentMonitorWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace
         ? hyprMonitor.activeWorkspace.id
         : 1
+    readonly property bool isWorkspaceFullscreen: hyprMonitor && hyprMonitor.activeWorkspace
+        ? !!hyprMonitor.activeWorkspace.hasFullscreen
+        : false
     readonly property bool screenRecordingActive: shellRootController
         && shellRootController.screenRecordingActive !== undefined
         ? !!shellRootController.screenRecordingActive
@@ -43,8 +59,14 @@ PanelWindow {
     readonly property bool clipboardLayerVisible: islandContainer.islandState === "clipboard"
     readonly property bool emojiPickerLayerVisible: islandContainer.islandState === "emojis"
     readonly property bool wallpapersLayerVisible: islandContainer.islandState === "wallpapers"
+    readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
+    readonly property bool controlCenterLayerVisible: islandContainer.islandState === "control_center"
 
     readonly property var userConfig: UserConfig
+
+    ListModel {
+        id: notificationHistory
+    }
 
     HyprlandDispatch {
         id: hyprDispatch
@@ -55,6 +77,13 @@ PanelWindow {
     mask: Region {
         // Input is the union of the island's visible surfaces plus a compact top
         // gesture strip. The gesture strip must not grow with expanded content.
+        Region {
+            x: 0
+            y: 0
+            width: root.controlCenterLayerVisible ? root.width : 0
+            height: root.controlCenterLayerVisible ? root.height : 0
+        }
+
         Region {
             x: 0
             y: 0
@@ -89,6 +118,22 @@ PanelWindow {
 
         Region {
             intersection: Intersection.Combine
+            x: Math.floor(batteryConnectivityDetailShell.x)
+            y: Math.floor(batteryConnectivityDetailShell.y)
+            width: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.width) : 0
+            height: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(audioConnectivityDetailShell.x)
+            y: Math.floor(audioConnectivityDetailShell.y)
+            width: audioConnectivityDetailShell.visible ? Math.ceil(audioConnectivityDetailShell.width) : 0
+            height: audioConnectivityDetailShell.visible ? Math.ceil(audioConnectivityDetailShell.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
             x: Math.floor(topRightComponent.x)
             y: Math.floor(topRightComponent.y)
             width: topRightComponent.visible ? Math.ceil(topRightComponent.width) : 0
@@ -111,27 +156,21 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: root.overviewVisible
-        ? Math.max(
-            Math.ceil(4 + root.connectivityDetailHeight + 12),
-            Math.ceil(4 + root.overviewCapsuleHeight + 8),
-            Math.ceil(root.controlCenterWindowHeight)
-        )
-        : Math.max(Math.ceil(4 + root.connectivityDetailHeight + 12), Math.ceil(root.controlCenterWindowHeight))
+    implicitHeight: 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers")
-    WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers")
-        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+    WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
         id: launcherGrab
-        active: root.monitorFocused && (islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers")
+        active: root.monitorFocused && (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
         windows: [ root ]
         onCleared: {
-            if (islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers") {
+            if (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") {
                 islandContainer.smartRestoreState();
             }
         }
@@ -141,6 +180,17 @@ PanelWindow {
     readonly property string textFontFamily: userConfig.textFontFamily
     readonly property string heroFontFamily: userConfig.heroFontFamily
     readonly property string timeFontFamily: userConfig.timeFontFamily
+
+    Connections {
+        target: root.shellRootController
+        function onSettingsWindowOpenChanged() {
+            if (root.shellRootController && root.shellRootController.settingsWindowOpen) {
+                if (islandContainer.islandState === "control_center") {
+                    islandContainer.smartRestoreState();
+                }
+            }
+        }
+    }
     readonly property string defaultSplitIcon: "\ud83c\udfa7"
     readonly property string notificationStatusIcon: "\uf0f3"
     readonly property real overviewWindowCornerRadius: 12
@@ -166,14 +216,18 @@ PanelWindow {
     property bool wifiConnectivityDetailMounted: false
     property bool bluetoothConnectivityDetailOpen: false
     property bool bluetoothConnectivityDetailMounted: false
-    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted
+    property bool batteryConnectivityDetailOpen: false
+    property bool batteryConnectivityDetailMounted: false
+    property bool audioConnectivityDetailOpen: false
+    property bool audioConnectivityDetailMounted: false
+    readonly property bool anyConnectivityDetailMounted: wifiConnectivityDetailMounted || bluetoothConnectivityDetailMounted || batteryConnectivityDetailMounted || audioConnectivityDetailMounted
     readonly property real connectivityDetailWidth: 318
     readonly property real connectivityDetailHeight: 404
     readonly property real controlCenterMaximumExtraHeight: controlCenterLoader.item
         ? controlCenterLoader.item.controlCenterMaximumExtraHeight
         : 120
     readonly property real controlCenterWindowHeight: islandContainer.controlCenterLayerVisible
-        ? 4 + 408 + root.controlCenterMaximumExtraHeight + 12
+        ? 4 + 350 + root.controlCenterMaximumExtraHeight + 12
         : 0
     readonly property real connectivityDetailGap: 16
     readonly property int connectivityDetailAnimationDuration: 360
@@ -259,12 +313,42 @@ PanelWindow {
                 bluetoothConnectivityDetailOpen = false;
                 bluetoothConnectivityDetailCleanupTimer.restart();
             }
+            return;
+        }
+
+        if (kind === "battery") {
+            if (nextOpen) {
+                batteryConnectivityDetailCleanupTimer.stop();
+                batteryConnectivityDetailMounted = true;
+                batteryConnectivityDetailOpen = true;
+            } else {
+                if (!batteryConnectivityDetailMounted && !batteryConnectivityDetailOpen)
+                    return;
+                batteryConnectivityDetailOpen = false;
+                batteryConnectivityDetailCleanupTimer.restart();
+            }
+            return;
+        }
+
+        if (kind === "audio") {
+            if (nextOpen) {
+                audioConnectivityDetailCleanupTimer.stop();
+                audioConnectivityDetailMounted = true;
+                audioConnectivityDetailOpen = true;
+            } else {
+                if (!audioConnectivityDetailMounted && !audioConnectivityDetailOpen)
+                    return;
+                audioConnectivityDetailOpen = false;
+                audioConnectivityDetailCleanupTimer.restart();
+            }
         }
     }
 
     function closeAllConnectivityDetails() {
         setConnectivityDetailVisible("wifi", false);
         setConnectivityDetailVisible("bluetooth", false);
+        setConnectivityDetailVisible("battery", false);
+        setConnectivityDetailVisible("audio", false);
     }
 
     function openOverviewEverywhere() {
@@ -311,7 +395,19 @@ PanelWindow {
     }
 
     function showNotification(appName, summary, body) {
-        islandContainer.showNotificationCapsule(appName, summary, body);
+        let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
+        notificationHistory.append({
+            "appName": displayAppName,
+            "summary": summary,
+            "body": body,
+            "timestamp": new Date().toLocaleTimeString(Qt.locale(), "hh:mm")
+        });
+        if (notificationHistory.count > 50) {
+            notificationHistory.remove(0);
+        }
+        if (!root.dndActive) {
+            islandContainer.showNotificationCapsule(appName, summary, body);
+        }
     }
 
     function toggleControlCenter() {
@@ -326,6 +422,10 @@ PanelWindow {
 
     function toggleLauncher() {
         islandContainer.toggleLauncher();
+    }
+
+    function toggleUtilities() {
+        islandContainer.toggleUtilities();
     }
 
     function toggleClipboard() {
@@ -363,16 +463,32 @@ PanelWindow {
         if (wallpapersLayerVisible && monitorFocused)
             wallpapersFocusTimer.restart();
     }
+    onUtilitiesLayerVisibleChanged: {
+        if (utilitiesLayerVisible) {
+            if (utilitiesSwipeLoader.item) {
+                utilitiesSwipeLoader.item.selectedIdx = 0;
+                utilitiesSwipeLoader.item.forceActiveFocus();
+            }
+        }
+        if (utilitiesLayerVisible && monitorFocused)
+            utilitiesFocusTimer.restart();
+    }
+    onControlCenterLayerVisibleChanged: {
+        if (controlCenterLayerVisible && monitorFocused)
+            controlCenterFocusTimer.restart();
+    }
     onOverviewVisualReadyChanged: {
         if (overviewVisualReady) beginOverviewOpening();
     }
     onMonitorFocusedChanged: {
         if (overviewVisible && monitorFocused) overviewFocusTimer.restart();
         if (connectivityPromptActive && monitorFocused) connectivityPromptFocusTimer.restart();
+        if (controlCenterLayerVisible && monitorFocused) controlCenterFocusTimer.restart();
         if (launcherLayerVisible && monitorFocused) launcherFocusTimer.restart();
         if (clipboardLayerVisible && monitorFocused) clipboardFocusTimer.restart();
         if (emojiPickerLayerVisible && monitorFocused) emojisFocusTimer.restart();
         if (wallpapersLayerVisible && monitorFocused) wallpapersFocusTimer.restart();
+        if (utilitiesLayerVisible && monitorFocused) utilitiesFocusTimer.restart();
     }
 
     Timer {
@@ -384,6 +500,13 @@ PanelWindow {
 
     Timer {
         id: connectivityPromptFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: islandContainer.forceActiveFocus()
+    }
+
+    Timer {
+        id: controlCenterFocusTimer
         interval: 0
         repeat: false
         onTriggered: islandContainer.forceActiveFocus()
@@ -412,6 +535,13 @@ PanelWindow {
 
     Timer {
         id: wallpapersFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: islandContainer.forceActiveFocus()
+    }
+
+    Timer {
+        id: utilitiesFocusTimer
         interval: 0
         repeat: false
         onTriggered: islandContainer.forceActiveFocus()
@@ -456,6 +586,20 @@ PanelWindow {
         onTriggered: root.bluetoothConnectivityDetailMounted = false
     }
 
+    Timer {
+        id: batteryConnectivityDetailCleanupTimer
+        interval: root.connectivityDetailAnimationDuration
+        repeat: false
+        onTriggered: root.batteryConnectivityDetailMounted = false
+    }
+
+    Timer {
+        id: audioConnectivityDetailCleanupTimer
+        interval: root.connectivityDetailAnimationDuration
+        repeat: false
+        onTriggered: root.audioConnectivityDetailMounted = false
+    }
+
     OverviewWallpaperCacheController {
         id: overviewWallpaperCache
 
@@ -480,7 +624,7 @@ PanelWindow {
     FocusScope {
         id: islandContainer
         anchors.fill: parent
-        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers")
+        focus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandState === "control_center" || islandState === "launcher" || islandState === "clipboard" || islandState === "emojis" || islandState === "wallpapers" || islandState === "utilities")
 
         property string islandState: "normal"
         property string splitIcon: root.defaultSplitIcon
@@ -507,6 +651,7 @@ PanelWindow {
         property bool expandedByPlayerAutoOpen: false
         property real customCapsuleWidth: 220
         property real lyricsCapsuleWidth: 220
+        property real utilitiesCapsuleWidth: 614
         property bool sideSwipeSettling: false
         readonly property int defaultAutoHideInterval: 1250
         readonly property int notificationAutoHideInterval: 4200
@@ -520,15 +665,13 @@ PanelWindow {
             || islandState === "clipboard"
             || islandState === "emojis"
             || islandState === "wallpapers"
+            || islandState === "utilities"
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
         readonly property bool splitUsesExtendedLayout: splitShowsProgress || splitShowsText
         readonly property real splitCapsuleWidth: splitShowsProgress ? 248 : (splitShowsText ? 220 : 140)
-        readonly property bool canShowSideSwipe: islandState === "normal"
-            || islandState === "custom"
-            || islandState === "lyrics"
-            || (islandState === "long_capsule" && workspaceOriginSide === "none")
+        readonly property bool canShowSideSwipe: false
         readonly property real rightSwipeProgress: Math.max(0, swipeTransitionProgress)
         readonly property var customLeftItems: systemState.customLeftItems
         readonly property bool hasCustomLeftItems: systemState.hasCustomLeftItems
@@ -545,11 +688,12 @@ PanelWindow {
                         && (workspaceOriginSide === "left" || swipeTransitionProgress < 0))
                 )
             )
-        readonly property bool lyricsSwipeVisible: !root.overviewVisible && (
+        readonly property bool lyricsSwipeVisible: !root.overviewVisible && islandState === "lyrics"
+        readonly property bool utilitiesSwipeVisible: !root.overviewVisible && (
             capsuleMouseArea.sideSwipeInteractive
             ? swipeTransitionProgress >= 0
             : (
-                islandState === "lyrics"
+                islandState === "utilities"
                 || (islandState === "normal" && swipeTransitionProgress >= 0)
                 || (islandState === "split" && splitOriginSide === "right")
                 || (islandState === "long_capsule"
@@ -638,6 +782,19 @@ PanelWindow {
             }
         }
 
+        MouseArea {
+            id: controlCenterClickAwayArea
+
+            anchors.fill: parent
+            enabled: islandContainer.controlCenterLayerVisible
+            visible: enabled
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+            onClicked: {
+                islandContainer.smartRestoreState();
+            }
+        }
+
         HyprlandWorkspaceTracker {
             id: workspaceTracker
 
@@ -657,7 +814,7 @@ PanelWindow {
         Behavior on osdProgress {
             enabled: islandContainer.osdProgressAnimationEnabled
 
-            SmoothedAnimation { velocity: 1.2; duration: 180; easing.type: Easing.InOutQuad }
+            NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
         }
         Behavior on swipeTransitionProgress {
             NumberAnimation {
@@ -667,6 +824,12 @@ PanelWindow {
         }
 
         Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Escape && islandState === "control_center") {
+                smartRestoreState();
+                event.accepted = true;
+                return;
+            }
+
             if (!root.overviewVisible) return;
 
             if ((event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier)) || event.key === Qt.Key_Backtab) {
@@ -798,6 +961,7 @@ PanelWindow {
         function normalizeRestingState(nextState) {
             if (nextState === "lyrics") return "normal";
             if (nextState === "custom" && hasCustomLeftItems) return "custom";
+            if (nextState === "utilities") return "utilities";
             return "normal";
         }
 
@@ -806,6 +970,8 @@ PanelWindow {
             case "custom":
                 return -1;
             case "lyrics":
+                return 1;
+            case "utilities":
                 return 1;
             default:
                 return 0;
@@ -818,6 +984,8 @@ PanelWindow {
                 return "left";
             case "lyrics":
                 return "right";
+            case "utilities":
+                return "right";
             default:
                 return "none";
             }
@@ -829,6 +997,8 @@ PanelWindow {
                 return -1;
             case "lyrics":
                 return 1;
+            case "utilities":
+                return 1;
             default:
                 return 0;
             }
@@ -839,6 +1009,8 @@ PanelWindow {
             case "custom":
                 return "left";
             case "lyrics":
+                return "right";
+            case "utilities":
                 return "right";
             case "long_capsule":
                 return workspaceOriginSide;
@@ -888,6 +1060,8 @@ PanelWindow {
                 syncCustomCapsuleWidth();
             if (restingState === "lyrics")
                 syncLyricsCapsuleWidth();
+            if (restingState === "utilities")
+                syncUtilitiesCapsuleWidth();
         }
 
         function applyRestingVisuals() {
@@ -903,7 +1077,7 @@ PanelWindow {
 
         function sideSwipeRestWidthForProgress(progressValue) {
             if (progressValue <= -0.5) return customCapsuleWidth;
-            if (progressValue >= 0.5) return lyricsCapsuleWidth;
+            if (progressValue >= 0.5) return utilitiesCapsuleWidth;
             return 140;
         }
 
@@ -919,29 +1093,35 @@ PanelWindow {
             return Math.max(140, lyricsCapsuleWidth + 2);
         }
 
+        function utilitiesSideSwipeDragDistance() {
+            const view = utilitiesSwipeLoader.item;
+            if (view && view.dragDistance > 0) return view.dragDistance;
+            return Math.max(140, utilitiesCapsuleWidth + 2);
+        }
+
         function sideSwipeDragDistanceForDirection(direction) {
             if (direction === "left") return customSideSwipeDragDistance();
-            if (direction === "right") return lyricsSideSwipeDragDistance();
+            if (direction === "right") return utilitiesSideSwipeDragDistance();
             return 140;
         }
 
         function advanceSideSwipeProgress(currentProgress, deltaX) {
-            const minProgress = hasCustomLeftItems ? -1 : 0;
-            const maxProgress = 0;
+            const minProgress = 0;
+            const maxProgress = 1;
             let nextProgress = Math.max(minProgress, Math.min(maxProgress, currentProgress));
             let remainingDelta = deltaX;
 
             if (remainingDelta > 0) {
-                if (nextProgress < 0) {
-                    const leftDistance = Math.max(1, sideSwipeDragDistanceForDirection("left"));
-                    const progressToCenter = Math.min(-nextProgress, remainingDelta / leftDistance);
-                    nextProgress += progressToCenter;
-                    remainingDelta -= progressToCenter * leftDistance;
+                if (remainingDelta > 0 && nextProgress >= 0 && nextProgress < maxProgress) {
+                    const rightDistance = Math.max(1, sideSwipeDragDistanceForDirection("right"));
+                    nextProgress = Math.min(maxProgress, nextProgress + remainingDelta / rightDistance);
                 }
             } else if (remainingDelta < 0) {
-                if (remainingDelta < 0 && nextProgress > minProgress) {
-                    const leftDistance = Math.max(1, sideSwipeDragDistanceForDirection("left"));
-                    nextProgress = Math.max(minProgress, nextProgress + remainingDelta / leftDistance);
+                if (nextProgress > 0) {
+                    const rightDistance = Math.max(1, sideSwipeDragDistanceForDirection("right"));
+                    const progressToCenter = Math.min(nextProgress, -remainingDelta / rightDistance);
+                    nextProgress -= progressToCenter;
+                    remainingDelta += progressToCenter * rightDistance;
                 }
             }
 
@@ -953,12 +1133,12 @@ PanelWindow {
             let settleProgress = sideSwipeRestProgressForProgress(startProgress);
             let settleWidth = sideSwipeRestWidthForProgress(startProgress);
 
-            if (hasCustomLeftItems && finalProgress <= -0.56) {
-                settleAction = "custom";
-                settleProgress = -1;
-                settleWidth = customCapsuleWidth;
-            } else if (startProgress <= -0.5) {
-                if (finalProgress >= -0.44) {
+            if (finalProgress >= 0.56) {
+                settleAction = "utilities";
+                settleProgress = 1;
+                settleWidth = utilitiesCapsuleWidth;
+            } else if (startProgress >= 0.5) {
+                if (finalProgress <= 0.44) {
                     settleAction = "time";
                     settleProgress = 0;
                     settleWidth = 140;
@@ -1185,6 +1365,22 @@ PanelWindow {
                 showWallpapers();
         }
 
+        function showUtilities() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "utilities";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function toggleUtilities() {
+            if (islandState === "utilities")
+                smartRestoreState();
+            else
+                showUtilities();
+        }
+
         function showCustomCapsule() {
             if (!hasCustomLeftItems) {
                 showTimeCapsule();
@@ -1199,8 +1395,21 @@ PanelWindow {
             showRestingCapsule("lyrics");
         }
 
+        function showUtilitiesCapsule() {
+            showRestingCapsule("utilities");
+        }
+
         function showTimeCapsule() {
             showRestingCapsule("normal");
+        }
+
+        function closeUtilitiesInstantly() {
+            const oldDuration = mainCapsule.morphDuration;
+            mainCapsule.morphDuration = 0;
+            showTimeCapsule();
+            Qt.callLater(() => {
+                mainCapsule.morphDuration = oldDuration;
+            });
         }
 
         function showWorkspaceCapsule(wsId) {
@@ -1253,6 +1462,12 @@ PanelWindow {
             lyricsCapsuleWidth = Math.max(220, Math.min(root.width - 48, view.preferredWidth));
         }
 
+        function syncUtilitiesCapsuleWidth() {
+            const view = utilitiesSwipeLoader.item;
+            if (!view) return;
+            utilitiesCapsuleWidth = Math.max(220, Math.min(root.width - 48, view.preferredWidth));
+        }
+
         onCurrentTrackChanged: {
             if (currentTrack !== ""
                     && islandState !== "control_center"
@@ -1284,6 +1499,12 @@ PanelWindow {
                         return islandContainer.lyricsCapsuleWidth;
                     }
 
+                    if (islandContainer.restingState === "utilities"
+                            && ((islandContainer.islandState === "split" && islandContainer.splitOriginSide === "right")
+                                || (islandContainer.islandState === "long_capsule" && islandContainer.workspaceOriginSide === "right"))) {
+                        return islandContainer.utilitiesCapsuleWidth;
+                    }
+
                     if (islandContainer.restingState === "custom"
                             && ((islandContainer.islandState === "split" && islandContainer.splitOriginSide === "left")
                                 || (islandContainer.islandState === "long_capsule" && islandContainer.workspaceOriginSide === "left"))) {
@@ -1300,8 +1521,10 @@ PanelWindow {
                     return islandContainer.customCapsuleWidth;
                 case "lyrics":
                     return islandContainer.lyricsCapsuleWidth;
+                case "utilities":
+                    return islandContainer.utilitiesCapsuleWidth;
                 case "control_center":
-                    return 420;
+                    return 540;
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -1323,9 +1546,17 @@ PanelWindow {
             readonly property real targetHeight: {
                 if (root.overviewVisible) return root.overviewCapsuleHeight;
 
+                // Dynamic height scaling during swiping/settling towards utilities
+                if (capsuleMouseArea.sideSwipeInteractive && islandContainer.swipeTransitionProgress > 0) {
+                    return 35 + (84 - 35) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
+                if (islandContainer.sideSwipeSettling && islandContainer.swipeTransitionProgress > 0) {
+                    return 35 + (84 - 35) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
+
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 408 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                    return 350 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -1338,12 +1569,22 @@ PanelWindow {
                     return notificationLoader.item
                         ? Math.max(56, Math.min(68, notificationLoader.item.preferredHeight))
                         : 56;
+                case "utilities":
+                    return 84;
                 default:
                     return 35;
                 }
             }
             readonly property real targetRadius: {
                 if (root.overviewVisible) return root.overviewCapsuleRadius;
+
+                // Dynamic radius scaling during swiping/settling towards utilities
+                if (capsuleMouseArea.sideSwipeInteractive && islandContainer.swipeTransitionProgress > 0) {
+                    return 19 + (24 - 19) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
+                if (islandContainer.sideSwipeSettling && islandContainer.swipeTransitionProgress > 0) {
+                    return 19 + (24 - 19) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                }
 
                 switch (islandContainer.islandState) {
                 case "control_center":
@@ -1357,6 +1598,8 @@ PanelWindow {
                     return 40;
                 case "notification":
                     return mainCapsule.targetHeight / 2;
+                case "utilities":
+                    return 24;
                 default:
                     return 19;
                 }
@@ -1366,7 +1609,7 @@ PanelWindow {
                     return 140 + (islandContainer.customCapsuleWidth - 140)
                         * islandContainer.clamp01(-progressValue);
                 if (progressValue > 0)
-                    return 140 + (islandContainer.lyricsCapsuleWidth - 140)
+                    return 140 + (islandContainer.utilitiesCapsuleWidth - 140)
                         * islandContainer.clamp01(progressValue);
                 return 140;
             }
@@ -1396,7 +1639,7 @@ PanelWindow {
                 enabled: !(controlCenterLoader.item && controlCenterLoader.item.batteryDrawerMoving)
 
                 NumberAnimation {
-                    duration: mainCapsule.morphDuration
+                    duration: capsuleMouseArea.sideSwipeInteractive ? 0 : mainCapsule.morphDuration
                     easing.type: Easing.OutQuint
                 }
             }
@@ -1532,6 +1775,9 @@ PanelWindow {
                         case "lyrics":
                             islandContainer.showLyricsCapsule();
                             break;
+                        case "utilities":
+                            islandContainer.showUtilitiesCapsule();
+                            break;
                         default:
                             islandContainer.swipeTransitionProgress = settleResult.progress;
                         }
@@ -1580,7 +1826,7 @@ PanelWindow {
                 id: twoFingerTouchArea
                 anchors.fill: parent
                 z: 0
-                enabled: !root.overviewVisible
+                enabled: false
                 mouseEnabled: false
                 minimumTouchPoints: 2
                 maximumTouchPoints: 2
@@ -1636,6 +1882,9 @@ PanelWindow {
                             break;
                         case "lyrics":
                             islandContainer.showLyricsCapsule();
+                            break;
+                        case "utilities":
+                            islandContainer.showUtilitiesCapsule();
                             break;
                         default:
                             islandContainer.swipeTransitionProgress = settleResult.progress;
@@ -1702,6 +1951,46 @@ PanelWindow {
                             && islandContainer.splitOriginSide !== "right"
                         showCondition: true
                         onPreferredWidthChanged: islandContainer.syncLyricsCapsuleWidth()
+                    }
+                }
+            }
+
+            Loader {
+                id: utilitiesSwipeLoader
+                anchors.fill: parent
+                active: islandContainer.utilitiesSwipeVisible
+                asynchronous: false
+                visible: active
+                focus: islandContainer.islandState === "utilities"
+
+                onLoaded: {
+                    islandContainer.syncUtilitiesCapsuleWidth();
+                    if (item) {
+                        item.selectedIdx = 0;
+                        item.forceActiveFocus();
+                    }
+                }
+
+                sourceComponent: Component {
+                    SwipeUtilitiesLayer {
+                        focus: true
+                        shellRootController: root.shellRootController
+                        screenRecordingActive: root.screenRecordingActive
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        timeFontFamily: root.timeFontFamily
+                        timeText: timeObj.currentTime
+                        showSecondaryText: islandContainer.workspaceOriginSide !== "right"
+                            && islandContainer.splitOriginSide !== "right"
+                        transitionProgress: islandContainer.islandState === "utilities" ? 1.0 : islandContainer.rightSwipeProgress
+                        showCondition: true
+                        onPreferredWidthChanged: islandContainer.syncUtilitiesCapsuleWidth()
+                        onCloseRequested: {
+                            islandContainer.closeUtilitiesInstantly();
+                        }
+                        onWallpaperRequested: {
+                            islandContainer.showWallpapers();
+                        }
                     }
                 }
             }
@@ -1853,13 +2142,33 @@ PanelWindow {
                         batteryCapacity: islandContainer.batteryCapacity
                         isCharging: islandContainer.isCharging
                         volumeLevel: islandContainer.currentVolume
+                        isMuted: islandContainer.isMuted
                         brightnessLevel: islandContainer.currentBrightness
+                        tempLevel: root.nightLightTemp
+                        batteryModeInitialIndex: root.cachedBatteryModeIndex
+                        caffeineMode: root.shellRootController ? root.shellRootController.caffeineMode : false
+                        dndActive: root.dndActive
                         currentWorkspace: islandContainer.currentWs
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
                         showCondition: islandContainer.controlCenterLayerVisible
+                        notificationModel: notificationHistory
                         onConnectivityPanelRequested: function(kind, open) {
                             root.setConnectivityDetailVisible(kind, open);
+                        }
+                        onTempChanged: function(val) {
+                            root.nightLightTemp = val;
+                        }
+                        onBatteryModeIndexChangedExternal: function(index) {
+                            root.cachedBatteryModeIndex = index;
+                        }
+                        onCaffeineModeChanged: {
+                            if (root.shellRootController) {
+                                root.shellRootController.caffeineMode = caffeineMode;
+                            }
+                        }
+                        onDndToggleRequested: {
+                            root.dndActive = !root.dndActive;
                         }
                     }
                 }
@@ -2006,8 +2315,44 @@ PanelWindow {
 
             open: root.bluetoothConnectivityDetailOpen
             mounted: root.bluetoothConnectivityDetailMounted
-            rightSide: true
+            rightSide: false
             panelKind: "bluetooth"
+            provider: controlCenterLoader.item
+            mainCapsule: mainCapsule
+            availableWidth: root.width
+            detailWidth: root.connectivityDetailWidth
+            detailHeight: root.connectivityDetailHeight
+            detailGap: root.connectivityDetailGap
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+            heroFontFamily: root.heroFontFamily
+        }
+
+        ConnectivityDetailShell {
+            id: batteryConnectivityDetailShell
+
+            open: root.batteryConnectivityDetailOpen
+            mounted: root.batteryConnectivityDetailMounted
+            rightSide: true
+            panelKind: "battery"
+            provider: controlCenterLoader.item
+            mainCapsule: mainCapsule
+            availableWidth: root.width
+            detailWidth: root.connectivityDetailWidth
+            detailHeight: root.connectivityDetailHeight
+            detailGap: root.connectivityDetailGap
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+            heroFontFamily: root.heroFontFamily
+        }
+
+        ConnectivityDetailShell {
+            id: audioConnectivityDetailShell
+
+            open: root.audioConnectivityDetailOpen
+            mounted: root.audioConnectivityDetailMounted
+            rightSide: true
+            panelKind: "audio"
             provider: controlCenterLoader.item
             mainCapsule: mainCapsule
             availableWidth: root.width
@@ -2021,6 +2366,7 @@ PanelWindow {
 
         TopRightStatus {
             id: topRightComponent
+            visible: !root.isWorkspaceFullscreen
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
@@ -2029,12 +2375,14 @@ PanelWindow {
             batteryCapacity: islandContainer.batteryCapacity
             isCharging: islandContainer.isCharging
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
+            currentVolume: islandContainer.currentVolume
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
         }
 
         TopLeftLyrics {
             id: topLeftComponent
+            visible: !root.isWorkspaceFullscreen
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
@@ -2044,10 +2392,12 @@ PanelWindow {
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
             maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32
+            islandState: islandContainer.islandState
         }
 
         TopRightTray {
             id: topRightTray
+            visible: !root.isWorkspaceFullscreen
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top

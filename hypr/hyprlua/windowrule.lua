@@ -58,3 +58,26 @@ hl.window_rule({
     no_blur=true,
     dim_around  = true
 })
+
+-- Float and center the Mirror & Camera Recorder window
+hl.window_rule({
+    match = { title = "Mirror & Camera Recorder" },
+    float = true,
+    size = { 960, 540 },
+    center = true
+})
+
+-- Open Discord in its dedicated special workspace
+hl.window_rule({
+    match = { class = "discord" },
+    workspace = "special:discord_special",
+
+})
+
+hl.window_rule({
+    match = { title = "Hyprland Customizer" },
+    float = true,
+    persistent_size = true
+})
+
+

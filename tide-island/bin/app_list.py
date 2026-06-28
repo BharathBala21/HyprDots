@@ -2,6 +2,10 @@
 import os
 import json
 import re
+import sys
+import argparse
+
+USAGE_FILE = os.path.expanduser('~/.cache/tide-island/app_usage.json')
 
 def parse_desktop_file(filepath):
     entry = {}
@@ -28,54 +32,120 @@ def parse_desktop_file(filepath):
         return None
     return entry
 
+def track_app(filename):
+    os.makedirs(os.path.dirname(USAGE_FILE), exist_ok=True)
+    try:
+        if os.path.exists(USAGE_FILE):
+            with open(USAGE_FILE, 'r', encoding='utf-8') as f:
+                counts = json.load(f)
+                if not isinstance(counts, dict):
+                    counts = {}
+        else:
+            counts = {}
+    except Exception:
+        counts = {}
+    
+    counts[filename] = counts.get(filename, 0) + 1
+    
+    try:
+        with open(USAGE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(counts, f, indent=2)
+    except Exception as e:
+        print(f"Error writing usage counts: {e}", file=sys.stderr)
+
+CACHE_FILE = os.path.expanduser('~/.cache/tide-island/app_cache.json')
+
 def get_apps():
+    usage_counts = {}
+    try:
+        if os.path.exists(USAGE_FILE):
+            with open(USAGE_FILE, 'r', encoding='utf-8') as f:
+                usage_counts = json.load(f)
+                if not isinstance(usage_counts, dict):
+                    usage_counts = {}
+    except Exception:
+        pass
+
     dirs = [
         os.path.expanduser('~/.local/share/applications'),
         '/usr/share/applications'
     ]
+
+    cache_valid = False
     apps = {}
-    for d in dirs:
-        if not os.path.exists(d):
-            continue
-        try:
-            filenames = os.listdir(d)
-        except Exception:
-            continue
-        for filename in filenames:
-            if not filename.endswith('.desktop'):
+
+    try:
+        if os.path.exists(CACHE_FILE):
+            cache_mtime = os.path.getmtime(CACHE_FILE)
+            dir_mtimes = [os.path.getmtime(d) for d in dirs if os.path.exists(d)]
+            if dir_mtimes and cache_mtime > max(dir_mtimes):
+                with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                    apps = json.load(f)
+                    if isinstance(apps, dict) and len(apps) > 0:
+                        cache_valid = True
+    except Exception:
+        cache_valid = False
+
+    if not cache_valid:
+        apps = {}
+        for d in dirs:
+            if not os.path.exists(d):
                 continue
-            if filename in apps:
+            try:
+                filenames = os.listdir(d)
+            except Exception:
                 continue
-            filepath = os.path.join(d, filename)
-            entry = parse_desktop_file(filepath)
-            if not entry:
-                continue
-            
-            if entry.get('NoDisplay') == 'true' or entry.get('Hidden') == 'true':
-                continue
-            if 'Name' not in entry or 'Exec' not in entry:
-                continue
+            for filename in filenames:
+                if not filename.endswith('.desktop'):
+                    continue
+                if filename in apps:
+                    continue
+                filepath = os.path.join(d, filename)
+                entry = parse_desktop_file(filepath)
+                if not entry:
+                    continue
                 
-            exec_cmd = entry['Exec']
-            exec_cmd = re.sub(r'%[fFuUdDnNicCkv]', '', exec_cmd).strip()
-            
-            name = entry['Name']
-            icon = entry.get('Icon', 'application-x-executable')
-            comment = entry.get('Comment', '')
-            generic = entry.get('GenericName', '')
-            keywords = entry.get('Keywords', '').replace(';', ' ')
-            
-            apps[filename] = {
-                'filename': filename,
-                'name': name,
-                'exec': exec_cmd,
-                'icon': icon,
-                'description': comment or generic,
-                'search': f"{name} {comment} {generic} {keywords}".lower()
-            }
-            
-    sorted_apps = sorted(apps.values(), key=lambda x: x['name'].lower())
+                if entry.get('NoDisplay') == 'true' or entry.get('Hidden') == 'true':
+                    continue
+                if 'Name' not in entry or 'Exec' not in entry:
+                    continue
+                    
+                exec_cmd = entry['Exec']
+                exec_cmd = re.sub(r'%[fFuUdDnNicCkv]', '', exec_cmd).strip()
+                
+                name = entry['Name']
+                icon = entry.get('Icon', 'application-x-executable')
+                comment = entry.get('Comment', '')
+                generic = entry.get('GenericName', '')
+                keywords = entry.get('Keywords', '').replace(';', ' ')
+                
+                apps[filename] = {
+                    'filename': filename,
+                    'name': name,
+                    'exec': exec_cmd,
+                    'icon': icon,
+                    'description': comment or generic,
+                    'search': f"{name} {comment} {generic} {keywords}".lower()
+                }
+        
+        try:
+            os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
+            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(apps, f)
+        except Exception:
+            pass
+
+    sorted_apps = sorted(
+        apps.values(),
+        key=lambda x: (-usage_counts.get(x['filename'], 0), x['name'].lower())
+    )
     return sorted_apps
 
 if __name__ == '__main__':
-    print(json.dumps(get_apps()))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--track', type=str, help='Track app usage')
+    args = parser.parse_args()
+    if args.track:
+        track_app(args.track)
+    else:
+        print(json.dumps(get_apps()))
