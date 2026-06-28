@@ -33,10 +33,6 @@ Item {
     }
 
     function getWifiGlyphForSignal(signalVal) {
-        if (signalVal < 0) return "\u{F05AD}"; // wifi-strength-outline
-        if (signalVal >= 75) return "\u{F05AC}"; // wifi-strength-4
-        if (signalVal >= 50) return "\u{F05AB}"; // wifi-strength-3
-        if (signalVal >= 25) return "\u{F05AA}"; // wifi-strength-2
         return "\u{F05A9}"; // wifi-strength-1
     }
 

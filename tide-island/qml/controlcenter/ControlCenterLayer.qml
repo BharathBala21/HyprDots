@@ -167,10 +167,6 @@ Item {
     readonly property color buttonFillPressed: themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : StyleTokens.buttonFillPressed
     readonly property string wifiGlyph: {
         if (!wifiEnabled) return "\u{F05AE}"; // wifi-strength-off
-        if (wifiCurrentSsid.length === 0 || wifiSignal < 0) return "\u{F05AD}"; // wifi-strength-outline
-        if (wifiSignal >= 75) return "\u{F05AC}"; // wifi-strength-4
-        if (wifiSignal >= 50) return "\u{F05AB}"; // wifi-strength-3
-        if (wifiSignal >= 25) return "\u{F05AA}"; // wifi-strength-2
         return "\u{F05A9}"; // wifi-strength-1
     }
     readonly property string bluetoothGlyph: ""

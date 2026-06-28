@@ -49,9 +49,33 @@ PanelWindow {
     readonly property int currentMonitorWorkspaceId: hyprMonitor && hyprMonitor.activeWorkspace
         ? hyprMonitor.activeWorkspace.id
         : 1
-    readonly property bool isWorkspaceFullscreen: hyprMonitor && hyprMonitor.activeWorkspace
-        ? !!hyprMonitor.activeWorkspace.hasFullscreen
-        : false
+    readonly property bool isWorkspaceFullscreen: {
+        if (!hyprMonitor || !hyprMonitor.activeWorkspace || !hyprMonitor.activeWorkspace.hasFullscreen) {
+            return false;
+        }
+
+        // Check if the active window on this monitor/workspace is in actual fullscreen mode (fullscreen == 2)
+        const atl = Hyprland.activeToplevel;
+        if (atl && atl.workspace && atl.workspace.id === hyprMonitor.activeWorkspace.id) {
+            if (atl.wayland && atl.wayland.fullscreen) return true;
+            if (atl.lastIpcObject && atl.lastIpcObject.fullscreen === 2) return true;
+        }
+
+        // Fallback: check all toplevels
+        if (Hyprland.toplevels) {
+            const count = Hyprland.toplevels.count;
+            if (typeof count === "number") {
+                for (let i = 0; i < count; i++) {
+                    const tl = Hyprland.toplevels.get(i);
+                    if (tl && tl.workspace && tl.workspace.id === hyprMonitor.activeWorkspace.id) {
+                        if (tl.wayland && tl.wayland.fullscreen) return true;
+                        if (tl.lastIpcObject && tl.lastIpcObject.fullscreen === 2) return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
     readonly property bool screenRecordingActive: shellRootController
         && shellRootController.screenRecordingActive !== undefined
         ? !!shellRootController.screenRecordingActive
