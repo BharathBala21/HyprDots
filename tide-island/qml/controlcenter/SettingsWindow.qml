@@ -7,8 +7,8 @@ FloatingWindow {
     id: root
 
     title: "Hyprland Customizer"
-    implicitWidth: 460
-    implicitHeight: 560
+    implicitWidth: 700
+    implicitHeight: 580
     color: colorBackground // Sleek dark panel background
 
     signal settingsClosed()
@@ -42,6 +42,15 @@ FloatingWindow {
 
     property bool addRulePanelOpen: false
     property real ruleOpacity: 1.0
+
+    property int activeSection: 0
+
+    // Matugen configurations
+    property string matugenMode: "dark"
+    property string matugenType: "scheme-tonal-spot"
+    property real matugenContrast: 0.0
+    property string matugenPrefer: "default"
+    property int matugenSourceColorIndex: 0
 
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
@@ -221,6 +230,44 @@ FloatingWindow {
         opaqueSwitch.checked = false;
         noBlurSwitch.checked = false;
         ruleOpacity = 1.0;
+    }
+
+    function saveMatugenSettings() {
+        var args = [
+            "python3",
+            Quickshell.shellDir + "/bin/update_user_config.py",
+            "--mode", matugenMode,
+            "--type", matugenType,
+            "--contrast", matugenContrast.toString(),
+            "--prefer", matugenPrefer,
+            "--source-color-index", matugenSourceColorIndex.toString()
+        ];
+        Quickshell.execDetached(args);
+    }
+
+    Process {
+        id: matugenConfigReadProcess
+        command: [
+            "cat",
+            Qt.getenv("HOME") + "/.config/tide-island/userconfig.json"
+        ]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        var config = JSON.parse(this.text);
+                        if (config.matugenMode !== undefined) matugenMode = config.matugenMode;
+                        if (config.matugenType !== undefined) matugenType = config.matugenType;
+                        if (config.matugenContrast !== undefined) matugenContrast = parseFloat(config.matugenContrast);
+                        if (config.matugenPrefer !== undefined) matugenPrefer = config.matugenPrefer;
+                        if (config.matugenSourceColorIndex !== undefined) matugenSourceColorIndex = parseInt(config.matugenSourceColorIndex);
+                    } catch (e) {
+                        console.log("Error parsing userconfig.json: " + e);
+                    }
+                }
+            }
+        }
     }
 
     ListModel {
@@ -642,790 +689,1143 @@ FloatingWindow {
         }
     }
 
-    // Background click handler to unfocus text inputs
-    MouseArea {
+    // Restructured layout: Row containing Sidebar and Content Area
+    Row {
+        id: mainRow
         anchors.fill: parent
-        z: -1
-        onClicked: {
-            scrollView.forceActiveFocus();
-        }
-    }
+        spacing: 0
 
-    // Window scroll view content layout
-    ScrollView {
-        id: scrollView
-        anchors.fill: parent
-        anchors.margins: 16
-        clip: true
-        ScrollBar.vertical.policy: ScrollBar.AsNeeded
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
-        background: Rectangle {
+        // Left Sidebar
+        Rectangle {
+            id: sidebar
+            width: 160
+            height: parent.height
             color: "transparent"
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 8
+
+                Text {
+                    text: "Settings"
+                    color: colorOnSurface
+                    font.pixelSize: 18
+                    font.family: "Inter Display"
+                    font.weight: Font.Bold
+                    bottomPadding: 12
+                }
+
+                // Sidebar buttons
+                Repeater {
+                    model: [
+                        { name: "Styling", icon: "🎨" },
+                        { name: "Blur", icon: "✨" },
+                        { name: "Rules", icon: "📝" },
+                        { name: "Matugen", icon: "🌈" }
+                    ]
+
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 36
+                        radius: 8
+                        color: index === activeSection
+                            ? colorSecondaryContainer
+                            : (sidebarItemMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent")
+
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Row {
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            spacing: 8
+
+                            Text {
+                                text: modelData.icon
+                                font.pixelSize: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: modelData.name
+                                color: index === activeSection ? colorPrimary : colorOnSurface
+                                font.pixelSize: 13
+                                font.family: "Inter Display"
+                                font.weight: index === activeSection ? Font.DemiBold : Font.Normal
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        MouseArea {
+                            id: sidebarItemMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: {
+                                activeSection = index;
+                                scrollView.forceActiveFocus();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Vertical separator line
+        Rectangle {
+            width: 1
+            height: parent.height
+            color: colorOutline
+        }
+
+        // Right Content Area
+        Item {
+            id: contentArea
+            width: parent.width - sidebar.width - 1
+            height: parent.height
+
+            // Background click handler inside content area to unfocus text inputs
             MouseArea {
                 anchors.fill: parent
+                z: -1
                 onClicked: {
                     scrollView.forceActiveFocus();
                 }
             }
-        }
 
-        Column {
-            id: mainColumn
-            property var settingsWindow: root
-            width: scrollView.width - 12
-            spacing: 12
+            ScrollView {
+                id: scrollView
+                anchors.fill: parent
+                anchors.margins: 16
+                clip: true
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-            Text {
-                text: "Hyprland Styling"
-                color: colorOnSurface
-                font.pixelSize: 18
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-                anchors.horizontalCenter: parent.horizontalCenter
-                bottomPadding: 8
-            }
-
-            Text {
-                text: "General Settings"
-                color: colorOnSurfaceVariant
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-                leftPadding: 6
-            }
-
-            SettingsCard {
-                title: "Window Rounding"
-                SettingsStepper {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    value: hyprRounding
-                    min: 0
-                    max: 30
-                    suffix: "px"
-                    onChanged: (newValue) => {
-                        root.updateHyprRounding(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Border Thickness"
-                SettingsStepper {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    value: hyprBorder
-                    min: 0
-                    max: 15
-                    suffix: "px"
-                    onChanged: (newValue) => {
-                        root.updateHyprBorder(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Gaps (Between Windows)"
-                SettingsStepper {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    value: hyprGapsIn
-                    min: 0
-                    max: 40
-                    suffix: "px"
-                    onChanged: (newValue) => {
-                        root.updateHyprGapsIn(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Gaps (Screen Edges)"
-                SettingsStepper {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    value: hyprGapsOut
-                    min: 0
-                    max: 40
-                    suffix: "px"
-                    onChanged: (newValue) => {
-                        root.updateHyprGapsOut(newValue);
-                    }
-                }
-            }
-
-            Text {
-                text: "Blur Settings"
-                color: colorOnSurfaceVariant
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-                leftPadding: 6
-                topPadding: 8
-            }
-
-            SettingsCard {
-                title: "Enable Window Blur"
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    checked: blurEnabled
-                    onToggled: (newValue) => {
-                        root.updateBlurEnabled(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Blur Size"
-                active: blurEnabled
-                SettingsStepper {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    value: blurSize
-                    min: 1
-                    max: 20
-                    suffix: ""
-                    active: blurEnabled
-                    onChanged: (newValue) => {
-                        root.updateBlurSize(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Blur Passes"
-                active: blurEnabled
-                SettingsStepper {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    value: blurPasses
-                    min: 1
-                    max: 10
-                    suffix: ""
-                    active: blurEnabled
-                    onChanged: (newValue) => {
-                        root.updateBlurPasses(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Ignore Window Opacity"
-                active: blurEnabled
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    checked: blurIgnoreOpacity
-                    active: blurEnabled
-                    onToggled: (newValue) => {
-                        root.updateBlurIgnoreOpacity(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "New Optimizations"
-                active: blurEnabled
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    checked: blurNewOptimizations
-                    active: blurEnabled
-                    onToggled: (newValue) => {
-                        root.updateBlurNewOptimizations(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "X-Ray Blur"
-                active: blurEnabled && blurNewOptimizations
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    checked: blurXray
-                    active: blurEnabled && blurNewOptimizations
-                    onToggled: (newValue) => {
-                        root.updateBlurXray(newValue);
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Blur Noise"
-                active: blurEnabled
-                
-                Row {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 12
-                    
-                    SettingsNumberInput {
-                        value: blurNoise
-                        from: 0.0
-                        to: 1.0
-                        decimals: 4
-                        active: blurEnabled
-                        anchors.verticalCenter: parent.verticalCenter
-                        onChanged: (newValue) => {
-                            root.updateBlurNoise(newValue);
-                        }
-                    }
-                    
-                    SettingsSlider {
-                        value: blurNoise
-                        from: 0.0
-                        to: 1.0
-                        active: blurEnabled
-                        onMoved: (newValue) => {
-                            root.updateBlurNoise(newValue);
-                        }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Blur Contrast"
-                active: blurEnabled
-                
-                Row {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 12
-                    
-                    SettingsNumberInput {
-                        value: blurContrast
-                        from: 0.0
-                        to: 2.0
-                        decimals: 4
-                        active: blurEnabled
-                        anchors.verticalCenter: parent.verticalCenter
-                        onChanged: (newValue) => {
-                            root.updateBlurContrast(newValue);
-                        }
-                    }
-                    
-                    SettingsSlider {
-                        value: blurContrast
-                        from: 0.0
-                        to: 2.0
-                        active: blurEnabled
-                        onMoved: (newValue) => {
-                            root.updateBlurContrast(newValue);
-                        }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Blur Brightness"
-                active: blurEnabled
-                
-                Row {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 12
-                    
-                    SettingsNumberInput {
-                        value: blurBrightness
-                        from: 0.0
-                        to: 2.0
-                        decimals: 4
-                        active: blurEnabled
-                        anchors.verticalCenter: parent.verticalCenter
-                        onChanged: (newValue) => {
-                            root.updateBlurBrightness(newValue);
-                        }
-                    }
-                    
-                    SettingsSlider {
-                        value: blurBrightness
-                        from: 0.0
-                        to: 2.0
-                        active: blurEnabled
-                        onMoved: (newValue) => {
-                            root.updateBlurBrightness(newValue);
-                        }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Blur Vibrancy"
-                active: blurEnabled
-                
-                Row {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 12
-                    
-                    SettingsNumberInput {
-                        value: blurVibrancy
-                        from: 0.0
-                        to: 1.0
-                        decimals: 4
-                        active: blurEnabled
-                        anchors.verticalCenter: parent.verticalCenter
-                        onChanged: (newValue) => {
-                            root.updateBlurVibrancy(newValue);
-                        }
-                    }
-                    
-                    SettingsSlider {
-                        value: blurVibrancy
-                        from: 0.0
-                        to: 1.0
-                        active: blurEnabled
-                        onMoved: (newValue) => {
-                            root.updateBlurVibrancy(newValue);
-                        }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Blur Vibrancy Darkness"
-                active: blurEnabled
-                
-                Row {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 16
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 12
-                    
-                    SettingsNumberInput {
-                        value: blurVibrancyDarkness
-                        from: 0.0
-                        to: 1.0
-                        decimals: 4
-                        active: blurEnabled
-                        anchors.verticalCenter: parent.verticalCenter
-                        onChanged: (newValue) => {
-                            root.updateBlurVibrancyDarkness(newValue);
-                        }
-                    }
-                    
-                    SettingsSlider {
-                        value: blurVibrancyDarkness
-                        from: 0.0
-                        to: 1.0
-                        active: blurEnabled
-                        onMoved: (newValue) => {
-                            root.updateBlurVibrancyDarkness(newValue);
-                        }
-                    }
-                }
-            }
-
-            Text {
-                text: "Window Rules"
-                color: colorOnSurfaceVariant
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-                leftPadding: 6
-                topPadding: 8
-            }
-
-            // Displaying each rule in the list
-            Repeater {
-                model: rulesListModel
-                delegate: Rectangle {
-                    width: parent.width
-                    height: 52
-                    radius: 14
-                    color: colorCardBg
-                    
+                background: Rectangle {
+                    color: "transparent"
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
                             scrollView.forceActiveFocus();
                         }
                     }
-                    
+                }
+
+                Column {
+                    id: mainColumn
+                    property var settingsWindow: root
+                    width: scrollView.width - 12
+                    spacing: 12
+
+                    // SECTION 0: Styling
                     Column {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 2
-                        
+                        width: parent.width
+                        visible: activeSection === 0
+                        spacing: 12
+
                         Text {
-                            text: model.class ? "Class: " + model.class : (model.title ? "Title: " + model.title : "Any Window")
+                            text: "Hyprland Styling"
                             color: colorOnSurface
-                            font.pixelSize: 13
+                            font.pixelSize: 16
                             font.family: "Inter Display"
-                            font.weight: Font.Medium
+                            font.weight: Font.Bold
+                            bottomPadding: 4
                         }
-                        
+
                         Text {
-                            text: {
-                                var effects = [];
-                                if (model.float) effects.push("Float");
-                                if (model.opaque) effects.push("Opaque");
-                                if (model.no_blur) effects.push("No Blur");
-                                if (model.stay_focused) effects.push("Stay Focused");
-                                if (model.opacity !== undefined && model.opacity !== null && model.opacity !== 1.0) effects.push("Opacity: " + model.opacity);
-                                if (model.rounding !== undefined && model.rounding !== null) effects.push("Rounding: " + model.rounding + "px");
-                                return effects.join(", ") || "No Effects";
-                            }
+                            text: "General Settings"
                             color: colorOnSurfaceVariant
                             font.pixelSize: 11
                             font.family: "Inter Display"
-                        }
-                    }
-                    
-                    // Delete button on the right
-                    Rectangle {
-                        anchors.right: parent.right
-                        anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 28
-                        height: 28
-                        radius: 14
-                        color: deleteMouse.containsMouse ? (themeColors ? themeColors.error : "#ff3b30") : colorSecondaryContainer
-                        
-                        Behavior on color { ColorAnimation { duration: 100 } }
-                        
-                        Text {
-                            anchors.centerIn: parent
-                            text: "×"
-                            color: deleteMouse.containsMouse ? (themeColors ? themeColors.on_error : "#ffffff") : colorOnSurface
-                            font.pixelSize: 18
                             font.weight: Font.Bold
+                            leftPadding: 6
                         }
-                        
-                        MouseArea {
-                            id: deleteMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: {
-                                mainColumn.settingsWindow.deleteRule(index);
+
+                        SettingsCard {
+                            title: "Window Rounding"
+                            SettingsStepper {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                value: hyprRounding
+                                min: 0
+                                max: 30
+                                suffix: "px"
+                                onChanged: (newValue) => {
+                                    root.updateHyprRounding(newValue);
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Border Thickness"
+                            SettingsStepper {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                value: hyprBorder
+                                min: 0
+                                max: 15
+                                suffix: "px"
+                                onChanged: (newValue) => {
+                                    root.updateHyprBorder(newValue);
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Gaps (Between Windows)"
+                            SettingsStepper {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                value: hyprGapsIn
+                                min: 0
+                                max: 40
+                                suffix: "px"
+                                onChanged: (newValue) => {
+                                    root.updateHyprGapsIn(newValue);
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Gaps (Screen Edges)"
+                            SettingsStepper {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                value: hyprGapsOut
+                                min: 0
+                                max: 40
+                                suffix: "px"
+                                onChanged: (newValue) => {
+                                    root.updateHyprGapsOut(newValue);
+                                }
                             }
                         }
                     }
-                }
-            }
 
-            // Add Rule Toggle Button
-            Rectangle {
-                visible: !addRulePanelOpen
-                width: parent.width
-                height: 40
-                radius: 10
-                color: addRuleMouse.containsMouse ? colorButtonBgHover : colorCardBg
-                border.width: 1
-                border.color: colorOutline
-                
-                Text {
-                    anchors.centerIn: parent
-                    text: "+ Add New Window Rule"
-                    color: colorPrimary
-                    font.pixelSize: 13
-                    font.family: "Inter Display"
-                    font.weight: Font.Medium
-                }
-                
-                MouseArea {
-                    id: addRuleMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: {
-                        addRulePanelOpen = true;
-                        scrollTimer.restart();
-                    }
-                }
-            }
-
-            // Expandable Add Rule Form
-            Rectangle {
-                visible: addRulePanelOpen
-                width: parent.width
-                height: 240
-                radius: 14
-                color: colorCardBg
-                border.width: 1
-                border.color: colorOutline
-                
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        scrollView.forceActiveFocus();
-                    }
-                }
-                
-                Column {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    spacing: 12
-                    
-                    Text {
-                        text: "New Window Rule"
-                        color: colorOnSurface
-                        font.pixelSize: 13
-                        font.family: "Inter Display"
-                        font.weight: Font.Bold
-                    }
-                    
-                    Row {
-                        spacing: 12
+                    // SECTION 1: Blur
+                    Column {
                         width: parent.width
-                        
+                        visible: activeSection === 1
+                        spacing: 12
+
                         Text {
-                            text: "Match Class:"
+                            text: "Blur Settings"
                             color: colorOnSurface
-                            font.pixelSize: 12
+                            font.pixelSize: 16
                             font.family: "Inter Display"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 80
+                            font.weight: Font.Bold
+                            bottomPadding: 4
                         }
-                        
-                        SettingsInput {
-                            id: classInput
-                            placeholder: "e.g. kitty"
-                            width: parent.width - 100
-                        }
-                    }
 
-                    Row {
-                        spacing: 12
-                        width: parent.width
-                        
-                        Text {
-                            text: "Opacity:"
-                            color: colorOnSurface
-                            font.pixelSize: 12
-                            font.family: "Inter Display"
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 80
-                        }
-                        
-                        SettingsNumberInput {
-                            value: ruleOpacity
-                            from: 0.1
-                            to: 1.0
-                            decimals: 2
-                            width: 38
-                            anchors.verticalCenter: parent.verticalCenter
-                            onChanged: (newValue) => {
-                                ruleOpacity = newValue;
+                        SettingsCard {
+                            title: "Enable Window Blur"
+                            SettingsSwitch {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: blurEnabled
+                                onToggled: (newValue) => {
+                                    root.updateBlurEnabled(newValue);
+                                }
                             }
                         }
-                        
-                        SettingsSlider {
-                            id: ruleOpacitySlider
-                            value: ruleOpacity
-                            from: 0.1
-                            to: 1.0
-                            width: parent.width - 150
-                            onMoved: (newValue) => {
-                                ruleOpacity = newValue;
+
+                        SettingsCard {
+                            title: "Blur Size"
+                            active: blurEnabled
+                            SettingsStepper {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                value: blurSize
+                                min: 1
+                                max: 20
+                                suffix: ""
+                                active: blurEnabled
+                                onChanged: (newValue) => {
+                                    root.updateBlurSize(newValue);
+                                }
                             }
                         }
-                    }
-                    
-                    // Grid of checkable switches/options
-                    Grid {
-                        columns: 2
-                        spacing: 12
-                        width: parent.width
-                        
-                        Item {
-                            width: 180
-                            height: 24
-                            
+
+                        SettingsCard {
+                            title: "Blur Passes"
+                            active: blurEnabled
+                            SettingsStepper {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                value: blurPasses
+                                min: 1
+                                max: 10
+                                suffix: ""
+                                active: blurEnabled
+                                onChanged: (newValue) => {
+                                    root.updateBlurPasses(newValue);
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Ignore Window Opacity"
+                            active: blurEnabled
+                            SettingsSwitch {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: blurIgnoreOpacity
+                                active: blurEnabled
+                                onToggled: (newValue) => {
+                                    root.updateBlurIgnoreOpacity(newValue);
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "New Optimizations"
+                            active: blurEnabled
+                            SettingsSwitch {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: blurNewOptimizations
+                                active: blurEnabled
+                                onToggled: (newValue) => {
+                                    root.updateBlurNewOptimizations(newValue);
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "X-Ray Blur"
+                            active: blurEnabled && blurNewOptimizations
+                            SettingsSwitch {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: blurXray
+                                active: blurEnabled && blurNewOptimizations
+                                onToggled: (newValue) => {
+                                    root.updateBlurXray(newValue);
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Blur Noise"
+                            active: blurEnabled
+
                             Row {
-                                spacing: 8
-                                anchors.fill: parent
-                                
-                                SettingsSwitch {
-                                    id: floatSwitch
-                                    checked: false
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 12
+
+                                SettingsNumberInput {
+                                    value: blurNoise
+                                    from: 0.0
+                                    to: 1.0
+                                    decimals: 4
+                                    active: blurEnabled
                                     anchors.verticalCenter: parent.verticalCenter
-                                }
-                                Text {
-                                    text: "Float Window"
-                                    color: colorOnSurface
-                                    font.pixelSize: 12
-                                    font.family: "Inter Display"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    floatSwitch.checked = !floatSwitch.checked;
-                                    scrollView.forceActiveFocus();
-                                }
-                            }
-                        }
-                        
-                        Item {
-                            width: 180
-                            height: 24
-                            
-                            Row {
-                                spacing: 8
-                                anchors.fill: parent
-                                
-                                SettingsSwitch {
-                                    id: stayFocusedSwitch
-                                    checked: false
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                Text {
-                                    text: "Stay Focused"
-                                    color: colorOnSurface
-                                    font.pixelSize: 12
-                                    font.family: "Inter Display"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    stayFocusedSwitch.checked = !stayFocusedSwitch.checked;
-                                    scrollView.forceActiveFocus();
-                                }
-                            }
-                        }
-                        
-                        Item {
-                            width: 180
-                            height: 24
-                            
-                            Row {
-                                spacing: 8
-                                anchors.fill: parent
-                                
-                                SettingsSwitch {
-                                    id: opaqueSwitch
-                                    checked: false
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                Text {
-                                    text: "Force Opaque"
-                                    color: colorOnSurface
-                                    font.pixelSize: 12
-                                    font.family: "Inter Display"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    opaqueSwitch.checked = !opaqueSwitch.checked;
-                                    scrollView.forceActiveFocus();
-                                }
-                            }
-                        }
-                        
-                        Item {
-                            width: 180
-                            height: 24
-                            
-                            Row {
-                                spacing: 8
-                                anchors.fill: parent
-                                
-                                SettingsSwitch {
-                                    id: noBlurSwitch
-                                    checked: false
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                Text {
-                                    text: "Disable Blur"
-                                    color: colorOnSurface
-                                    font.pixelSize: 12
-                                    font.family: "Inter Display"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    noBlurSwitch.checked = !noBlurSwitch.checked;
-                                    scrollView.forceActiveFocus();
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Action Buttons (Save/Cancel)
-                    Row {
-                        spacing: 12
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        
-                        Rectangle {
-                            width: 80
-                            height: 28
-                            radius: 6
-                            color: cancelMouse.containsMouse ? (themeColors ? Qt.darker(themeColors.error, 1.15) : "#e03025") : (themeColors ? themeColors.error : "#ff3b30")
-                            Text {
-                                anchors.centerIn: parent
-                                text: "Cancel"
-                                color: themeColors ? themeColors.on_error : "#ffffff"
-                                font.pixelSize: 12
-                                font.family: "Inter Display"
-                                font.weight: Font.Medium
-                            }
-                            MouseArea {
-                                id: cancelMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                onClicked: {
-                                    mainColumn.settingsWindow.resetAddRuleForm();
-                                    addRulePanelOpen = false;
-                                }
-                            }
-                        }
-                        
-                        Rectangle {
-                            width: 80
-                            height: 28
-                            radius: 6
-                            color: saveMouse.containsMouse ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#28b54c") : (themeColors ? themeColors.primary : "#30d158")
-                            Text {
-                                anchors.centerIn: parent
-                                text: "Save"
-                                color: themeColors ? themeColors.on_primary : "#ffffff"
-                                font.pixelSize: 12
-                                font.family: "Inter Display"
-                                font.weight: Font.Medium
-                            }
-                            MouseArea {
-                                id: saveMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                onClicked: {
-                                    if (classInput.text !== "") {
-                                        rulesListModel.append({
-                                            "class": classInput.text,
-                                            "float": floatSwitch.checked,
-                                            "opaque": opaqueSwitch.checked,
-                                            "no_blur": noBlurSwitch.checked,
-                                            "stay_focused": stayFocusedSwitch.checked,
-                                            "opacity": ruleOpacity
-                                        });
-                                        mainColumn.settingsWindow.saveWindowRules();
-                                        mainColumn.settingsWindow.resetAddRuleForm();
-                                        addRulePanelOpen = false;
+                                    onChanged: (newValue) => {
+                                        root.updateBlurNoise(newValue);
                                     }
+                                }
+
+                                SettingsSlider {
+                                    value: blurNoise
+                                    from: 0.0
+                                    to: 1.0
+                                    active: blurEnabled
+                                    onMoved: (newValue) => {
+                                        root.updateBlurNoise(newValue);
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Blur Contrast"
+                            active: blurEnabled
+
+                            Row {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 12
+
+                                SettingsNumberInput {
+                                    value: blurContrast
+                                    from: 0.0
+                                    to: 2.0
+                                    decimals: 4
+                                    active: blurEnabled
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    onChanged: (newValue) => {
+                                        root.updateBlurContrast(newValue);
+                                    }
+                                }
+
+                                SettingsSlider {
+                                    value: blurContrast
+                                    from: 0.0
+                                    to: 2.0
+                                    active: blurEnabled
+                                    onMoved: (newValue) => {
+                                        root.updateBlurContrast(newValue);
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Blur Brightness"
+                            active: blurEnabled
+
+                            Row {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 12
+
+                                SettingsNumberInput {
+                                    value: blurBrightness
+                                    from: 0.0
+                                    to: 2.0
+                                    decimals: 4
+                                    active: blurEnabled
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    onChanged: (newValue) => {
+                                        root.updateBlurBrightness(newValue);
+                                    }
+                                }
+
+                                SettingsSlider {
+                                    value: blurBrightness
+                                    from: 0.0
+                                    to: 2.0
+                                    active: blurEnabled
+                                    onMoved: (newValue) => {
+                                        root.updateBlurBrightness(newValue);
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Blur Vibrancy"
+                            active: blurEnabled
+
+                            Row {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 12
+
+                                SettingsNumberInput {
+                                    value: blurVibrancy
+                                    from: 0.0
+                                    to: 1.0
+                                    decimals: 4
+                                    active: blurEnabled
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    onChanged: (newValue) => {
+                                        root.updateBlurVibrancy(newValue);
+                                    }
+                                }
+
+                                SettingsSlider {
+                                    value: blurVibrancy
+                                    from: 0.0
+                                    to: 1.0
+                                    active: blurEnabled
+                                    onMoved: (newValue) => {
+                                        root.updateBlurVibrancy(newValue);
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Blur Vibrancy Darkness"
+                            active: blurEnabled
+
+                            Row {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 12
+
+                                SettingsNumberInput {
+                                    value: blurVibrancyDarkness
+                                    from: 0.0
+                                    to: 1.0
+                                    decimals: 4
+                                    active: blurEnabled
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    onChanged: (newValue) => {
+                                        root.updateBlurVibrancyDarkness(newValue);
+                                    }
+                                }
+
+                                SettingsSlider {
+                                    value: blurVibrancyDarkness
+                                    from: 0.0
+                                    to: 1.0
+                                    active: blurEnabled
+                                    onMoved: (newValue) => {
+                                        root.updateBlurVibrancyDarkness(newValue);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // SECTION 2: Rules
+                    Column {
+                        width: parent.width
+                        visible: activeSection === 2
+                        spacing: 12
+
+                        Text {
+                            text: "Window Rules"
+                            color: colorOnSurface
+                            font.pixelSize: 16
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            bottomPadding: 4
+                        }
+
+                        // Displaying each rule in the list
+                        Repeater {
+                            model: rulesListModel
+                            delegate: Rectangle {
+                                width: parent.width
+                                height: 52
+                                radius: 14
+                                color: colorCardBg
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        scrollView.forceActiveFocus();
+                                    }
+                                }
+
+                                Column {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 16
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 2
+
+                                    Text {
+                                        text: model.class ? "Class: " + model.class : (model.title ? "Title: " + model.title : "Any Window")
+                                        color: colorOnSurface
+                                        font.pixelSize: 13
+                                        font.family: "Inter Display"
+                                        font.weight: Font.Medium
+                                    }
+
+                                    Text {
+                                        text: {
+                                            var effects = [];
+                                            if (model.float) effects.push("Float");
+                                            if (model.opaque) effects.push("Opaque");
+                                            if (model.no_blur) effects.push("No Blur");
+                                            if (model.stay_focused) effects.push("Stay Focused");
+                                            if (model.opacity !== undefined && model.opacity !== null && model.opacity !== 1.0) effects.push("Opacity: " + model.opacity);
+                                            if (model.rounding !== undefined && model.rounding !== null) effects.push("Rounding: " + model.rounding + "px");
+                                            return effects.join(", ") || "No Effects";
+                                        }
+                                        color: colorOnSurfaceVariant
+                                        font.pixelSize: 11
+                                        font.family: "Inter Display"
+                                    }
+                                }
+
+                                // Delete button on the right
+                                Rectangle {
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 28
+                                    height: 28
+                                    radius: 14
+                                    color: deleteMouse.containsMouse ? (themeColors ? themeColors.error : "#ff3b30") : colorSecondaryContainer
+
+                                    Behavior on color { ColorAnimation { duration: 100 } }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "×"
+                                        color: deleteMouse.containsMouse ? (themeColors ? themeColors.on_error : "#ffffff") : colorOnSurface
+                                        font.pixelSize: 18
+                                        font.weight: Font.Bold
+                                    }
+
+                                    MouseArea {
+                                        id: deleteMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        onClicked: {
+                                            mainColumn.settingsWindow.deleteRule(index);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Add Rule Toggle Button
+                        Rectangle {
+                            visible: !addRulePanelOpen
+                            width: parent.width
+                            height: 40
+                            radius: 10
+                            color: addRuleMouse.containsMouse ? colorButtonBgHover : colorCardBg
+                            border.width: 1
+                            border.color: colorOutline
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "+ Add New Window Rule"
+                                color: colorPrimary
+                                font.pixelSize: 13
+                                font.family: "Inter Display"
+                                font.weight: Font.Medium
+                            }
+
+                            MouseArea {
+                                id: addRuleMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    addRulePanelOpen = true;
+                                    scrollTimer.restart();
+                                }
+                            }
+                        }
+
+                        // Expandable Add Rule Form
+                        Rectangle {
+                            visible: addRulePanelOpen
+                            width: parent.width
+                            height: 240
+                            radius: 14
+                            color: colorCardBg
+                            border.width: 1
+                            border.color: colorOutline
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    scrollView.forceActiveFocus();
+                                }
+                            }
+
+                            Column {
+                                anchors.fill: parent
+                                anchors.margins: 14
+                                spacing: 12
+
+                                Text {
+                                    text: "New Window Rule"
+                                    color: colorOnSurface
+                                    font.pixelSize: 13
+                                    font.family: "Inter Display"
+                                    font.weight: Font.Bold
+                                }
+
+                                Row {
+                                    spacing: 12
+                                    width: parent.width
+
+                                    Text {
+                                        text: "Match Class:"
+                                        color: colorOnSurface
+                                        font.pixelSize: 12
+                                        font.family: "Inter Display"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 80
+                                    }
+
+                                    SettingsInput {
+                                        id: classInput
+                                        placeholder: "e.g. kitty"
+                                        width: parent.width - 100
+                                    }
+                                }
+
+                                Row {
+                                    spacing: 12
+                                    width: parent.width
+
+                                    Text {
+                                        text: "Opacity:"
+                                        color: colorOnSurface
+                                        font.pixelSize: 12
+                                        font.family: "Inter Display"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 80
+                                    }
+
+                                    SettingsNumberInput {
+                                        value: ruleOpacity
+                                        from: 0.1
+                                        to: 1.0
+                                        decimals: 2
+                                        width: 38
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        onChanged: (newValue) => {
+                                            ruleOpacity = newValue;
+                                        }
+                                    }
+
+                                    SettingsSlider {
+                                        id: ruleOpacitySlider
+                                        value: ruleOpacity
+                                        from: 0.1
+                                        to: 1.0
+                                        width: parent.width - 150
+                                        onMoved: (newValue) => {
+                                            ruleOpacity = newValue;
+                                        }
+                                    }
+                                }
+
+                                // Grid of checkable switches/options
+                                Grid {
+                                    columns: 2
+                                    spacing: 12
+                                    width: parent.width
+
+                                    Item {
+                                        width: 180
+                                        height: 24
+
+                                        Row {
+                                            spacing: 8
+                                            anchors.fill: parent
+
+                                            SettingsSwitch {
+                                                id: floatSwitch
+                                                checked: false
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                            Text {
+                                                text: "Float Window"
+                                                color: colorOnSurface
+                                                font.pixelSize: 12
+                                                font.family: "Inter Display"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                floatSwitch.checked = !floatSwitch.checked;
+                                                scrollView.forceActiveFocus();
+                                            }
+                                        }
+                                    }
+
+                                    Item {
+                                        width: 180
+                                        height: 24
+
+                                        Row {
+                                            spacing: 8
+                                            anchors.fill: parent
+
+                                            SettingsSwitch {
+                                                id: stayFocusedSwitch
+                                                checked: false
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                            Text {
+                                                text: "Stay Focused"
+                                                color: colorOnSurface
+                                                font.pixelSize: 12
+                                                font.family: "Inter Display"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                stayFocusedSwitch.checked = !stayFocusedSwitch.checked;
+                                                scrollView.forceActiveFocus();
+                                            }
+                                        }
+                                    }
+
+                                    Item {
+                                        width: 180
+                                        height: 24
+
+                                        Row {
+                                            spacing: 8
+                                            anchors.fill: parent
+
+                                            SettingsSwitch {
+                                                id: opaqueSwitch
+                                                checked: false
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                            Text {
+                                                text: "Force Opaque"
+                                                color: colorOnSurface
+                                                font.pixelSize: 12
+                                                font.family: "Inter Display"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                opaqueSwitch.checked = !opaqueSwitch.checked;
+                                                scrollView.forceActiveFocus();
+                                            }
+                                        }
+                                    }
+
+                                    Item {
+                                        width: 180
+                                        height: 24
+
+                                        Row {
+                                            spacing: 8
+                                            anchors.fill: parent
+
+                                            SettingsSwitch {
+                                                id: noBlurSwitch
+                                                checked: false
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                            Text {
+                                                text: "Disable Blur"
+                                                color: colorOnSurface
+                                                font.pixelSize: 12
+                                                font.family: "Inter Display"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
+                                                noBlurSwitch.checked = !noBlurSwitch.checked;
+                                                scrollView.forceActiveFocus();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Action Buttons (Save/Cancel)
+                                Row {
+                                    spacing: 12
+                                    anchors.horizontalCenter: parent.horizontalCenter
+
+                                    Rectangle {
+                                        width: 80
+                                        height: 28
+                                        radius: 6
+                                        color: cancelMouse.containsMouse ? (themeColors ? Qt.darker(themeColors.error, 1.15) : "#e03025") : (themeColors ? themeColors.error : "#ff3b30")
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "Cancel"
+                                            color: themeColors ? themeColors.on_error : "#ffffff"
+                                            font.pixelSize: 12
+                                            font.family: "Inter Display"
+                                            font.weight: Font.Medium
+                                        }
+                                        MouseArea {
+                                            id: cancelMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: {
+                                                mainColumn.settingsWindow.resetAddRuleForm();
+                                                addRulePanelOpen = false;
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        width: 80
+                                        height: 28
+                                        radius: 6
+                                        color: saveMouse.containsMouse ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#28b54c") : (themeColors ? themeColors.primary : "#30d158")
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "Save"
+                                            color: themeColors ? themeColors.on_primary : "#ffffff"
+                                            font.pixelSize: 12
+                                            font.family: "Inter Display"
+                                            font.weight: Font.Medium
+                                        }
+                                        MouseArea {
+                                            id: saveMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: {
+                                                if (classInput.text !== "") {
+                                                    rulesListModel.append({
+                                                        "class": classInput.text,
+                                                        "float": floatSwitch.checked,
+                                                        "opaque": opaqueSwitch.checked,
+                                                        "no_blur": noBlurSwitch.checked,
+                                                        "stay_focused": stayFocusedSwitch.checked,
+                                                        "opacity": ruleOpacity
+                                                    });
+                                                    mainColumn.settingsWindow.saveWindowRules();
+                                                    mainColumn.settingsWindow.resetAddRuleForm();
+                                                    addRulePanelOpen = false;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // SECTION 3: Matugen
+                    Column {
+                        width: parent.width
+                        visible: activeSection === 3
+                        spacing: 12
+
+                        Text {
+                            text: "Matugen Styling"
+                            color: colorOnSurface
+                            font.pixelSize: 16
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            bottomPadding: 4
+                        }
+
+                        Text {
+                            text: "Theme Mode"
+                            color: colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                        }
+
+                        SettingsCard {
+                            title: "Dark Theme Mode"
+                            SettingsSwitch {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: matugenMode === "dark"
+                                onToggled: (newValue) => {
+                                    matugenMode = newValue ? "dark" : "light";
+                                    root.saveMatugenSettings();
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "Palette Type"
+                            color: colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                            topPadding: 8
+                        }
+
+                        // Grid of Palette styles
+                        Grid {
+                            columns: 2
+                            spacing: 8
+                            width: parent.width
+
+                            Repeater {
+                                model: [
+                                    { value: "scheme-tonal-spot", label: "Tonal Spot" },
+                                    { value: "scheme-content", label: "Content" },
+                                    { value: "scheme-expressive", label: "Expressive" },
+                                    { value: "scheme-fidelity", label: "Fidelity" },
+                                    { value: "scheme-fruit-salad", label: "Fruit Salad" },
+                                    { value: "scheme-monochrome", label: "Monochrome" },
+                                    { value: "scheme-neutral", label: "Neutral" },
+                                    { value: "scheme-rainbow", label: "Rainbow" },
+                                    { value: "scheme-vibrant", label: "Vibrant" }
+                                ]
+
+                                delegate: Rectangle {
+                                    width: (parent.width - 8) / 2
+                                    height: 36
+                                    radius: 10
+                                    color: matugenType === modelData.value ? colorSecondaryContainer : colorCardBg
+                                    border.width: 1
+                                    border.color: matugenType === modelData.value ? colorPrimary : colorOutline
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: modelData.label
+                                        color: matugenType === modelData.value ? colorPrimary : colorOnSurface
+                                        font.pixelSize: 12
+                                        font.family: "Inter Display"
+                                        font.weight: matugenType === modelData.value ? Font.DemiBold : Font.Normal
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
+                                            matugenType = modelData.value;
+                                            root.saveMatugenSettings();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "Contrast & extraction"
+                            color: colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                            topPadding: 8
+                        }
+
+                        SettingsCard {
+                            title: "Theme Contrast"
+
+                            Row {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 12
+
+                                SettingsNumberInput {
+                                    value: matugenContrast
+                                    from: -1.0
+                                    to: 1.0
+                                    decimals: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    onChanged: (newValue) => {
+                                        matugenContrast = newValue;
+                                        root.saveMatugenSettings();
+                                    }
+                                }
+
+                                SettingsSlider {
+                                    value: matugenContrast
+                                    from: -1.0
+                                    to: 1.0
+                                    onMoved: (newValue) => {
+                                        matugenContrast = newValue;
+                                        root.saveMatugenSettings();
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Source Color Index"
+                            SettingsStepper {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                value: matugenSourceColorIndex
+                                min: 0
+                                max: 4
+                                suffix: ""
+                                onChanged: (newValue) => {
+                                    matugenSourceColorIndex = newValue;
+                                    root.saveMatugenSettings();
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "Color Preference"
+                            color: colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                            topPadding: 8
+                        }
+
+                        Grid {
+                            columns: 2
+                            spacing: 8
+                            width: parent.width
+
+                            Repeater {
+                                model: [
+                                    { value: "default", label: "Default" },
+                                    { value: "darkness", label: "Darkness" },
+                                    { value: "lightness", label: "Lightness" },
+                                    { value: "saturation", label: "Saturation" },
+                                    { value: "less-saturation", label: "Less Saturation" },
+                                    { value: "value", label: "Value" },
+                                    { value: "closest-to-fallback", label: "Closest to Fallback" }
+                                ]
+
+                                delegate: Rectangle {
+                                    width: (parent.width - 8) / 2
+                                    height: 36
+                                    radius: 10
+                                    color: matugenPrefer === modelData.value ? colorSecondaryContainer : colorCardBg
+                                    border.width: 1
+                                    border.color: matugenPrefer === modelData.value ? colorPrimary : colorOutline
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: modelData.label
+                                        color: matugenPrefer === modelData.value ? colorPrimary : colorOnSurface
+                                        font.pixelSize: 12
+                                        font.family: "Inter Display"
+                                        font.weight: matugenPrefer === modelData.value ? Font.DemiBold : Font.Normal
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
+                                            matugenPrefer = modelData.value;
+                                            root.saveMatugenSettings();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Item { width: 1; height: 12 } // spacing
+
+                        // Regenerate Button
+                        Rectangle {
+                            width: parent.width
+                            height: 40
+                            radius: 10
+                            color: regenerateMouse.containsMouse ? colorButtonBgHover : colorCardBg
+                            border.width: 1
+                            border.color: colorOutline
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "🔄 Regenerate Colors"
+                                color: colorPrimary
+                                font.pixelSize: 13
+                                font.family: "Inter Display"
+                                font.weight: Font.Medium
+                            }
+
+                            MouseArea {
+                                id: regenerateMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    root.saveMatugenSettings();
                                 }
                             }
                         }

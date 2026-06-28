@@ -84,7 +84,7 @@ FocusScope {
 
     function confirmWallpaper(path) {
         previewWallpaper(path);
-        Quickshell.execDetached(["matugen", "image", "-v", "--source-color-index", "0", path]);
+        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--wallpaper", path]);
         root.initialWallpaper = path; // Confirm it as the active wallpaper (reverting won't change it back)    
         root.closeRequested();
     }
