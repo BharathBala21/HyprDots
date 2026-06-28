@@ -15,17 +15,14 @@ Item {
 
     signal selectionChanged(int idx)
 
-    // Calculate target timezone time details using standard UTC offsets
-    // This bypasses QML's incomplete toLocaleString timezone support!
     readonly property var tzDetails: {
         if (!tzList || selectedIndex < 0 || selectedIndex >= tzList.length) {
             return { hours: 0, minutes: 0, seconds: 0, timeString: "00:00" }
         }
         
         var targetTz = tzList[selectedIndex];
-        var offsetMinutes = targetTz.offset; // e.g. 330 for India (+5:30)
+        var offsetMinutes = targetTz.offset; 
         
-        // Calculate UTC milliseconds and add target offset milliseconds
         var localTime = currentDate.getTime();
         var localOffsetMs = currentDate.getTimezoneOffset() * 60000;
         var utcMs = localTime + localOffsetMs;
@@ -46,135 +43,178 @@ Item {
         }
     }
 
-    // Hands angle calculation
     readonly property real hourAngle: ((tzDetails.hours % 12) * 30) + (tzDetails.minutes * 0.5)
     readonly property real minuteAngle: (tzDetails.minutes * 6) + (tzDetails.seconds * 0.1)
     readonly property real secondAngle: tzDetails.seconds * 6
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 4
+        spacing: 6
 
-        // City dropdown button
-        ComboBox {
-            id: cityCombo
+        Button {
+            id: citySelectorBtn
             Layout.fillWidth: true
-            implicitHeight: 20
-            currentIndex: root.selectedIndex
-            model: root.tzList
-            textRole: "name"
-
-            // Just make the main button look like a text button
-            contentItem: Text {
-                text: root.tzList && root.tzList[root.selectedIndex] ? root.tzList[root.selectedIndex].name : ""
-                font.pixelSize: 11
-                font.weight: Font.DemiBold
-                color: root.theme.on_surface
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                elide: Text.ElideRight
-            }
+            implicitHeight: 24
 
             background: Rectangle {
-                color: "transparent"
+                color: citySelectorBtn.hovered ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.1) : "transparent"
+                radius: 6
             }
 
-            indicator: Canvas {
-                id: canvas
-                x: cityCombo.width - width - 2
-                y: cityCombo.height / 2 - height / 2
-                width: 6
-                height: 4
-                contextType: "2d"
-                opacity: 0.4
+            contentItem: Item {
+                Text {
+                    anchors.left: parent.left
+                    anchors.right: indicatorIcon.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.tzList && root.tzList[root.selectedIndex] ? root.tzList[root.selectedIndex].name : ""
+                    font.pixelSize: 12
+                    font.weight: Font.Bold
+                    color: root.theme.on_surface
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                }
+                Canvas {
+                    id: indicatorIcon
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 8
+                    height: 6
+                    contextType: "2d"
+                    opacity: 0.5
 
-                onPaint: {
-                    var context = getContext("2d");
-                    context.reset();
-                    context.moveTo(0, 0);
-                    context.lineTo(width, 0);
-                    context.lineTo(width / 2, height);
-                    context.closePath();
-                    context.fillStyle = root.theme.on_surface;
-                    context.fill();
+                    onPaint: {
+                        var context = getContext("2d");
+                        context.reset();
+                        context.moveTo(0, 0);
+                        context.lineTo(width, 0);
+                        context.lineTo(width / 2, height);
+                        context.closePath();
+                        context.fillStyle = root.theme.on_surface;
+                        context.fill();
+                    }
                 }
             }
 
-            // Custom search-based popup menu
-            popup: Popup {
+            onClicked: comboPopup.open()
+
+            Popup {
                 id: comboPopup
-                y: cityCombo.height + 2
-                width: 150
-                implicitHeight: Math.min(220, popupLayout.implicitHeight + 10)
-                padding: 4
+                y: citySelectorBtn.height + 4
+                x: -(width - citySelectorBtn.width) / 2
+                width: 160
+                implicitHeight: Math.min(220, popupLayout.implicitHeight + 12)
+                padding: 6
+                focus: true 
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                background: Rectangle {
+                    color: root.theme.surface_container
+                    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
+                    border.width: 1
+                    radius: 8
+                }
+
+                onOpened: {
+                    searchField.text = "";
+                    searchField.forceActiveFocus();
+                }
 
                 ColumnLayout {
                     id: popupLayout
-                    anchors.fill: parent
-                    spacing: 4
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    spacing: 6
 
-                    // Search input box
                     TextField {
                         id: searchField
                         Layout.fillWidth: true
-                        implicitHeight: 24
+                        implicitHeight: 28
                         placeholderText: qsTr("Search...")
-                        font.pixelSize: 10
+                        font.pixelSize: 11
                         color: root.theme.on_surface
                         placeholderTextColor: root.theme.on_surface_variant
+                        focus: true
                         
                         background: Rectangle {
-                            color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.5)
+                            color: Qt.rgba(root.theme.surface.r, root.theme.surface.g, root.theme.surface.b, 0.8)
                             border.color: searchField.activeFocus ? root.theme.primary : Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.2)
                             border.width: 1
-                            radius: 4
+                            radius: 6
                         }
-
-                        // Set focus to input box when opened
-                        Connections {
-                            target: comboPopup
-                            function onOpened() {
-                                searchField.text = ""
-                                searchField.forceActiveFocus()
+                        
+                        Keys.onEscapePressed: comboPopup.close()
+                        
+                        // Down arrow moves focus to the list
+                        Keys.onDownPressed: {
+                            if (comboList.count > 0) {
+                                comboList.currentIndex = 0;
+                                comboList.forceActiveFocus();
                             }
                         }
                     }
 
-                    // Scrollable list of filtered results
                     ListView {
                         id: comboList
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
+                        implicitHeight: Math.min(160, comboList.contentHeight)
                         clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+                        spacing: 2
+                        focus: true
                         
                         model: {
                             var txt = searchField.text.trim().toLowerCase();
-                            if (txt === "") {
-                                return root.tzList;
-                            }
+                            if (!root.tzList) return [];
+                            if (txt === "") return root.tzList;
                             var res = [];
                             for (var i = 0; i < root.tzList.length; i++) {
-                                if (root.tzList[i].name.toLowerCase().indexOf(txt) !== -1) {
-                                    res.push(root.tzList[i]);
+                                var item = root.tzList[i];
+                                if (item && item.name && item.name.toLowerCase().indexOf(txt) !== -1) {
+                                    res.push(item);
                                 }
                             }
                             return res;
                         }
 
+                        // Up arrow on first item moves focus back to search field
+                        Keys.onUpPressed: {
+                            if (currentIndex === 0) {
+                                searchField.forceActiveFocus();
+                            } else {
+                                decrementCurrentIndex();
+                            }
+                        }
+                        
+                        // Enter/Return key selects the current item
+                        Keys.onReturnPressed: {
+                            if (currentIndex >= 0 && currentIndex < count) {
+                                var currentData = model[currentIndex];
+                                if (currentData) {
+                                    root.selectionChanged(currentData.origIndex);
+                                    comboPopup.close();
+                                }
+                            }
+                        }
+
                         delegate: ItemDelegate {
                             id: itemDel
                             width: comboList.width
-                            height: 22
+                            height: 26
+                            padding: 0
                             
                             contentItem: Text {
-                                text: modelData.name
-                                color: itemDel.highlighted ? root.theme.primary : root.theme.on_surface
-                                font.pixelSize: 10
+                                text: modelData.name 
+                                color: (itemDel.hovered || itemDel.ListView.isCurrentItem) ? root.theme.primary : root.theme.on_surface
+                                font.pixelSize: 11
+                                font.weight: Font.Medium
                                 verticalAlignment: Text.AlignVCenter
-                                leftPadding: 4
+                                leftPadding: 6
                             }
+                            
                             background: Rectangle {
-                                color: itemDel.hovered || itemDel.highlighted ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : "transparent"
+                                color: (itemDel.hovered || itemDel.ListView.isCurrentItem) ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : "transparent"
                                 radius: 4
                             }
                             
@@ -185,94 +225,82 @@ Item {
                         }
                     }
                 }
-
-                background: Rectangle {
-                    color: root.theme.surface
-                    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
-                    border.width: 1
-                    radius: 8
-                }
             }
         }
 
-        // macOS Clock Face (Opaque black face, white hands, primary accent second hand)
         Item {
             Layout.alignment: Qt.AlignHCenter
-            width: 58
-            height: 58
+            width: 64
+            height: 64
+            Layout.topMargin: 4
 
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: "#121212" // Solid dark clock face
-                border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
+                color: "#0A0A0A" 
+                border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.4)
                 border.width: 1.5
 
-                // Tick marks (subtle 12, 3, 6, 9 markers)
                 Repeater {
                     model: 4
                     Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: 2
+                        y: 3
                         width: 1.5
-                        height: 4
-                        color: Qt.rgba(1, 1, 1, 0.3)
+                        height: 5
+                        color: Qt.rgba(1, 1, 1, 0.4)
                         transform: Rotation {
                             origin.x: 0.75
-                            origin.y: 27
+                            origin.y: 29
                             angle: index * 90
                         }
                     }
                 }
 
-                // Hour Hand (white, clean, solid)
                 Rectangle {
-                    x: 28
-                    y: 15
-                    width: 2.2
-                    height: 14
+                    x: 31
+                    y: 16
+                    width: 2.5
+                    height: 16
                     color: "#FFFFFF"
                     antialiasing: true
-                    radius: 1
+                    radius: 1.25
                     transform: Rotation {
-                        origin.x: 1.1
-                        origin.y: 14
+                        origin.x: 1.25
+                        origin.y: 16
                         angle: root.hourAngle
                     }
                 }
 
-                // Minute Hand (white, thin)
                 Rectangle {
-                    x: 28.25
-                    y: 9
+                    x: 31.25
+                    y: 8
                     width: 1.5
-                    height: 20
+                    height: 24
                     color: "#FFFFFF"
                     antialiasing: true
-                    radius: 0.8
+                    radius: 0.75
                     transform: Rotation {
                         origin.x: 0.75
-                        origin.y: 20
+                        origin.y: 24
                         angle: root.minuteAngle
                     }
                 }
 
-                // Second Hand (primary color accent)
                 Rectangle {
-                    x: 28.5
-                    y: 7
+                    x: 31.5
+                    y: 6
                     width: 1
-                    height: 22
+                    height: 26
                     color: root.theme.primary
                     antialiasing: true
                     transform: Rotation {
                         origin.x: 0.5
-                        origin.y: 22
+                        origin.y: 26
                         angle: root.secondAngle
                     }
                 }
 
-                // Center Pin
                 Rectangle {
                     anchors.centerIn: parent
                     width: 4
@@ -283,23 +311,23 @@ Item {
             }
         }
 
-        // Digital Time
         Text {
             Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 4
             text: root.tzDetails.timeString
             color: root.theme.on_surface
-            font.pixelSize: 13
-            font.weight: Font.DemiBold
+            font.pixelSize: 16
+            font.weight: Font.Bold
             font.family: "monospace"
         }
 
-        // Timezone Offset details
         Text {
             Layout.alignment: Qt.AlignHCenter
             Layout.fillWidth: true
             text: root.tzList[root.selectedIndex].offsetLabel
             color: root.theme.on_surface_variant
-            font.pixelSize: 8
+            font.pixelSize: 10
+            font.weight: Font.Medium
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
         }

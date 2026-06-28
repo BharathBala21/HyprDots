@@ -5,18 +5,16 @@ import QtQuick.Layouts
 Rectangle {
     id: root
     implicitWidth: 300
-    implicitHeight: 200
-    radius: 16
+    implicitHeight: 220
+    radius: 12 // Matching Hyprland geometry
     
-    // Solid macOS-style widget background
     color: root.theme.surface
-    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.15)
+    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
     border.width: 1
 
     property QtObject theme
     property string iconFontFamily: ""
 
-    // 30+ major global cities with standard UTC offsets (in minutes) and original indices
     readonly property var tzData: {
         var base = [
             { name: "New Delhi", zone: "Asia/Kolkata", offset: 330, offsetLabel: "IST (GMT+5:30)" },
@@ -56,9 +54,9 @@ Rectangle {
         return base;
     }
 
-    property int clock1Index: 0 // Default: New Delhi
-    property int clock2Index: 3 // Default: New York
-    property int clock3Index: 4 // Default: London
+    property int clock1Index: 0 
+    property int clock2Index: 3 
+    property int clock3Index: 4 
 
     property date currentDate: new Date()
 
@@ -72,44 +70,34 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 8
+        anchors.margins: 18
+        spacing: 16
 
-        // Header
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 10
 
-            Rectangle {
-                width: 24
-                height: 24
-                radius: 6
-                color: Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15)
-                
-                Text {
-                    anchors.centerIn: parent
-                    text: "\uf0ac"
-                    font.family: root.iconFontFamily
-                    font.pixelSize: 11
-                    color: root.theme.primary
-                }
+            Text {
+                text: "\uf0ac"
+                font.family: root.iconFontFamily
+                font.pixelSize: 14
+                color: root.theme.primary
             }
 
             Text {
                 text: qsTr("World Clock")
                 color: root.theme.on_surface
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
+                font.pixelSize: 14
+                font.weight: Font.Bold
             }
 
             Item { Layout.fillWidth: true }
         }
 
-        // Clocks grid
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 4
+            spacing: 8
 
             ClockItem {
                 Layout.fillWidth: true

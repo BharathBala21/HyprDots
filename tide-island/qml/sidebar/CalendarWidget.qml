@@ -150,9 +150,10 @@ Rectangle {
                         radius: 5
                     }
                     contentItem: Text {
-                        text: "<"
-                        color: root.theme.on_surface
-                        font.pixelSize: 11
+                        text: "\uf053"
+                        font.family: root.iconFontFamily
+                        font.pixelSize: 8
+                        color: prevBtn.hovered ? root.theme.primary : root.theme.on_surface
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -188,9 +189,10 @@ Rectangle {
                         radius: 5
                     }
                     contentItem: Text {
-                        text: ">"
-                        color: root.theme.on_surface
-                        font.pixelSize: 11
+                        text: "\uf054"
+                        font.family: root.iconFontFamily
+                        font.pixelSize: 8
+                        color: nextBtn.hovered ? root.theme.primary : root.theme.on_surface
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }

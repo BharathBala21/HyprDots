@@ -118,6 +118,7 @@ Rectangle {
                     color: root.theme.on_surface
                     verticalAlignment: Text.AlignVCenter
                     leftPadding: 6
+                    rightPadding: 20
                 }
 
                 background: Rectangle {
@@ -125,6 +126,16 @@ Rectangle {
                     border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.2)
                     border.width: 1
                     radius: 6
+                }
+
+                indicator: Text {
+                    x: modeCombo.width - width - 8
+                    y: (modeCombo.height - height) / 2
+                    text: "\uf078"
+                    font.family: root.iconFontFamily
+                    font.pixelSize: 8
+                    color: root.theme.on_surface
+                    opacity: 0.5
                 }
 
                 popup: Popup {
