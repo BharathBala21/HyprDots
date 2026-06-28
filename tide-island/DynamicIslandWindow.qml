@@ -402,14 +402,14 @@ PanelWindow {
 
     function showNotification(appName, summary, body) {
         let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
-        notificationHistory.append({
+        notificationHistory.insert(0, {
             "appName": displayAppName,
             "summary": summary,
             "body": body,
             "timestamp": new Date().toLocaleTimeString(Qt.locale(), "hh:mm")
         });
         if (notificationHistory.count > 50) {
-            notificationHistory.remove(0);
+            notificationHistory.remove(50);
         }
         if (!root.dndActive) {
             islandContainer.showNotificationCapsule(appName, summary, body);
@@ -1985,7 +1985,7 @@ PanelWindow {
                 onLoaded: islandContainer.syncCustomCapsuleWidth()
 
                 sourceComponent: Component {
-                    SwipeCustomInfoLayer {
+                    CustomInfoLayer {
                         items: islandContainer.customLeftItems
                         cavaLevels: islandContainer.cavaLevels
                         timeText: timeObj.currentTime
@@ -2014,7 +2014,7 @@ PanelWindow {
                 onLoaded: islandContainer.syncLyricsCapsuleWidth()
 
                 sourceComponent: Component {
-                    SwipeLyricsLayer {
+                    LyricsLayer {
                         lyricText: islandContainer.lyricsDisplayText
                         timeText: timeObj.currentTime
                         textFontFamily: root.textFontFamily
@@ -2049,7 +2049,7 @@ PanelWindow {
                 }
 
                 sourceComponent: Component {
-                    SwipeUtilitiesLayer {
+                    UtilitiesLayer {
                         focus: true
                         shellRootController: root.shellRootController
                         screenRecordingActive: root.screenRecordingActive
@@ -2088,7 +2088,7 @@ PanelWindow {
                 }
 
                 sourceComponent: Component {
-                    SwipePowerMenuLayer {
+                    PowerMenuLayer {
                         focus: true
                         shellRootController: root.shellRootController
                         iconFontFamily: root.iconFontFamily

@@ -47,7 +47,7 @@ Item {
         anchors.centerIn: parent
         spacing: 0
 
-        SwipeCavaBars {
+        CavaBars {
             id: visualizer
             levels: root.cavaLevels
             anchors.verticalCenter: parent.verticalCenter
