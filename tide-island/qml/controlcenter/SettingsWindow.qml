@@ -52,6 +52,10 @@ FloatingWindow {
     property string matugenPrefer: "default"
     property int matugenSourceColorIndex: 0
 
+    // VS Code configurations
+    property string vscodeTheme: "Matugen"
+    property bool vscodeAutoUpdate: true
+
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
 
@@ -264,6 +268,40 @@ FloatingWindow {
                         if (config.matugenSourceColorIndex !== undefined) matugenSourceColorIndex = parseInt(config.matugenSourceColorIndex);
                     } catch (e) {
                         console.log("Error parsing userconfig.json: " + e);
+                    }
+                }
+            }
+        }
+    }
+
+    Process {
+        id: vscodeConfigReadProcess
+        command: [
+            "python3",
+            "-c",
+            "import json, os; " +
+            "theme = 'Default'; auto_up = True; " +
+            "for p in ['~/.config/Code/User/settings.json', '~/.config/VSCodium/User/settings.json', '~/.config/Code - Insiders/User/settings.json']:" +
+            "    path = os.path.expanduser(p); " +
+            "    if os.path.exists(path): " +
+            "        try: " +
+            "            d = json.load(open(path)); " +
+            "            theme = d.get('workbench.colorTheme', theme); " +
+            "            auto_up = d.get('matugenTheme.autoUpdate', auto_up); " +
+            "            break; " +
+            "        except: pass; " +
+            "print(json.dumps({'theme': theme, 'autoUpdate': auto_up}))"
+        ]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        var res = JSON.parse(this.text);
+                        vscodeTheme = res.theme;
+                        vscodeAutoUpdate = res.autoUpdate;
+                    } catch (e) {
+                        console.log("Error reading VS Code config: " + e);
                     }
                 }
             }
@@ -1800,6 +1838,117 @@ FloatingWindow {
                             }
                         }
 
+                        Item { width: 1; height: 8 } // spacing
+
+                        Text {
+                            text: "VS Code Integration"
+                            color: colorOnSurface
+                            font.pixelSize: 14
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                            topPadding: 12
+                            bottomPadding: 2
+                        }
+
+                        SettingsCard {
+                            title: "Matugen Theme Extension"
+                            
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 100
+                                height: 28
+                                radius: 6
+                                color: installBtnMouse.containsMouse ? colorButtonBgHover : colorButtonBg
+                                border.width: 1
+                                border.color: colorOutline
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Install"
+                                    color: colorPrimary
+                                    font.pixelSize: 12
+                                    font.family: "Inter Display"
+                                    font.weight: Font.Medium
+                                }
+
+                                MouseArea {
+                                    id: installBtnMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: {
+                                        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--install-vscode-extension"]);
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "VS Code Theme"
+                            color: colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                            topPadding: 6
+                        }
+
+                        Grid {
+                            columns: 3
+                            spacing: 8
+                            width: parent.width
+
+                            Repeater {
+                                model: [
+                                    { value: "Matugen", label: "Matugen" },
+                                    { value: "Matugen Bordered", label: "Bordered" },
+                                    { value: "Default Dark Modern", label: "Default Theme" }
+                                ]
+
+                                delegate: Rectangle {
+                                    width: (parent.width - 16) / 3
+                                    height: 36
+                                    radius: 10
+                                    color: vscodeTheme === modelData.value ? colorSecondaryContainer : colorCardBg
+                                    border.width: 1
+                                    border.color: vscodeTheme === modelData.value ? colorPrimary : colorOutline
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: modelData.label
+                                        color: vscodeTheme === modelData.value ? colorPrimary : colorOnSurface
+                                        font.pixelSize: 11
+                                        font.family: "Inter Display"
+                                        font.weight: vscodeTheme === modelData.value ? Font.DemiBold : Font.Normal
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
+                                            vscodeTheme = modelData.value;
+                                            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--set-vscode-theme", modelData.value]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Auto-Update Theme"
+                            SettingsSwitch {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: vscodeAutoUpdate
+                                onToggled: (newValue) => {
+                                    vscodeAutoUpdate = newValue;
+                                    Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--set-vscode-autoupdate", newValue ? "true" : "false"]);
+                                }
+                            }
+                        }
+
                         Item { width: 1; height: 12 } // spacing
 
                         // Regenerate Button
@@ -1830,6 +1979,7 @@ FloatingWindow {
                             }
                         }
                     }
+
                 }
             }
         }
