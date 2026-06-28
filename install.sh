@@ -113,6 +113,8 @@ REQUIRED_PACMAN=(
     "hyprland" "hyprpaper" "hypridle" "hyprlock" "hyprcursor"
     "wl-clipboard" "cliphist" "dunst" "waypaper" "cava"
     "btop" "fastfetch" "fish" "kitty" "yazi" "python" "python-pillow" "jq"
+    "wireplumber" "brightnessctl" "hyprpicker" "hyprshot" "tesseract"
+    "tesseract-data-eng" "zbar" "grim" "slurp" "wf-recorder" "libnotify"
 )
 REQUIRED_AUR=(
     "quickshell" "matugen" "tide-island"
@@ -217,6 +219,25 @@ setup_configs() {
 }
 
 setup_configs
+
+# --- Step 4.5: Change Default Shell to Fish ---
+setup_shell() {
+    local fish_path
+    fish_path=$(command -v fish || true)
+
+    if [ -n "$fish_path" ] && [ "$SHELL" != "$fish_path" ]; then
+        if prompt_yes_no "Do you want to change your default shell to Fish?" "y"; then
+            log_info "Changing default shell to Fish (requires password)..."
+            if chsh -s "$fish_path"; then
+                log_success "Default shell changed to Fish."
+            else
+                log_warning "Failed to change default shell to Fish. You can run 'chsh -s $fish_path' manually later."
+            fi
+        fi
+    fi
+}
+
+setup_shell
 
 # --- Step 5: Cursor Theme (Moga) ---
 setup_cursor() {
