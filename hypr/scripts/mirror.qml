@@ -77,6 +77,9 @@ ApplicationWindow {
             onRecorderStateChanged: {
                 if (recorder.recorderState === MediaRecorder.StoppedState) {
                     var path = recorder.actualLocation.toString();
+                    if (!path) {
+                        path = recorder.outputLocation.toString();
+                    }
                     if (path.indexOf("file://") === 0) {
                         path = path.substring(7);
                     }

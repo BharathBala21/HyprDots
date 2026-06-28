@@ -7,7 +7,7 @@ import re
 
 def send_notification(title, message, icon="camera-photo"):
     try:
-        subprocess.run(["notify-send", "-i", icon, title, message], check=False)
+        subprocess.run(["notify-send", "-a", "Mirror", "-i", icon, title, message], check=False)
     except FileNotFoundError:
         pass
 
@@ -66,7 +66,7 @@ def main():
     print(f"Launching Mirror QML application with active system theme...")
     send_notification("Mirror Tool", "Launching camera mirror window...")
     
-    cmd = ["qml6", qml_path]
+    cmd = ["stdbuf", "-oL", "-eL", "qml6", qml_path]
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         

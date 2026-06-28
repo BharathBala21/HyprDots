@@ -1886,6 +1886,19 @@ PanelWindow {
                         return;
                     }
 
+                    if (islandContainer.islandState === "notification") {
+                        preparedOverviewOnPress = false;
+                        const home = root.shellRootController ? root.shellRootController.getHomePath() : (Quickshell.env("HOME") || "");
+                        Quickshell.execDetached([
+                            home + "/.local/src/HyprDots/tide-island/bin/redirect_app.py",
+                            islandContainer.notificationAppName,
+                            islandContainer.notificationSummary,
+                            islandContainer.notificationBody
+                        ]);
+                        islandContainer.smartRestoreState();
+                        return;
+                    }
+
                     if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandPrimaryButton)) {
                         preparedOverviewOnPress = false;
                         islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandPrimaryAction);
