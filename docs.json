@@ -2,10 +2,6 @@
   "$schema": "https://docs.page/schema.json",
   "name": "HyerDOTS",
   "description": "Curated Arch Linux + Hyprland dotfiles with Matugen theming and Tide Island widgets.",
-  "logo": {
-    "light": "assets/1.png",
-    "dark": "assets/1.png"
-  },
   "theme": {
     "defaultTheme": "dark",
     "preset": "slate",
