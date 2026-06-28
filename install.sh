@@ -345,12 +345,23 @@ setup_tide_island
 
 
 # --- Final Step ---
+# Create first boot flag file
+mkdir -p "$HOME/.cache"
+touch "$HOME/.cache/hyprdots_first_boot"
+
 echo -e "\n========================================================"
 log_success "HyprDots Installation and Configuration completed!"
 echo -e "========================================================"
-echo -e "To apply all changes, you can:"
-echo -e "  1. Reload Hyprland config (if you are running it):"
-echo -e "     ${BOLD}hyprctl reload${RESET}"
-echo -e "  2. Or restart Hyprland / log out and log back in."
-echo -e "  3. Use ${BOLD}tide-island-setup --wizard${RESET} if you wish to re-configure Tide Island."
-echo -e "========================================================\n"
+echo -e "A first-boot flag has been set to open the cheatsheet automatically."
+echo -e "It is highly recommended to restart your system to apply all changes."
+echo -e "========================================================"
+
+if prompt_yes_no "Do you want to restart (reboot) your system now?" "y"; then
+    log_info "Restarting system in 3 seconds..."
+    sleep 3
+    systemctl reboot || reboot
+else
+    echo -e "\nPlease reload Hyprland or restart your session later to apply changes."
+    echo -e "Use ${BOLD}tide-island-setup --wizard${RESET} if you wish to re-configure Tide Island."
+    echo -e "========================================================\n"
+fi
