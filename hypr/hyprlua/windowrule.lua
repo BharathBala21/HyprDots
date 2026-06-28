@@ -6,8 +6,10 @@ hl.window_rule({
         title = "btop"
     },
     float = true,
-    size = { 1000, 750 },
-    center = true
+    size = { 1600, 1000 },
+    center = true,
+    dim_around = true
+
 })
 
 
