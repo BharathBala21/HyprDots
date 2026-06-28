@@ -177,6 +177,15 @@ install_packages() {
     fi
 }
 
+# --- Pre-installation Symlink Safety Cleanup ---
+# If /usr/share/tide-island is a symbolic link, we must remove it BEFORE running
+# the package manager (pacman/yay). Otherwise, pacman will follow the symlink
+# during package installation/upgrade and delete the files inside the repository!
+if [ -L "/usr/share/tide-island" ]; then
+    log_info "Removing temporary system symlink /usr/share/tide-island to protect repository files from pacman..."
+    sudo rm -f "/usr/share/tide-island"
+fi
+
 install_packages
 
 # --- Step 3.5: Auto-create Ignored Config Files ---
