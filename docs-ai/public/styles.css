@@ -33,7 +33,8 @@ form button:disabled { opacity: .55; cursor: wait; }
 .notice { margin: 10px 4px; font-size: .78rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 .embedded { background: transparent; }
-.embedded .shell { width: 100%; padding: 0; }
+.embedded .shell { width: 100%; max-width: none; padding: 0 2px; }
 .embedded header, .embedded .hero { display: none; }
-.embedded .conversation { min-height: 360px; }
+.embedded .conversation { min-height: 430px; max-height: 500px; overflow-y: auto; }
+.embedded form { position: sticky; bottom: 0; }
 @media (max-width: 600px) { .hero { padding-top: 38px; } form { grid-template-columns: 1fr; } form button { width: 100%; } }
