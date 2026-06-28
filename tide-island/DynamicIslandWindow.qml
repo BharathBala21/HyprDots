@@ -1829,9 +1829,9 @@ PanelWindow {
 
                     let pressedAction = "";
                     if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandPrimaryButton)) {
-                        pressedAction = userConfig.dynamicIslandPrimaryAction;
-                    } else if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandSecondaryButton)) {
                         pressedAction = userConfig.dynamicIslandSecondaryAction;
+                    } else if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandSecondaryButton)) {
+                        pressedAction = userConfig.dynamicIslandPrimaryAction;
                     }
 
                     preparedOverviewOnPress = pressedAction === "openOverview"
@@ -1945,13 +1945,13 @@ PanelWindow {
 
                     if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandPrimaryButton)) {
                         preparedOverviewOnPress = false;
-                        islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandPrimaryAction);
+                        islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandSecondaryAction);
                         return;
                     }
 
                     if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandSecondaryButton)) {
                         preparedOverviewOnPress = false;
-                        islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandSecondaryAction);
+                        islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandPrimaryAction);
                     }
                 }
             }
