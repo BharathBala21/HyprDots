@@ -1,6 +1,9 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
+import QtQuick.Shapes
 
 Rectangle {
     id: root
@@ -8,12 +11,27 @@ Rectangle {
     implicitHeight: 240
     radius: 12
     
-    color: root.theme.surface
-    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
-    border.width: 1
+    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.92)
+    border.width: 0
+
+    // Extra layering for thickness and opacity
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(0, 0, 0, 0.35)
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(1.0, 1.0, 1.0, 0.04)
+    }
+
+
 
     property QtObject theme
     property string iconFontFamily: ""
+    property string textFontFamily: ""
 
     // Counts
     property int doneCount: 0
@@ -27,9 +45,52 @@ Rectangle {
             }
         }
         doneCount = count
+        totalCount = todoModel.count
     }
 
-    Component.onCompleted: updateCounts()
+    // Processes to Save/Load Tasks dynamically to user's config directory
+    Process {
+        id: saveProcess
+    }
+
+    function saveTasks() {
+        var list = [];
+        for (var i = 0; i < todoModel.count; i++) {
+            var item = todoModel.get(i);
+            list.push({ text: item.taskText, done: item.taskDone });
+        }
+        var jsonStr = JSON.stringify(list);
+        saveProcess.command = ["sh", "-c", "mkdir -p ~/.config/tide-island && echo \"$1\" > ~/.config/tide-island/todo.json", "sh", jsonStr];
+        saveProcess.running = true;
+    }
+
+    Process {
+        id: loadProcess
+        command: ["cat", "/home/aashiq/.config/tide-island/todo.json"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        var list = JSON.parse(this.text.trim());
+                        if (Array.isArray(list)) {
+                            todoModel.clear();
+                            for (var i = 0; i < list.length; i++) {
+                                todoModel.append({ taskText: list[i].text, taskDone: list[i].done });
+                            }
+                            root.updateCounts();
+                        }
+                    } catch (e) {
+                        // Keep default if JSON fails to parse
+                    }
+                }
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        loadProcess.running = true;
+    }
 
     ListModel {
         id: todoModel
@@ -58,6 +119,7 @@ Rectangle {
                 Text {
                     text: qsTr("Tasks")
                     color: root.theme.on_surface
+                    font.family: root.textFontFamily
                     font.pixelSize: 14
                     font.weight: Font.Bold
                 }
@@ -66,6 +128,7 @@ Rectangle {
             Text {
                 text: root.doneCount + "/" + root.totalCount
                 color: root.theme.primary
+                font.family: root.textFontFamily
                 font.pixelSize: 12
                 font.weight: Font.Bold
             }
@@ -108,7 +171,7 @@ Rectangle {
                         Layout.alignment: Qt.AlignVCenter
 
                         background: Rectangle {
-                            radius: height / 2 // Circular checkbox matching original design
+                            radius: height / 2
                             color: delegateItem.taskDone ? root.theme.primary : "transparent"
                             border.color: delegateItem.taskDone ? "transparent" : root.theme.outline
                             border.width: delegateItem.taskDone ? 0 : 1.5
@@ -116,6 +179,7 @@ Rectangle {
                         }
                         contentItem: Text {
                             text: "✓"
+                            font.family: root.textFontFamily
                             font.pixelSize: 10
                             font.weight: Font.Bold
                             color: root.theme.on_primary
@@ -126,6 +190,7 @@ Rectangle {
                         onClicked: {
                             todoModel.setProperty(delegateItem.index, "taskDone", !delegateItem.taskDone)
                             root.updateCounts()
+                            root.saveTasks()
                         }
                     }
 
@@ -135,6 +200,7 @@ Rectangle {
                         text: delegateItem.taskText
                         color: delegateItem.taskDone ? root.theme.on_surface_variant : root.theme.on_surface
                         opacity: delegateItem.taskDone ? 0.5 : 0.9
+                        font.family: root.textFontFamily
                         font.pixelSize: 12
                         font.strikeout: delegateItem.taskDone
                         elide: Text.ElideRight
@@ -155,6 +221,7 @@ Rectangle {
 
                         contentItem: Text {
                             text: "✕"
+                            font.family: root.textFontFamily
                             font.pixelSize: 10
                             color: root.theme.error
                             horizontalAlignment: Text.AlignHCenter
@@ -164,6 +231,7 @@ Rectangle {
                         onClicked: {
                             todoModel.remove(delegateItem.index)
                             root.updateCounts()
+                            root.saveTasks()
                         }
                     }
 
@@ -184,6 +252,7 @@ Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: 32
                 placeholderText: qsTr("Add a task...")
+                font.family: root.textFontFamily
                 font.pixelSize: 12
                 color: root.theme.on_surface
                 placeholderTextColor: root.theme.on_surface_variant
@@ -200,6 +269,7 @@ Rectangle {
                         todoModel.append({ taskText: text.trim(), taskDone: false })
                         text = ""
                         root.updateCounts()
+                        root.saveTasks()
                     }
                 }
             }
@@ -215,6 +285,7 @@ Rectangle {
                 }
                 contentItem: Text {
                     text: "+"
+                    font.family: root.textFontFamily
                     font.pixelSize: 16
                     font.weight: Font.Bold
                     color: root.theme.on_primary
@@ -227,6 +298,7 @@ Rectangle {
                         todoModel.append({ taskText: taskInput.text.trim(), taskDone: false })
                         taskInput.text = ""
                         root.updateCounts()
+                        root.saveTasks()
                     }
                 }
             }

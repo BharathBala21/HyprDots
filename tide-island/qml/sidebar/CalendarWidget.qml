@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 Rectangle {
     id: root
@@ -8,13 +9,27 @@ Rectangle {
     implicitHeight: 230
     radius: 16
     
-    // Solid macOS-style widget background
-    color: root.theme.surface
-    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.15)
-    border.width: 1
+    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.92)
+    border.width: 0
+
+    // Extra layering for thickness and opacity
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(0, 0, 0, 0.35)
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(1.0, 1.0, 1.0, 0.04)
+    }
+
+
 
     property QtObject theme
     property string iconFontFamily: ""
+    property string textFontFamily: ""
 
     // Calendar state
     property int currentMonth: new Date().getMonth()
@@ -292,6 +307,7 @@ Rectangle {
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData
+                            font.family: root.textFontFamily
                             font.pixelSize: 10
                             font.weight: Font.Medium
                             color: index === 0 || index === 6 ? root.theme.primary : root.theme.on_surface_variant
@@ -329,9 +345,10 @@ Rectangle {
                                 radius: width / 2
                                 color: modelData.isToday ? root.theme.primary : "transparent"
                                 
-                                Text {
+                                 Text {
                                     anchors.centerIn: parent
                                     text: modelData.day
+                                    font.family: root.textFontFamily
                                     font.pixelSize: 10
                                     font.weight: modelData.isToday ? Font.Bold : Font.Normal
                                     color: {

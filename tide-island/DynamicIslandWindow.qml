@@ -217,7 +217,7 @@ PanelWindow {
             intersection: Intersection.Combine
             x: 0
             y: 0
-            width: (sidebar.visible && root.sidebarOpen) ? 332 : 0
+            width: (sidebar.visible && root.sidebarOpen) ? 360 : 0
             height: (sidebar.visible && root.sidebarOpen) ? root.height : 0
         }
     }

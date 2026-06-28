@@ -12,6 +12,7 @@ Item {
     property var tzList
     property int selectedIndex
     property string iconFontFamily: ""
+    property string textFontFamily: ""
 
     signal selectionChanged(int idx)
 
@@ -67,32 +68,23 @@ Item {
                     anchors.right: indicatorIcon.left
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.tzList && root.tzList[root.selectedIndex] ? root.tzList[root.selectedIndex].name : ""
-                    font.pixelSize: 12
+                    font.family: root.textFontFamily
+                    font.pixelSize: 11
                     font.weight: Font.Bold
                     color: root.theme.on_surface
                     horizontalAlignment: Text.AlignHCenter
                     elide: Text.ElideRight
                 }
-                Canvas {
+                Text {
                     id: indicatorIcon
                     anchors.right: parent.right
                     anchors.rightMargin: 4
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 8
-                    height: 6
-                    contextType: "2d"
+                    text: "\uf105"
+                    font.family: root.iconFontFamily
+                    font.pixelSize: 8
+                    color: root.theme.on_surface
                     opacity: 0.5
-
-                    onPaint: {
-                        var context = getContext("2d");
-                        context.reset();
-                        context.moveTo(0, 0);
-                        context.lineTo(width, 0);
-                        context.lineTo(width / 2, height);
-                        context.closePath();
-                        context.fillStyle = root.theme.on_surface;
-                        context.fill();
-                    }
                 }
             }
 
@@ -238,22 +230,22 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: "#0A0A0A" 
-                border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.4)
-                border.width: 1.5
+                color: Qt.rgba(root.theme.surface.r, root.theme.surface.g, root.theme.surface.b, 0.15)
+                border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.25)
+                border.width: 1
 
                 Repeater {
-                    model: 4
+                    model: 12
                     Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: 3
-                        width: 1.5
-                        height: 5
-                        color: Qt.rgba(1, 1, 1, 0.4)
+                        y: 2
+                        width: 1
+                        height: 4
+                        color: Qt.rgba(root.theme.on_surface.r, root.theme.on_surface.g, root.theme.on_surface.b, 0.3)
                         transform: Rotation {
-                            origin.x: 0.75
-                            origin.y: 29
-                            angle: index * 90
+                            origin.x: 0.5
+                            origin.y: 30
+                            angle: index * 30
                         }
                     }
                 }
@@ -261,13 +253,13 @@ Item {
                 Rectangle {
                     x: 31
                     y: 16
-                    width: 2.5
+                    width: 2
                     height: 16
-                    color: "#FFFFFF"
+                    color: root.theme.on_surface
                     antialiasing: true
-                    radius: 1.25
+                    radius: 1
                     transform: Rotation {
-                        origin.x: 1.25
+                        origin.x: 1
                         origin.y: 16
                         angle: root.hourAngle
                     }
@@ -278,7 +270,7 @@ Item {
                     y: 8
                     width: 1.5
                     height: 24
-                    color: "#FFFFFF"
+                    color: root.theme.on_surface
                     antialiasing: true
                     radius: 0.75
                     transform: Rotation {
@@ -319,7 +311,7 @@ Item {
             color: root.theme.on_surface
             font.pixelSize: 16
             font.weight: Font.Bold
-            font.family: "monospace"
+            font.family: root.textFontFamily
         }
 
         Text {
@@ -327,6 +319,7 @@ Item {
             Layout.fillWidth: true
             text: root.tzList[root.selectedIndex].offsetLabel
             color: root.theme.on_surface_variant
+            font.family: root.textFontFamily
             font.pixelSize: 10
             font.weight: Font.Medium
             horizontalAlignment: Text.AlignHCenter

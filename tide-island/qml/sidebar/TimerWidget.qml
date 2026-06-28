@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Shapes
+import Quickshell
+import Quickshell.Io
 
 Rectangle {
     id: root
@@ -9,12 +11,27 @@ Rectangle {
     implicitHeight: 200
     radius: 12 
     
-    color: root.theme.surface
-    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
-    border.width: 1
+    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.92)
+    border.width: 0
+
+    // Extra layering for thickness and opacity
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(0, 0, 0, 0.35)
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(1.0, 1.0, 1.0, 0.04)
+    }
+
+
 
     property QtObject theme
     property string iconFontFamily: ""
+    property string textFontFamily: ""
 
     property int totalSeconds: 600
     property int remainingSeconds: 600
@@ -33,6 +50,16 @@ Rectangle {
         return (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs)
     }
 
+    Process {
+        id: notifyProcess
+        command: ["notify-send", "Timer Completed!", "Your countdown has ended."]
+    }
+
+    Process {
+        id: soundProcess
+        command: ["sh", "-c", "for i in {1..5}; do paplay /usr/share/sounds/ocean/stereo/alarm-clock-elapsed.oga || pw-play /usr/share/sounds/ocean/stereo/alarm-clock-elapsed.oga; done"]
+    }
+
     Timer {
         id: countdownTimer
         interval: 1000
@@ -43,6 +70,8 @@ Rectangle {
                 remainingSeconds--
             } else {
                 root.timerState = "stopped"
+                notifyProcess.running = true
+                soundProcess.running = true
             }
         }
     }
@@ -53,7 +82,11 @@ Rectangle {
         if (mode === "pomodoro") totalSeconds = 25 * 60
         else if (mode === "shortBreak") totalSeconds = 5 * 60
         else if (mode === "longBreak") totalSeconds = 15 * 60
-        else totalSeconds = (parseInt(minsInput.text) || 10) * 60 + (parseInt(secsInput.text) || 0)
+        else {
+            var mins = parseInt(minsInput.text)
+            var secs = parseInt(secsInput.text)
+            totalSeconds = (isNaN(mins) ? 10 : mins) * 60 + (isNaN(secs) ? 0 : secs)
+        }
         remainingSeconds = totalSeconds
     }
 
@@ -76,6 +109,7 @@ Rectangle {
                 Text {
                     text: qsTr("Timer")
                     color: root.theme.on_surface
+                    font.family: root.textFontFamily
                     font.pixelSize: 14
                     font.weight: Font.Bold
                 }
@@ -102,6 +136,7 @@ Rectangle {
                     contentItem: Text {
                         text: modelData.text
                         color: itemDel.highlighted ? root.theme.primary : root.theme.on_surface
+                        font.family: root.textFontFamily
                         font.pixelSize: 11
                         verticalAlignment: Text.AlignVCenter
                         leftPadding: 6
@@ -114,6 +149,7 @@ Rectangle {
 
                 contentItem: Text {
                     text: modeCombo.currentText
+                    font.family: root.textFontFamily
                     font.pixelSize: 11
                     color: root.theme.on_surface
                     verticalAlignment: Text.AlignVCenter
@@ -285,6 +321,7 @@ Rectangle {
                     contentItem: Text {
                         text: root.isRunning ? qsTr("Pause") : (root.isPaused ? qsTr("Resume") : qsTr("Start"))
                         color: root.theme.on_primary
+                        font.family: root.textFontFamily
                         font.pixelSize: 12
                         font.weight: Font.Bold
                         horizontalAlignment: Text.AlignHCenter
@@ -295,7 +332,9 @@ Rectangle {
                             root.timerState = "paused"
                         } else {
                             if (root.timerState === "stopped" && root.activeMode === "custom") {
-                                root.totalSeconds = (parseInt(minsInput.text) || 10) * 60 + (parseInt(secsInput.text) || 0)
+                                var mins = parseInt(minsInput.text)
+                                var secs = parseInt(secsInput.text)
+                                root.totalSeconds = (isNaN(mins) ? 10 : mins) * 60 + (isNaN(secs) ? 0 : secs)
                                 root.remainingSeconds = root.totalSeconds
                             }
                             root.timerState = "running"
@@ -318,12 +357,14 @@ Rectangle {
                     contentItem: Text {
                         text: qsTr("Reset")
                         color: root.theme.on_surface
+                        font.family: root.textFontFamily
                         font.pixelSize: 12
                         font.weight: Font.Medium
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: {
+                        soundProcess.running = false
                         root.setMode(root.activeMode)
                     }
                 }

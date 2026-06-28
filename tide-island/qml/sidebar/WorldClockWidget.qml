@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 Rectangle {
     id: root
@@ -8,12 +9,27 @@ Rectangle {
     implicitHeight: 220
     radius: 12 // Matching Hyprland geometry
     
-    color: root.theme.surface
-    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
-    border.width: 1
+    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.92)
+    border.width: 0
+
+    // Extra layering for thickness and opacity
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(0, 0, 0, 0.35)
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Qt.rgba(1.0, 1.0, 1.0, 0.04)
+    }
+
+
 
     property QtObject theme
     property string iconFontFamily: ""
+    property string textFontFamily: ""
 
     readonly property var tzData: {
         var base = [
@@ -87,6 +103,7 @@ Rectangle {
             Text {
                 text: qsTr("World Clock")
                 color: root.theme.on_surface
+                font.family: root.textFontFamily
                 font.pixelSize: 14
                 font.weight: Font.Bold
             }
@@ -106,6 +123,7 @@ Rectangle {
                 tzList: root.tzData
                 selectedIndex: root.clock1Index
                 iconFontFamily: root.iconFontFamily
+                textFontFamily: root.textFontFamily
                 onSelectionChanged: (idx) => root.clock1Index = idx
             }
 
@@ -116,6 +134,7 @@ Rectangle {
                 tzList: root.tzData
                 selectedIndex: root.clock2Index
                 iconFontFamily: root.iconFontFamily
+                textFontFamily: root.textFontFamily
                 onSelectionChanged: (idx) => root.clock2Index = idx
             }
 
@@ -126,6 +145,7 @@ Rectangle {
                 tzList: root.tzData
                 selectedIndex: root.clock3Index
                 iconFontFamily: root.iconFontFamily
+                textFontFamily: root.textFontFamily
                 onSelectionChanged: (idx) => root.clock3Index = idx
             }
         }
