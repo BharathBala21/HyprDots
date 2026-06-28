@@ -48,7 +48,7 @@ def parse_colors():
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    qml_path = os.path.join(script_dir, "mirror.qml")
+    qml_path = os.path.abspath(os.path.join(script_dir, "..", "qml", "controlcenter", "mirror.qml"))
     theme_path = os.path.join(script_dir, "theme.json")
     
     if not os.path.exists(qml_path):
