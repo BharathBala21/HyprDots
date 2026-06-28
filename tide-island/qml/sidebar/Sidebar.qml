@@ -9,75 +9,56 @@ Item {
     property bool isOpen: false
     property var themeColors: null
     readonly property alias theme: theme
-
-    // Track if there are open windows in the active workspace
     property bool hasOpenWindows: false
 
-
-    // Font families passed down from tide-island shell
     property string iconFontFamily: ""
     property string textFontFamily: ""
 
-    // Instantiate Matugen theme loader with passed colors
     MatugenTheme {
         id: theme
         colors: root.themeColors
     }
 
-    // Expose the sidebar panel so it can be referenced in mask regions
     property alias panel: sidebarPanel
 
-    // macOS Liquid Glass background panel (only active when windows are open behind it)
     Rectangle {
         id: glassBackground
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        
-        // Dynamic width matching the open/closed state of the sidebar panel
-        width: root.isOpen ? 332 : 0
+        width: root.isOpen ? 340 : 0
         visible: width > 0
 
-        // Liquid glass styling: translucent card color
-        color: root.hasOpenWindows ? Qt.rgba(theme.surface.r, theme.surface.g, theme.surface.b, 0.45) : "transparent"
+        // Deeper tint for better contrast with the widgets
+        color: root.hasOpenWindows ? Qt.rgba(theme.surface_container.r, theme.surface_container.g, theme.surface_container.b, 0.65) : "transparent"
 
         Behavior on width {
-            NumberAnimation {
-                duration: 350
-                easing.type: Easing.OutQuint
-            }
+            NumberAnimation { duration: 300; easing.type: Easing.OutQuint }
         }
 
-        // Sleek separator line only on the right edge of the glass panel
         Rectangle {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: 1
-            color: root.hasOpenWindows ? Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.25) : "transparent"
+            color: root.hasOpenWindows ? Qt.rgba(theme.outline.r, theme.outline.g, theme.outline.b, 0.4) : "transparent"
         }
     }
 
-    // Sidebar Container (Invisible background behind components)
     Item {
         id: sidebarPanel
-        width: 300
+        width: 308 // Slightly wider to accommodate internal widget padding elegantly
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        anchors.topMargin: 64 // Pushed widgets downwards to look cleaner
-        anchors.bottomMargin: 16
+        anchors.topMargin: 64
+        anchors.bottomMargin: 24
 
-        // Slide animation: closed is off-screen, open is at x: 16
         x: root.isOpen ? 16 : -width - 40
 
         Behavior on x {
-            NumberAnimation {
-                duration: 350
-                easing.type: Easing.OutQuint
-            }
+            NumberAnimation { duration: 300; easing.type: Easing.OutQuint }
         }
 
-        // Scrollable widgets list
         Flickable {
             anchors.fill: parent
             contentWidth: width
@@ -85,43 +66,17 @@ Item {
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             
-            // Completely hide scrollbar track and handle to prevent vertical lines
-            ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AlwaysOff
-            }
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOff }
 
             Column {
                 id: widgetColumn
                 width: parent.width
-                spacing: 16 // Spacing between cards
+                spacing: 16 
 
-                // 1. Timer & Pomodoro Widget
-                TimerWidget {
-                    theme: theme
-                    width: parent.width
-                    iconFontFamily: root.iconFontFamily
-                }
-
-                // 2. Calendar Widget
-                CalendarWidget {
-                    theme: theme
-                    width: parent.width
-                    iconFontFamily: root.iconFontFamily
-                }
-
-                // 3. World Clock Widget
-                WorldClockWidget {
-                    theme: theme
-                    width: parent.width
-                    iconFontFamily: root.iconFontFamily
-                }
-
-                // 4. Todo List Widget
-                TodoListWidget {
-                    theme: theme
-                    width: parent.width
-                    iconFontFamily: root.iconFontFamily
-                }
+                TimerWidget { theme: theme; width: parent.width; iconFontFamily: root.iconFontFamily }
+                CalendarWidget { theme: theme; width: parent.width; iconFontFamily: root.iconFontFamily }
+                WorldClockWidget { theme: theme; width: parent.width; iconFontFamily: root.iconFontFamily }
+                TodoListWidget { theme: theme; width: parent.width; iconFontFamily: root.iconFontFamily }
             }
         }
     }
