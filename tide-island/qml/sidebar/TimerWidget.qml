@@ -55,34 +55,6 @@ Rectangle {
         return (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs)
     }
 
-    MouseArea {
-        id: dragArea
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: 48
-        anchors.rightMargin: 160
-        enabled: root.isFloating
-        cursorShape: Qt.SizeAllCursor
-
-        property real startX
-        property real startY
-
-        onPressed: (mouse) => {
-            root.isDragging = true
-            startX = mouse.x
-            startY = mouse.y
-        }
-        onPositionChanged: (mouse) => {
-            var dx = mouse.x - startX
-            var dy = mouse.y - startY
-            root.dragMoved(dx, dy)
-        }
-        onReleased: {
-            root.isDragging = false
-        }
-    }
-
     Process {
         id: notifyProcess
         command: ["notify-send", "Timer Completed!", "Your countdown has ended."]

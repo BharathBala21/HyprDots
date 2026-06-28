@@ -66,7 +66,7 @@ Rectangle {
 
     Process {
         id: loadProcess
-        command: ["cat", "/home/aashiq/.config/tide-island/todo.json"]
+        command: ["sh", "-c", "cat ~/.config/tide-island/todo.json 2>/dev/null || true"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {

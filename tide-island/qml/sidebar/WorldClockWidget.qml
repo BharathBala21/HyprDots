@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Shapes
+import Quickshell
+import Quickshell.Io
 
 Rectangle {
     id: root
@@ -73,6 +75,52 @@ Rectangle {
     property int clock1Index: 0 
     property int clock2Index: 3 
     property int clock3Index: 4 
+    property bool isLoading: true
+
+    onClock1IndexChanged: { if (!isLoading) saveClocks() }
+    onClock2IndexChanged: { if (!isLoading) saveClocks() }
+    onClock3IndexChanged: { if (!isLoading) saveClocks() }
+
+    Process {
+        id: saveClocksProcess
+    }
+
+    function saveClocks() {
+        var obj = {
+            clock1: root.clock1Index,
+            clock2: root.clock2Index,
+            clock3: root.clock3Index
+        };
+        var jsonStr = JSON.stringify(obj);
+        saveClocksProcess.command = ["sh", "-c", "mkdir -p ~/.config/tide-island && echo \"$1\" > ~/.config/tide-island/clocks.json", "sh", jsonStr];
+        saveClocksProcess.running = true;
+    }
+
+    Process {
+        id: loadClocksProcess
+        command: ["sh", "-c", "cat ~/.config/tide-island/clocks.json 2>/dev/null || true"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        var obj = JSON.parse(this.text.trim());
+                        root.isLoading = true;
+                        if (obj.hasOwnProperty("clock1")) root.clock1Index = obj.clock1;
+                        if (obj.hasOwnProperty("clock2")) root.clock2Index = obj.clock2;
+                        if (obj.hasOwnProperty("clock3")) root.clock3Index = obj.clock3;
+                    } catch (e) {
+                        // Keep default
+                    }
+                }
+                root.isLoading = false;
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        loadClocksProcess.running = true;
+    } 
 
     property date currentDate: new Date()
 
