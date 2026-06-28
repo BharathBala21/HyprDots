@@ -1,0 +1,79 @@
+---
+title: Troubleshooting
+description: Common fixes and diagnostics for HyerDOTS.
+---
+
+When issues appear, the most common causes are missing packages, symlink conflicts, or theme/config mismatches.
+
+## Missing or failed packages
+
+If the installer reports missing packages:
+
+- confirm `pacman` can update and install official packages
+- verify your AUR helper is working: `paru --version` or `yay --version`
+- install AUR dependencies manually if needed:
+
+```bash
+paru -S quickshell matugen tide-island
+```
+
+## Config not linked into `~/.config`
+
+If HyerDOTS files are not visible in your config directory:
+
+- check for conflicting files in `~/.config`
+- rerun `./install.sh` and allow symlink creation
+- verify symlinks with:
+
+```bash
+find ~/.config -maxdepth 1 -xtype l | grep -E 'hypr|kitty|fish|dunst|quickshell'
+```
+
+## Theme or Matugen issues
+
+If colors are out of sync or themes do not update:
+
+- make sure `matugen` is installed
+- inspect `matugen/config.toml`
+- verify the wallpaper path in `assets/`
+- restart affected apps after theme generation
+
+## Tide Island problems
+
+If the dynamic island or Quickshell UI does not appear:
+
+- ensure `/usr/share/tide-island` points to the repo
+- confirm `quickshell` is installed and executable
+- verify `hypr/hyprlua/exec.lua` runs on startup
+- check `tidе-island/bin` helper scripts for errors
+
+## Hyprland startup issues
+
+If Hyprland fails to start or crashes:
+
+- inspect logs in `~/.local/share/hyprland/`
+- validate `hyprland.lua` syntax
+- temporarily comment out rules in `hypr/hyprlua/windowrule.lua`
+
+## Local docs preview issues
+
+If local docs preview does not work:
+
+- run:
+
+```bash
+cd /home/nishanth/HyprDots
+npx @docs.page/cli preview --port 43931
+```
+
+- open the exact preview URL printed by the CLI
+- if the remote preview page errors, check the terminal output for errors
+
+## Useful diagnostics
+
+- `systemctl --user status wayland-session` — desktop session status
+- `ps -ef | grep hypr` — verify Hyprland processes
+- `journalctl --user -xe` — inspect service and application logs
+- `cat matugen/config.toml` — confirm theme sources
+
+If you still need help, use this documentation as a guide and inspect the repository layout in [Repository Structure](/structure).

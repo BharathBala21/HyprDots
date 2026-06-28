@@ -15,5 +15,12 @@ Used [Matugen](https://github.com/InioX/matugen) to generate a color scheme base
   </table>
 </div>
 
+[Instructions for cloning the repository]
+```bash
+git clone https://github.com/BharathBala21/HyprDots.git
+cd HyprDots
+./install.sh
+```
+[Additional information or instructions can go here]
 
 [Tide-Island](https://github.com/enhaoswen/Tide-island) (_Quickshell_) ❤️
