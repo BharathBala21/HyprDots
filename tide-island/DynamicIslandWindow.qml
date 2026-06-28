@@ -82,6 +82,26 @@ PanelWindow {
         && shellRootController.screenRecordingActive !== undefined
         ? !!shellRootController.screenRecordingActive
         : false
+    readonly property bool hasOpenWindowsInWorkspace: {
+        if (!hyprMonitor || !hyprMonitor.activeWorkspace) {
+            return false;
+        }
+        if (Hyprland.toplevels) {
+            const count = Hyprland.toplevels.count;
+            if (typeof count === "number") {
+                for (let i = 0; i < count; i++) {
+                    const tl = Hyprland.toplevels.get(i);
+                    if (tl && tl.workspace && tl.workspace.id === hyprMonitor.activeWorkspace.id) {
+                        const appid = tl.wayland ? tl.wayland.appid : "";
+                        if (appid !== "quickshell" && appid !== "") {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
     readonly property bool launcherLayerVisible: islandContainer.islandState === "launcher"
     readonly property bool clipboardLayerVisible: islandContainer.islandState === "clipboard"
     readonly property bool emojiPickerLayerVisible: islandContainer.islandState === "emojis"
@@ -194,10 +214,10 @@ PanelWindow {
 
         Region {
             intersection: Intersection.Combine
-            x: Math.floor(sidebar.panel.x)
-            y: Math.floor(sidebar.panel.y)
-            width: (sidebar.visible && root.sidebarOpen) ? Math.ceil(sidebar.panel.width) : 0
-            height: (sidebar.visible && root.sidebarOpen) ? Math.ceil(sidebar.panel.height) : 0
+            x: 0
+            y: 0
+            width: (sidebar.visible && root.sidebarOpen) ? 332 : 0
+            height: (sidebar.visible && root.sidebarOpen) ? root.height : 0
         }
     }
     implicitHeight: (islandContainer.islandState === "powermenu" || root.sidebarOpen) ? screen.height : 680
@@ -2598,6 +2618,7 @@ PanelWindow {
             visible: !root.isWorkspaceFullscreen
             themeColors: root.themeColors
             isOpen: root.sidebarOpen
+            hasOpenWindows: root.hasOpenWindowsInWorkspace
             anchors.fill: parent
         }
 

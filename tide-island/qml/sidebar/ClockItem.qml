@@ -80,16 +80,19 @@ Item {
             textRole: "name"
 
             delegate: ItemDelegate {
+                id: itemDel
                 width: cityCombo.width
                 height: 22
                 contentItem: Text {
                     text: modelData.name
-                    color: highlighted ? root.theme.primary : root.theme.on_surface
+                    color: itemDel.highlighted ? root.theme.primary : root.theme.on_surface
                     font.pixelSize: 10
                     verticalAlignment: Text.AlignVCenter
+                    leftPadding: 6
                 }
                 background: Rectangle {
-                    color: hovered ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.1) : "transparent"
+                    color: itemDel.hovered || itemDel.highlighted ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : "transparent"
+                    radius: 4
                 }
             }
 
@@ -125,6 +128,27 @@ Item {
                     context.closePath();
                     context.fillStyle = root.theme.on_surface;
                     context.fill();
+                }
+            }
+
+            popup: Popup {
+                y: cityCombo.height + 2
+                width: cityCombo.width
+                implicitHeight: contentItem.implicitHeight + 4
+                padding: 2
+
+                contentItem: ListView {
+                    clip: true
+                    implicitHeight: contentHeight
+                    model: cityCombo.popup.visible ? cityCombo.delegateModel : null
+                    currentIndex: cityCombo.highlightedIndex
+                }
+
+                background: Rectangle {
+                    color: root.theme.surface
+                    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
+                    border.width: 1
+                    radius: 8
                 }
             }
 

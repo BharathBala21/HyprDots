@@ -105,16 +105,19 @@ Rectangle {
                 textRole: "text"
 
                 delegate: ItemDelegate {
+                    id: itemDel
                     width: modeCombo.width
                     height: 24
                     contentItem: Text {
                         text: modelData.text
-                        color: highlighted ? root.theme.primary : root.theme.on_surface
+                        color: itemDel.highlighted ? root.theme.primary : root.theme.on_surface
                         font.pixelSize: 11
                         verticalAlignment: Text.AlignVCenter
+                        leftPadding: 6
                     }
                     background: Rectangle {
-                        color: hovered ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.1) : "transparent"
+                        color: itemDel.hovered || itemDel.highlighted ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : "transparent"
+                        radius: 4
                     }
                 }
 
@@ -131,6 +134,27 @@ Rectangle {
                     border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.2)
                     border.width: 1
                     radius: 6
+                }
+
+                popup: Popup {
+                    y: modeCombo.height + 2
+                    width: modeCombo.width
+                    implicitHeight: contentItem.implicitHeight + 4
+                    padding: 2
+
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: modeCombo.popup.visible ? modeCombo.delegateModel : null
+                        currentIndex: modeCombo.highlightedIndex
+                    }
+
+                    background: Rectangle {
+                        color: root.theme.surface
+                        border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
+                        border.width: 1
+                        radius: 8
+                    }
                 }
 
                 onActivated: (index) => {
