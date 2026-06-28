@@ -259,19 +259,25 @@ setup_wallpapers() {
     local wallpaper_dest_dir="${HOME}/Pictures/Wallpapers"
 
     if [ -d "$wallpaper_src_dir" ]; then
-        if prompt_yes_no "Do you want to copy the wallpapers from the repo assets to ~/Pictures/Wallpapers?" "y"; then
-            mkdir -p "$wallpaper_dest_dir"
+        log_info "Copying wallpapers to ~/Pictures/Wallpapers..."
+        mkdir -p "$wallpaper_dest_dir"
+        
+        # Copy wallpaper files with their original names (needed for configs like waypaper)
+        for wp in "$wallpaper_src_dir"/*.{png,jpg,jpeg}; do
+            [ -e "$wp" ] || continue
+            local filename
+            filename=$(basename "$wp")
             
-            # Copy wallpaper files with hyprdots prefix to avoid collision
-            for wp in "$wallpaper_src_dir"/*.{png,jpg,jpeg}; do
-                [ -e "$wp" ] || continue
-                local filename
-                filename=$(basename "$wp")
-                local target_name="hyprdots_${filename}"
-                
-                cp "$wp" "${wallpaper_dest_dir}/${target_name}"
-                log_success "Copied $(basename "$wp") -> ~/Pictures/Wallpapers/${target_name}"
-            done
+            cp "$wp" "${wallpaper_dest_dir}/${filename}"
+            log_success "Copied $(basename "$wp") -> ~/Pictures/Wallpapers/${filename}"
+        done
+
+        # Apply matugen for the new default wallpaper
+        if command -v matugen &>/dev/null; then
+            log_info "Generating Material You colors with matugen for tom_jazz.png..."
+            matugen image "${wallpaper_dest_dir}/tom_jazz.png" || log_warning "Matugen failed to generate colors."
+        else
+            log_warning "matugen is not installed. Skipping color generation."
         fi
     fi
 }
@@ -312,6 +318,26 @@ setup_tide_island() {
         fi
     fi
 
+    # Apply tom_jazz.png wallpaper by default
+    log_info "Applying default wallpaper (tom_jazz.png)..."
+    if command -v waypaper &>/dev/null; then
+        # Set via waypaper CLI (which also updates waypaper configuration)
+        waypaper --wallpaper "${HOME}/Pictures/Wallpapers/tom_jazz.png" &>/dev/null || true
+    fi
+
+    # Update tide-island configuration with the new wallpaper path
+    mkdir -p "${HOME}/.config/tide-island"
+    local tide_config="${HOME}/.config/tide-island/userconfig.json"
+    if [ ! -f "$tide_config" ]; then
+        echo "{}" > "$tide_config"
+    fi
+
+    if command -v jq &>/dev/null; then
+        log_info "Updating Tide Island configuration with the default wallpaper path..."
+        local temp_json
+        temp_json=$(jq --arg path "${HOME}/Pictures/Wallpapers/tom_jazz.png" '.wallpaperPath = $path' "$tide_config")
+        echo "$temp_json" > "$tide_config"
+    fi
 }
 
 setup_tide_island
