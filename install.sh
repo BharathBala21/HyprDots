@@ -1,0 +1,393 @@
+#!/bin/bash
+
+# ==============================================================================
+# HyprDots Installation Script
+# ==============================================================================
+# A comprehensive, interactive setup script to deploy and configure these
+# dotfiles on Arch Linux.
+# ==============================================================================
+
+# Exit on error for critical commands, but handle optional steps gracefully
+set -e
+
+# --- Colors and Styles ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+# --- Logging Helpers ---
+log_info() {
+    echo -e "${BLUE}${BOLD}[INFO]${RESET} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}${BOLD}[SUCCESS]${RESET} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}${BOLD}[WARNING]${RESET} $1"
+}
+
+log_error() {
+    echo -e "${RED}${BOLD}[ERROR]${RESET} $1"
+}
+
+# --- Prompt Helper ---
+# Usage: prompt_yes_no "Do you want to proceed?" "y"
+# Returns 0 for Yes, 1 for No
+prompt_yes_no() {
+    local question="$1"
+    local default="${2:-y}"
+    local prompt_str
+
+    if [[ "$default" =~ ^[Yy]$ ]]; then
+        prompt_str="[Y/n]"
+    else
+        prompt_str="[y/N]"
+    fi
+
+    while true; do
+        read -rp "$(echo -e "${CYAN}${BOLD}?${RESET} ${question} ${prompt_str} ")" choice
+        choice="${choice:-$default}"
+        case "$choice" in
+            [Yy]*) return 0 ;;
+            [Nn]*) return 1 ;;
+            *) echo -e "${RED}Please answer yes or no.${RESET}" ;;
+        esac
+    done
+}
+
+# --- Welcome Banner ---
+clear
+echo -e "${MAGENTA}${BOLD}"
+echo "  _    _                  _____   ____  _______  _____ "
+echo " | |  | |                |  __ \ / __ \|__   __|/ ____|"
+echo " | |__| |_   _ _ __  _ __| |  | | |  | |  | |  | (___  "
+echo " |  __  | | | | '_ \| '__| |  | | |  | |  | |   \___ \ "
+echo " | |  | | |_| | |_) | |  | |__| | |__| |  | |   ____) |"
+echo " |_|  |_|\__, | .__/|_|  |_____/ \____/   |_|  |_____/ "
+echo "          __/ | |                                      "
+echo "         |___/|_|                                      "
+echo -e "${RESET}"
+echo -e "${CYAN}${BOLD}Hyprland Dotfiles Setup Wizard${RESET}"
+echo -e "========================================================\n"
+
+# --- Repo Directory Discovery ---
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+log_info "Detected repository directory: ${BOLD}${REPO_DIR}${RESET}"
+
+# --- Step 1: OS Check ---
+log_info "Checking system requirements..."
+if [ ! -f /etc/arch-release ]; then
+    log_warning "This script is designed and optimized for Arch Linux."
+    if ! prompt_yes_no "Do you want to proceed anyway?" "n"; then
+        log_info "Installation aborted."
+        exit 0
+    fi
+else
+    log_success "Arch Linux detected."
+fi
+
+# --- Step 2: Package Manager & AUR Helper Check ---
+AUR_HELPER=""
+if command -v paru &>/dev/null; then
+    AUR_HELPER="paru"
+elif command -v yay &>/dev/null; then
+    AUR_HELPER="yay"
+fi
+
+if [ -n "$AUR_HELPER" ]; then
+    log_success "Found AUR helper: ${BOLD}${AUR_HELPER}${RESET}"
+else
+    log_warning "No AUR helper (paru or yay) detected."
+    log_info "You will need to manually install AUR packages (quickshell, matugen, tide-island, zen-browser-bin)."
+fi
+
+# --- Step 3: Package Installation ---
+REQUIRED_PACMAN=(
+    "hyprland" "hyprpaper" "hypridle" "hyprlock" "hyprcursor"
+    "wl-clipboard" "cliphist" "dunst" "waypaper" "cava"
+    "btop" "fastfetch" "fish" "kitty" "yazi" "python" "python-pillow" "jq"
+)
+REQUIRED_AUR=(
+    "quickshell" "matugen" "tide-island" "zen-browser-bin"
+)
+
+install_packages() {
+    local missing_pacman=()
+    local missing_aur=()
+
+    log_info "Checking installed packages..."
+    
+    # Check official packages
+    for pkg in "${REQUIRED_PACMAN[@]}"; do
+        if ! pacman -Qq "$pkg" &>/dev/null; then
+            missing_pacman+=("$pkg")
+        fi
+    done
+
+    # Check AUR packages
+    for pkg in "${REQUIRED_AUR[@]}"; do
+        if ! pacman -Qq "$pkg" &>/dev/null; then
+            missing_aur+=("$pkg")
+        fi
+    done
+
+    # Show status
+    if [ ${#missing_pacman[@]} -eq 0 ] && [ ${#missing_aur[@]} -eq 0 ]; then
+        log_success "All required packages are already installed."
+        return 0
+    fi
+
+    if [ ${#missing_pacman[@]} -gt 0 ]; then
+        echo -e "\n${YELLOW}Missing official packages:${RESET} ${missing_pacman[*]}"
+    fi
+    if [ ${#missing_aur[@]} -gt 0 ]; then
+        echo -e "${YELLOW}Missing AUR packages:${RESET} ${missing_aur[*]}"
+    fi
+
+    if prompt_yes_no "Do you want to install the missing packages?" "y"; then
+        # Install official packages
+        if [ ${#missing_pacman[@]} -gt 0 ]; then
+            log_info "Installing official packages via pacman..."
+            sudo pacman -S --needed "${missing_pacman[@]}"
+        fi
+
+        # Install AUR packages
+        if [ ${#missing_aur[@]} -gt 0 ]; then
+            if [ -n "$AUR_HELPER" ]; then
+                log_info "Installing AUR packages via $AUR_HELPER..."
+                $AUR_HELPER -S --needed "${missing_aur[@]}"
+            else
+                log_error "No AUR helper found. Please install the following AUR packages manually:"
+                echo -e "  ${REQUIRED_AUR[*]}"
+            fi
+        fi
+        log_success "Package installation completed."
+    else
+        log_info "Skipping package installation."
+    fi
+}
+
+install_packages
+
+# --- Step 4: Symlink Configurations in ~/.config ---
+CONFIG_DIRS=("btop" "cava" "dunst" "fastfetch" "fish" "hypr" "kitty" "matugen" "yazi")
+
+setup_configs() {
+    if prompt_yes_no "Do you want to symlink configuration folders to ~/.config/?" "y"; then
+        mkdir -p "$HOME/.config"
+        local timestamp
+        timestamp=$(date +"%Y%m%d_%H%M%S")
+
+        for dir in "${CONFIG_DIRS[@]}"; do
+            local source_path="${REPO_DIR}/${dir}"
+            local dest_path="${HOME}/.config/${dir}"
+
+            if [ ! -d "$source_path" ]; then
+                log_warning "Source directory $source_path does not exist. Skipping."
+                continue
+            fi
+
+            # Check if destination exists
+            if [ -e "$dest_path" ] || [ -L "$dest_path" ]; then
+                # Check if it's already a symlink pointing to the right place
+                if [ -L "$dest_path" ] && [ "$(readlink -f "$dest_path")" = "$source_path" ]; then
+                    log_info "${BOLD}$dir${RESET} is already symlinked correctly."
+                    continue
+                fi
+
+                # Backup existing
+                log_info "Backing up existing ${dest_path} to ${dest_path}.bak.${timestamp}"
+                mv "$dest_path" "${dest_path}.bak.${timestamp}"
+            fi
+
+            # Create symlink
+            ln -sf "$source_path" "$dest_path"
+            log_success "Symlinked ${BOLD}$dir${RESET} -> ~/.config/$dir"
+        done
+    else
+        log_info "Skipping configuration symlinking."
+    fi
+}
+
+setup_configs
+
+# --- Step 5: Cursor Theme (Moga) ---
+setup_cursor() {
+    local cursor_src="${REPO_DIR}/Cursor/Moga"
+    local local_icons_dir="${HOME}/.local/share/icons"
+    local system_icons_dir="/usr/share/icons/Moga"
+
+    if [ -d "$cursor_src" ]; then
+        if prompt_yes_no "Do you want to set up the Moga cursor theme in your user directory?" "y"; then
+            # Verify if already installed system-wide
+            if [ -d "$system_icons_dir" ]; then
+                log_info "Moga cursor theme is already installed system-wide at ${system_icons_dir}."
+            fi
+
+            mkdir -p "$local_icons_dir"
+            local dest_cursor="${local_icons_dir}/Moga"
+
+            if [ -e "$dest_cursor" ] || [ -L "$dest_cursor" ]; then
+                if [ -L "$dest_cursor" ] && [ "$(readlink -f "$dest_cursor")" = "$cursor_src" ]; then
+                    log_info "Moga cursor is already symlinked in ~/.local/share/icons."
+                else
+                    log_info "Backing up existing cursor theme in ~/.local/share/icons."
+                    mv "$dest_cursor" "${dest_cursor}.bak.$(date +%Y%m%d_%H%M%S)"
+                    ln -sf "$cursor_src" "$dest_cursor"
+                    log_success "Symlinked Moga cursor theme to ~/.local/share/icons/Moga"
+                fi
+            else
+                ln -sf "$cursor_src" "$dest_cursor"
+                log_success "Symlinked Moga cursor theme to ~/.local/share/icons/Moga"
+            fi
+        fi
+    fi
+}
+
+setup_cursor
+
+# --- Step 6: Wallpapers ---
+setup_wallpapers() {
+    local wallpaper_src_dir="${REPO_DIR}/assets"
+    local wallpaper_dest_dir="${HOME}/Pictures/Wallpapers"
+
+    if [ -d "$wallpaper_src_dir" ]; then
+        if prompt_yes_no "Do you want to copy the wallpapers from the repo assets to ~/Pictures/Wallpapers?" "y"; then
+            mkdir -p "$wallpaper_dest_dir"
+            
+            # Copy wallpaper files with hyprdots prefix to avoid collision
+            for wp in "$wallpaper_src_dir"/*.{png,jpg,jpeg}; do
+                [ -e "$wp" ] || continue
+                local filename
+                filename=$(basename "$wp")
+                local target_name="hyprdots_${filename}"
+                
+                cp "$wp" "${wallpaper_dest_dir}/${target_name}"
+                log_success "Copied $(basename "$wp") -> ~/Pictures/Wallpapers/${target_name}"
+            done
+        fi
+    fi
+}
+
+setup_wallpapers
+
+# --- Step 7: Tide-Island System Integration ---
+setup_tide_island() {
+    log_info "Integrating Tide-Island (Dynamic Island widget)..."
+
+    # Make helper scripts executable
+    log_info "Setting executable permissions on scripts..."
+    chmod +x "${REPO_DIR}/tide-island/bin/"* 2>/dev/null || true
+    chmod +x "${REPO_DIR}/tide-island/lockscreen/lock.sh" 2>/dev/null || true
+    chmod +x "${REPO_DIR}/Scripts/"* 2>/dev/null || true
+
+    local target_share="/usr/share/tide-island"
+    local source_tide="${REPO_DIR}/tide-island"
+
+    # Check the symlink in /usr/share/tide-island
+    local needs_symlink=true
+    if [ -L "$target_share" ]; then
+        if [ "$(readlink -f "$target_share")" = "$source_tide" ]; then
+            log_success "/usr/share/tide-island already correctly links to the repository."
+            needs_symlink=false
+        fi
+    fi
+
+    if [ "$needs_symlink" = true ]; then
+        echo -e "\n${YELLOW}Tide Island Launcher requires /usr/share/tide-island to link to the QML source directory.${RESET}"
+        if prompt_yes_no "Do you want to create the symbolic link in /usr/share/ (requires sudo)?" "y"; then
+            if [ -e "$target_share" ] && [ ! -L "$target_share" ]; then
+                log_info "Backing up existing non-symlink directory /usr/share/tide-island..."
+                sudo mv "$target_share" "${target_share}.bak.$(date +%Y%m%d_%H%M%S)"
+            fi
+            sudo ln -sfn "$source_tide" "$target_share"
+            log_success "Symlinked /usr/share/tide-island -> $source_tide"
+        fi
+    fi
+
+}
+
+setup_tide_island
+
+# --- Step 8: Zen Browser Profile Restore ---
+restore_zen_profile() {
+    local zen_backups_dir="${REPO_DIR}/zen"
+    
+    if [ -d "$zen_backups_dir" ]; then
+        local backups=("$zen_backups_dir"/*.tar.gz)
+        if [ -e "${backups[0]}" ]; then
+            echo -e "\n${YELLOW}Zen Browser backups found in the repository:${RESET}"
+            for b in "${backups[@]}"; do
+                echo -e "  - $(basename "$b")"
+            done
+            
+            if prompt_yes_no "Do you want to restore one of these Zen Browser profile configurations?" "y"; then
+                log_info "Starting Zen Browser restore process..."
+                # Run the restore script, overriding the backup folder
+                ZEN_BACKUP_DIR="$zen_backups_dir" bash "${REPO_DIR}/Scripts/zen-backup.sh" restore
+            fi
+        fi
+    fi
+}
+
+restore_zen_profile
+
+# --- Step 9: Obsidian CSS Snippets ---
+setup_obsidian_snippets() {
+    local obsidian_config="${HOME}/.config/obsidian/obsidian.json"
+    local snippets_src="${REPO_DIR}/obsidian_snippets"
+
+    if [ -d "$snippets_src" ] && [ -f "$obsidian_config" ] && command -v jq &>/dev/null; then
+        log_info "Obsidian configuration detected."
+        # Read all vault paths
+        local vaults
+        vaults=$(jq -r '.vaults[].path' "$obsidian_config" 2>/dev/null || true)
+
+        if [ -n "$vaults" ]; then
+            echo -e "\n${YELLOW}Detected Obsidian vaults:${RESET}"
+            IFS=$'\n' read -rd '' -a vault_array <<< "$vaults" || true
+            for v in "${vault_array[@]}"; do
+                echo -e "  - $v"
+            done
+
+            if prompt_yes_no "Do you want to install CSS snippets (sticky notes, logbook theme) to these vaults?" "y"; then
+                for v in "${vault_array[@]}"; do
+                    if [ -d "$v" ]; then
+                        local snippets_dest="${v}/.obsidian/snippets"
+                        mkdir -p "$snippets_dest"
+                        
+                        for css in "$snippets_src"/*.css; do
+                            [ -e "$css" ] || continue
+                            local snippet_name
+                            snippet_name=$(basename "$css")
+                            
+                            ln -sf "$css" "${snippets_dest}/${snippet_name}"
+                            log_success "Symlinked $snippet_name to Obsidian Vault: $(basename "$v")"
+                        done
+                    fi
+                done
+                log_info "Note: You can enable the CSS snippets in Obsidian Settings > Appearance > CSS snippets."
+            fi
+        fi
+    fi
+}
+
+setup_obsidian_snippets
+
+# --- Final Step ---
+echo -e "\n========================================================"
+log_success "HyprDots Installation and Configuration completed!"
+echo -e "========================================================"
+echo -e "To apply all changes, you can:"
+echo -e "  1. Reload Hyprland config (if you are running it):"
+echo -e "     ${BOLD}hyprctl reload${RESET}"
+echo -e "  2. Or restart Hyprland / log out and log back in."
+echo -e "  3. Use ${BOLD}tide-island-setup --wizard${RESET} if you wish to re-configure Tide Island."
+echo -e "========================================================\n"
