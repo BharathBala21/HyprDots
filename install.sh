@@ -246,11 +246,20 @@ EOF
 create_ignored_files
 
 # --- Step 4: Symlink Configurations in ~/.config ---
-CONFIG_DIRS=("btop" "cava" "dunst" "fastfetch" "fish" "hypr" "kitty" "matugen" "yazi")
+CONFIG_DIRS=("btop" "cava" "dunst" "fastfetch" "fish" "hypr" "kitty" "matugen")
 
 setup_configs() {
     if prompt_yes_no "Do you want to symlink configuration folders to ~/.config/?" "y"; then
         mkdir -p "$HOME/.config"
+        
+        # Ensure ~/.config/yazi exists as a real directory (not in repo, but needed by matugen)
+        local yazi_dest="${HOME}/.config/yazi"
+        if [ -L "$yazi_dest" ]; then
+            log_info "Removing conflicting yazi symlink..."
+            rm -f "$yazi_dest"
+        fi
+        mkdir -p "$yazi_dest"
+
         local timestamp
         timestamp=$(date +"%Y%m%d_%H%M%S")
 
@@ -373,7 +382,7 @@ setup_wallpapers() {
         # Apply matugen for the new default wallpaper
         if command -v matugen &>/dev/null; then
             log_info "Generating Material You colors with matugen for tom_jazz.png..."
-            matugen image "${wallpaper_dest_dir}/tom_jazz.png" || log_warning "Matugen failed to generate colors."
+            matugen image --source-color-index 0 "${wallpaper_dest_dir}/tom_jazz.png" || log_warning "Matugen failed to generate colors."
         else
             log_warning "matugen is not installed. Skipping color generation."
         fi
