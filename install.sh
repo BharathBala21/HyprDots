@@ -115,7 +115,7 @@ REQUIRED_PACMAN=(
     "btop" "fastfetch" "fish" "kitty" "yazi" "python" "python-pillow" "jq"
     "wireplumber" "brightnessctl" "hyprpicker" "hyprshot" "tesseract"
     "tesseract-data-eng" "zbar" "grim" "slurp" "wf-recorder" "libnotify"
-    "ttf-inter" "ttf-jetbrains-mono-nerd"
+     "ttf-jetbrains-mono-nerd"
 )
 REQUIRED_AUR=(
     "quickshell" "matugen" "tide-island"
