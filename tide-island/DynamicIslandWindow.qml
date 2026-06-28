@@ -13,6 +13,7 @@ import "qml/workspace"
 PanelWindow {
     id: root
     property var shellRootController: null
+    readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
     property real nightLightTemp: shellRootController ? shellRootController.nightLightTemp : 0.0
     onNightLightTempChanged: {
         if (shellRootController && shellRootController.nightLightTemp !== nightLightTemp) {
@@ -60,6 +61,7 @@ PanelWindow {
     readonly property bool emojiPickerLayerVisible: islandContainer.islandState === "emojis"
     readonly property bool wallpapersLayerVisible: islandContainer.islandState === "wallpapers"
     readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
+    readonly property bool powerMenuLayerVisible: islandContainer.islandState === "powermenu"
     readonly property bool controlCenterLayerVisible: islandContainer.islandState === "control_center"
 
     readonly property var userConfig: UserConfig
@@ -80,8 +82,8 @@ PanelWindow {
         Region {
             x: 0
             y: 0
-            width: root.controlCenterLayerVisible ? root.width : 0
-            height: root.controlCenterLayerVisible ? root.height : 0
+            width: (root.controlCenterLayerVisible || islandContainer.islandState === "powermenu") ? root.width : 0
+            height: (root.controlCenterLayerVisible || islandContainer.islandState === "powermenu") ? root.height : 0
         }
 
         Region {
@@ -156,25 +158,29 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: 680
+    implicitHeight: (islandContainer.islandState === "powermenu") ? screen.height : 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu")
     WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
-        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu")
+        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
         id: launcherGrab
-        active: root.monitorFocused && (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+        active: root.monitorFocused && (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu")
         windows: [ root ]
         onCleared: {
-            if (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") {
+            if (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu") {
                 islandContainer.smartRestoreState();
             }
         }
     }
+
+
+
+
 
     readonly property string iconFontFamily: userConfig.iconFontFamily
     readonly property string textFontFamily: userConfig.textFontFamily
@@ -396,14 +402,14 @@ PanelWindow {
 
     function showNotification(appName, summary, body) {
         let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
-        notificationHistory.append({
+        notificationHistory.insert(0, {
             "appName": displayAppName,
             "summary": summary,
             "body": body,
             "timestamp": new Date().toLocaleTimeString(Qt.locale(), "hh:mm")
         });
         if (notificationHistory.count > 50) {
-            notificationHistory.remove(0);
+            notificationHistory.remove(50);
         }
         if (!root.dndActive) {
             islandContainer.showNotificationCapsule(appName, summary, body);
@@ -426,6 +432,10 @@ PanelWindow {
 
     function toggleUtilities() {
         islandContainer.toggleUtilities();
+    }
+
+    function togglePowerMenu() {
+        islandContainer.togglePowerMenu();
     }
 
     function toggleClipboard() {
@@ -473,6 +483,16 @@ PanelWindow {
         if (utilitiesLayerVisible && monitorFocused)
             utilitiesFocusTimer.restart();
     }
+    onPowerMenuLayerVisibleChanged: {
+        if (powerMenuLayerVisible) {
+            if (powerMenuLoader.item) {
+                powerMenuLoader.item.selectedIdx = 0;
+                powerMenuLoader.item.forceActiveFocus();
+            }
+        }
+        if (powerMenuLayerVisible && monitorFocused)
+            powerMenuFocusTimer.restart();
+    }
     onControlCenterLayerVisibleChanged: {
         if (controlCenterLayerVisible && monitorFocused)
             controlCenterFocusTimer.restart();
@@ -489,6 +509,7 @@ PanelWindow {
         if (emojiPickerLayerVisible && monitorFocused) emojisFocusTimer.restart();
         if (wallpapersLayerVisible && monitorFocused) wallpapersFocusTimer.restart();
         if (utilitiesLayerVisible && monitorFocused) utilitiesFocusTimer.restart();
+        if (powerMenuLayerVisible && monitorFocused) powerMenuFocusTimer.restart();
     }
 
     Timer {
@@ -542,6 +563,13 @@ PanelWindow {
 
     Timer {
         id: utilitiesFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: islandContainer.forceActiveFocus()
+    }
+
+    Timer {
+        id: powerMenuFocusTimer
         interval: 0
         repeat: false
         onTriggered: islandContainer.forceActiveFocus()
@@ -1381,6 +1409,31 @@ PanelWindow {
                 showUtilities();
         }
 
+        function showPowerMenu() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "powermenu";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function togglePowerMenu() {
+            if (islandState === "powermenu")
+                smartRestoreState();
+            else
+                showPowerMenu();
+        }
+
+        function closePowerMenuInstantly() {
+            const oldDuration = mainCapsule.morphDuration;
+            mainCapsule.morphDuration = 0;
+            showTimeCapsule();
+            Qt.callLater(() => {
+                mainCapsule.morphDuration = oldDuration;
+            });
+        }
+
         function showCustomCapsule() {
             if (!hasCustomLeftItems) {
                 showTimeCapsule();
@@ -1482,6 +1535,26 @@ PanelWindow {
             }
         }
 
+        Rectangle {
+            id: powerMenuDimOverlay
+            anchors.fill: parent
+            color: root.themeColors ? root.themeColors.scrim : "#000000"
+            opacity: (islandContainer.islandState === "powermenu") ? 0.45 : 0.0
+            visible: opacity > 0.0
+            z: 1
+
+            Behavior on opacity {
+                NumberAnimation { duration: 220; easing.type: Easing.InOutQuad }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    islandContainer.closePowerMenuInstantly();
+                }
+            }
+        }
+
         // --- UI 渲染：灵动岛主干 ---
         Rectangle {
             id: mainCapsule
@@ -1523,6 +1596,8 @@ PanelWindow {
                     return islandContainer.lyricsCapsuleWidth;
                 case "utilities":
                     return islandContainer.utilitiesCapsuleWidth;
+                case "powermenu":
+                    return 392;
                 case "control_center":
                     return 540;
                 case "launcher":
@@ -1570,6 +1645,7 @@ PanelWindow {
                         ? Math.max(56, Math.min(68, notificationLoader.item.preferredHeight))
                         : 56;
                 case "utilities":
+                case "powermenu":
                     return 84;
                 default:
                     return 35;
@@ -1599,6 +1675,7 @@ PanelWindow {
                 case "notification":
                     return mainCapsule.targetHeight / 2;
                 case "utilities":
+                case "powermenu":
                     return 24;
                 default:
                     return 19;
@@ -1809,6 +1886,19 @@ PanelWindow {
                         return;
                     }
 
+                    if (islandContainer.islandState === "notification") {
+                        preparedOverviewOnPress = false;
+                        const home = root.shellRootController ? root.shellRootController.getHomePath() : (Quickshell.env("HOME") || "");
+                        Quickshell.execDetached([
+                            home + "/.local/src/HyprDots/tide-island/bin/redirect_app.py",
+                            islandContainer.notificationAppName,
+                            islandContainer.notificationSummary,
+                            islandContainer.notificationBody
+                        ]);
+                        islandContainer.smartRestoreState();
+                        return;
+                    }
+
                     if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandPrimaryButton)) {
                         preparedOverviewOnPress = false;
                         islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandPrimaryAction);
@@ -1908,7 +1998,7 @@ PanelWindow {
                 onLoaded: islandContainer.syncCustomCapsuleWidth()
 
                 sourceComponent: Component {
-                    SwipeCustomInfoLayer {
+                    CustomInfoLayer {
                         items: islandContainer.customLeftItems
                         cavaLevels: islandContainer.cavaLevels
                         timeText: timeObj.currentTime
@@ -1937,7 +2027,7 @@ PanelWindow {
                 onLoaded: islandContainer.syncLyricsCapsuleWidth()
 
                 sourceComponent: Component {
-                    SwipeLyricsLayer {
+                    LyricsLayer {
                         lyricText: islandContainer.lyricsDisplayText
                         timeText: timeObj.currentTime
                         textFontFamily: root.textFontFamily
@@ -1972,7 +2062,7 @@ PanelWindow {
                 }
 
                 sourceComponent: Component {
-                    SwipeUtilitiesLayer {
+                    UtilitiesLayer {
                         focus: true
                         shellRootController: root.shellRootController
                         screenRecordingActive: root.screenRecordingActive
@@ -1990,6 +2080,40 @@ PanelWindow {
                         }
                         onWallpaperRequested: {
                             islandContainer.showWallpapers();
+                        }
+                    }
+                }
+            }
+
+            Loader {
+                id: powerMenuLoader
+                anchors.fill: parent
+                active: islandContainer.islandState === "powermenu"
+                asynchronous: false
+                visible: active
+                focus: islandContainer.islandState === "powermenu"
+
+                onLoaded: {
+                    if (item) {
+                        item.selectedIdx = 0;
+                        item.forceActiveFocus();
+                    }
+                }
+
+                sourceComponent: Component {
+                    PowerMenuLayer {
+                        focus: true
+                        shellRootController: root.shellRootController
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        timeFontFamily: root.timeFontFamily
+                        timeText: timeObj.currentTime
+                        showSecondaryText: islandContainer.workspaceOriginSide !== "right"
+                            && islandContainer.splitOriginSide !== "right"
+                        transitionProgress: islandContainer.islandState === "powermenu" ? 1.0 : 0.0
+                        showCondition: true
+                        onCloseRequested: {
+                            islandContainer.closePowerMenuInstantly();
                         }
                     }
                 }

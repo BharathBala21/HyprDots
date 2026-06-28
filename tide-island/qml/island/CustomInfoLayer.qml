@@ -96,7 +96,7 @@ Item {
                 width: implicitWidth
                 height: implicitHeight
 
-                SwipeCavaBars {
+                CavaBars {
                     id: cavaBars
                     visible: parent.isCava
                     anchors.centerIn: parent

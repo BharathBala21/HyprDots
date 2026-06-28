@@ -269,6 +269,13 @@ Scope {
         function toggleCheatsheet() {
             shellRoot.toggleCheatsheetAll();
         }
+
+        function togglePowerMenu() {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.togglePowerMenu)
+                    window.togglePowerMenu();
+            });
+        }
     }
 
     GlobalShortcut {

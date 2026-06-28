@@ -158,10 +158,10 @@ hl.bind(mainMod .. " +SHIFT + C",hl.dsp.exec_cmd("hyprpicker -a"))
 hl.bind(mainMod .. " +SHIFT + S", hl.dsp.exec_cmd("hyprshot -z -m region"))
 hl.bind("Print", hl.dsp.exec_cmd("hyprshot -z -m output"))
 hl.bind(mainMod .. " +SHIFT + W", hl.dsp.exec_cmd("hyprshot -z -m window"))
-hl.bind(mainMod .. " +SHIFT + O", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/ocr.sh"))
-hl.bind(mainMod .. " +SHIFT + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/visual_search.sh"))
-hl.bind(mainMod .. " +SHIFT + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/qr_barcode.sh"))
-hl.bind(mainMod .. " +SHIFT + M", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/mirror.sh"))
+hl.bind(mainMod .. " +SHIFT + O", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/ocr.sh"))
+hl.bind(mainMod .. " +SHIFT + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/visual_search.sh"))
+hl.bind(mainMod .. " +SHIFT + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/qr_barcode.sh"))
+hl.bind(mainMod .. " +SHIFT + M", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/src/HyprDots/tide-island/bin/mirror.sh"))
 
 --wf-Recorder
 hl.bind(mainMod .. " + R", function()
@@ -204,5 +204,13 @@ hl.bind(
     mainMod .. " + slash",
     hl.dsp.exec_cmd(
         "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleCheatsheet"
+    )
+)
+
+-- Power menu toggle
+hl.bind(
+    mainMod .. " + Escape",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island togglePowerMenu"
     )
 )

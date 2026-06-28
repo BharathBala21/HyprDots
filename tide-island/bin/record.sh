@@ -2,7 +2,13 @@
 
 if pgrep -x "wf-recorder" > /dev/null; then
     pkill -INT -x "wf-recorder"
-    notify-send -i video-x-generic "Screen Recorder" "Recording stopped and saved to ~/Videos/Recordings/"
+    sleep 0.5
+    LATEST_FILE=$(ls -t "$HOME/Videos/Recordings/"*.mp4 2>/dev/null | head -n 1)
+    if [ -n "$LATEST_FILE" ]; then
+        notify-send -i video-x-generic "Screen Recorder" "Recording stopped and saved to $LATEST_FILE"
+    else
+        notify-send -i video-x-generic "Screen Recorder" "Recording stopped and saved to ~/Videos/Recordings/"
+    fi
     exit 0
 fi
 
