@@ -7,7 +7,7 @@ import re
 
 def send_notification(title, message, icon="camera-photo"):
     try:
-        subprocess.run(["notify-send", "-i", icon, title, message], check=False)
+        subprocess.run(["notify-send", "-a", "Mirror", "-i", icon, title, message], check=False)
     except FileNotFoundError:
         pass
 
@@ -48,7 +48,7 @@ def parse_colors():
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    qml_path = os.path.join(script_dir, "mirror.qml")
+    qml_path = os.path.abspath(os.path.join(script_dir, "..", "qml", "controlcenter", "mirror.qml"))
     theme_path = os.path.join(script_dir, "theme.json")
     
     if not os.path.exists(qml_path):
@@ -66,7 +66,7 @@ def main():
     print(f"Launching Mirror QML application with active system theme...")
     send_notification("Mirror Tool", "Launching camera mirror window...")
     
-    cmd = ["qml6", qml_path]
+    cmd = ["stdbuf", "-oL", "-eL", "qml6", qml_path]
     try:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         

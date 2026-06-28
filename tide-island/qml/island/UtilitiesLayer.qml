@@ -91,13 +91,13 @@ Item {
             } else if (item.name === "colorpicker") {
                 Quickshell.execDetached(["hyprpicker", "-a"]);
             } else if (item.name === "ocr") {
-                Quickshell.execDetached([home + "/.config/hypr/scripts/ocr.sh"]);
+                Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/ocr.sh"]);
             } else if (item.name === "search") {
-                Quickshell.execDetached([home + "/.config/hypr/scripts/visual_search.sh"]);
+                Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/visual_search.sh"]);
             } else if (item.name === "qr") {
-                Quickshell.execDetached([home + "/.config/hypr/scripts/qr_barcode.sh"]);
+                Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/qr_barcode.sh"]);
             } else if (item.name === "mirror") {
-                Quickshell.execDetached([home + "/.config/hypr/scripts/mirror.sh"]);
+                Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/mirror.sh"]);
             }
         };
         delayTriggerTimer.restart();
