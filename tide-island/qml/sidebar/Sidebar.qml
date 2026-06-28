@@ -20,6 +20,8 @@ Item {
     }
 
     property alias panel: sidebarPanel
+    readonly property real flickableContentY: flickable.contentY
+    readonly property real timerHeight: Math.round(200 * sidebarPanel.scaleFactor)
 
     Item {
         id: glassBackground
@@ -54,6 +56,7 @@ Item {
         }
 
         Flickable {
+            id: flickable
             anchors.fill: parent
             contentWidth: width
             contentHeight: widgetColumn.implicitHeight
@@ -67,12 +70,10 @@ Item {
                 width: parent.width
                 spacing: 16 
 
-                TimerWidget {
-                    theme: theme
+                Item {
+                    id: timerPlaceholder
                     width: parent.width
-                    height: Math.round(200 * sidebarPanel.scaleFactor)
-                    iconFontFamily: root.iconFontFamily
-                    textFontFamily: root.textFontFamily
+                    height: root.timerHeight
                 }
 
                 CalendarWidget {

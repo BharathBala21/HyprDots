@@ -9,20 +9,20 @@ Rectangle {
     implicitHeight: 220
     radius: 12 // Matching Hyprland geometry
     
-    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.92)
+    color: root.theme.surface_container
     border.width: 0
 
     // Extra layering for thickness and opacity
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
-        color: Qt.rgba(0, 0, 0, 0.35)
+        color: Qt.rgba(0, 0, 0, 0.45) // Deep contrast layer
     }
 
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
-        color: Qt.rgba(1.0, 1.0, 1.0, 0.04)
+        color: Qt.rgba(1.0, 1.0, 1.0, 0.05) // Frosted shine layer
     }
 
 

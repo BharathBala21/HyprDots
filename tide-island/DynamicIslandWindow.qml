@@ -15,6 +15,9 @@ PanelWindow {
     id: root
     property var shellRootController: null
     property bool sidebarOpen: false
+    property real floatingTimerX: root.width - 320
+    property real floatingTimerY: 64
+    readonly property bool isFloatingTimerActive: (timerWidget.timerState === "running" || timerWidget.timerState === "paused" || timerWidget.isAlarmRinging) && !root.sidebarOpen
     readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
     property real nightLightTemp: shellRootController ? shellRootController.nightLightTemp : 0.0
     onNightLightTempChanged: {
@@ -219,6 +222,14 @@ PanelWindow {
             y: 0
             width: (sidebar.visible && root.sidebarOpen) ? 360 : 0
             height: (sidebar.visible && root.sidebarOpen) ? root.height : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(timerWidget.x)
+            y: Math.floor(timerWidget.y)
+            width: (timerWidget.visible && root.isFloatingTimerActive) ? Math.ceil(timerWidget.width) : 0
+            height: (timerWidget.visible && root.isFloatingTimerActive) ? Math.ceil(timerWidget.height) : 0
         }
     }
     implicitHeight: screen.height
@@ -2623,6 +2634,42 @@ PanelWindow {
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
             anchors.fill: parent
+        }
+
+        TimerWidget {
+            id: timerWidget
+            theme: sidebar.theme
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
+
+            isFloating: root.isFloatingTimerActive
+
+            width: !root.isFloatingTimerActive ? (sidebar.panel ? sidebar.panel.width : 300) : 300
+            height: sidebar.timerHeight
+
+            x: !root.isFloatingTimerActive 
+               ? (sidebar.panel ? (sidebar.panel.x) : -400) 
+               : root.floatingTimerX
+            
+            y: !root.isFloatingTimerActive 
+               ? (sidebar.panel ? (sidebar.panel.y - sidebar.flickableContentY) : 48) 
+               : root.floatingTimerY
+
+            visible: !root.isWorkspaceFullscreen && (root.sidebarOpen || root.isFloatingTimerActive)
+
+            Behavior on x {
+                enabled: !timerWidget.isDragging && !root.sidebarOpen
+                NumberAnimation { duration: 350; easing.type: Easing.OutQuint }
+            }
+            Behavior on y {
+                enabled: !timerWidget.isDragging && !root.sidebarOpen
+                NumberAnimation { duration: 350; easing.type: Easing.OutQuint }
+            }
+
+            onDragMoved: (dx, dy) => {
+                root.floatingTimerX = Math.max(10, Math.min(root.width - width - 10, root.floatingTimerX + dx))
+                root.floatingTimerY = Math.max(10, Math.min(root.height - height - 10, root.floatingTimerY + dy))
+            }
         }
 
         TopRightTray {

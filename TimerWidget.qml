@@ -9,30 +9,82 @@ Rectangle {
     id: root
     implicitWidth: 300
     implicitHeight: 200
-    radius: 12 
-    
-    color: root.theme.surface_container
+    radius: 20
+    clip: true
+
+    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.86)
     border.width: 0
 
-    // Extra layering for thickness and opacity
+    // ---------------------------------------------------------------
+    // macOS / iOS style frosted-glass material
+    // ---------------------------------------------------------------
+
+    // Depth layer - keeps content legible over any wallpaper behind it
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
-        color: Qt.rgba(0, 0, 0, 0.45) // Deep contrast layer
+        color: Qt.rgba(0, 0, 0, 0.30)
     }
 
+    // Sheen layer - soft vertical light falloff, brightest near the top.
+    // This is the core "thick glass material" look.
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
-        color: Qt.rgba(1.0, 1.0, 1.0, 0.05) // Frosted shine layer
+        gradient: Gradient {
+            GradientStop { position: 0.0;  color: Qt.rgba(1.0, 1.0, 1.0, 0.12) }
+            GradientStop { position: 0.45; color: Qt.rgba(1.0, 1.0, 1.0, 0.03) }
+            GradientStop { position: 1.0;  color: Qt.rgba(1.0, 1.0, 1.0, 0.0)  }
+        }
     }
 
+    // Hairline inner edge - gives the glass a crisp, cut boundary
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 1
+        radius: Math.max(parent.radius - 1, 0)
+        color: "transparent"
+        border.width: 1
+        border.color: Qt.rgba(1.0, 1.0, 1.0, 0.09)
+    }
 
-    property bool isMuted: false
-    property bool isAlarmRinging: false
-    property bool isFloating: false
-    property bool isDragging: false
-    signal dragMoved(real dx, real dy)
+    // Shiny silver edge - top. Light sweeps in from the left and peaks
+    // brightest as it reaches the top-right corner.
+    Rectangle {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.topMargin: 1
+        anchors.leftMargin: 12
+        anchors.rightMargin: 10
+        height: 1.6
+        radius: height / 2
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: Qt.rgba(0.85, 0.87, 0.90, 0.10) }
+            GradientStop { position: 0.6; color: Qt.rgba(0.88, 0.90, 0.93, 0.45) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.95, 0.97, 1.00, 0.90) }
+        }
+    }
+
+    // Shiny silver edge - right. Continues the same highlight downward
+    // from the corner, fading out toward the bottom.
+    Rectangle {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.topMargin: 10
+        anchors.bottomMargin: 12
+        anchors.rightMargin: 1
+        width: 1.6
+        radius: width / 2
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: Qt.rgba(0.95, 0.97, 1.00, 0.90) }
+            GradientStop { position: 0.4; color: Qt.rgba(0.88, 0.90, 0.93, 0.40) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.85, 0.87, 0.90, 0.08) }
+        }
+    }
 
     property QtObject theme
     property string iconFontFamily: ""
@@ -55,34 +107,6 @@ Rectangle {
         return (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs)
     }
 
-    MouseArea {
-        id: dragArea
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: 48
-        anchors.rightMargin: 160
-        enabled: root.isFloating
-        cursorShape: Qt.SizeAllCursor
-
-        property real startX
-        property real startY
-
-        onPressed: (mouse) => {
-            root.isDragging = true
-            startX = mouse.x
-            startY = mouse.y
-        }
-        onPositionChanged: (mouse) => {
-            var dx = mouse.x - startX
-            var dy = mouse.y - startY
-            root.dragMoved(dx, dy)
-        }
-        onReleased: {
-            root.isDragging = false
-        }
-    }
-
     Process {
         id: notifyProcess
         command: ["notify-send", "Timer Completed!", "Your countdown has ended."]
@@ -91,12 +115,6 @@ Rectangle {
     Process {
         id: soundProcess
         command: ["sh", "-c", "for i in {1..5}; do paplay /usr/share/sounds/ocean/stereo/alarm-clock-elapsed.oga || pw-play /usr/share/sounds/ocean/stereo/alarm-clock-elapsed.oga; done"]
-    }
-
-    Process {
-        id: killSoundHelper
-        command: ["sh", "-c", "killall paplay pw-play 2>/dev/null || true"]
-        running: false
     }
 
     Timer {
@@ -109,18 +127,14 @@ Rectangle {
                 remainingSeconds--
             } else {
                 root.timerState = "stopped"
-                root.isAlarmRinging = true
                 notifyProcess.running = true
-                if (!root.isMuted) {
-                    soundProcess.running = true
-                }
+                soundProcess.running = true
             }
         }
     }
 
     function setMode(mode) {
         root.timerState = "stopped"
-        root.isAlarmRinging = false
         activeMode = mode
         if (mode === "pomodoro") totalSeconds = 25 * 60
         else if (mode === "shortBreak") totalSeconds = 5 * 60
@@ -162,8 +176,8 @@ Rectangle {
             
             ComboBox {
                 id: modeCombo
-                implicitWidth: 125
-                implicitHeight: 28
+                implicitWidth: 110
+                implicitHeight: 24
                 model: [
                     { text: qsTr("Custom"), value: "custom" },
                     { text: qsTr("Pomodoro"), value: "pomodoro" },
@@ -175,14 +189,14 @@ Rectangle {
                 delegate: ItemDelegate {
                     id: itemDel
                     width: modeCombo.width
-                    height: 28
+                    height: 24
                     contentItem: Text {
                         text: modelData.text
                         color: itemDel.highlighted ? root.theme.primary : root.theme.on_surface
                         font.family: root.textFontFamily
-                        font.pixelSize: 12
+                        font.pixelSize: 11
                         verticalAlignment: Text.AlignVCenter
-                        leftPadding: 8
+                        leftPadding: 6
                     }
                     background: Rectangle {
                         color: itemDel.hovered || itemDel.highlighted ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : "transparent"
@@ -193,18 +207,21 @@ Rectangle {
                 contentItem: Text {
                     text: modeCombo.currentText
                     font.family: root.textFontFamily
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     color: root.theme.on_surface
                     verticalAlignment: Text.AlignVCenter
-                    leftPadding: 8
+                    leftPadding: 6
                     rightPadding: 20
                 }
 
                 background: Rectangle {
-                    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.5)
-                    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.2)
+                    radius: 10
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Qt.rgba(root.theme.surface_container.r + 0.04, root.theme.surface_container.g + 0.04, root.theme.surface_container.b + 0.04, 0.55) }
+                        GradientStop { position: 1.0; color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.45) }
+                    }
+                    border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.25)
                     border.width: 1
-                    radius: 6
                 }
 
                 indicator: Text {
@@ -234,7 +251,7 @@ Rectangle {
                         color: root.theme.surface
                         border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
                         border.width: 1
-                        radius: 6
+                        radius: 10
                     }
                 }
 
@@ -311,16 +328,6 @@ Rectangle {
                         color: root.theme.primary
                         maximumLength: 2
                         validator: IntValidator { bottom: 0; top: 99 }
-                        focus: root.activeMode === "custom" && root.timerState === "stopped"
-                        
-                        Keys.onPressed: (event) => {
-                            if (event.key === Qt.Key_Right || event.key === Qt.Key_Tab || event.key === Qt.Key_Colon) {
-                                secsInput.forceActiveFocus()
-                                secsInput.selectAll()
-                                event.accepted = true
-                            }
-                        }
-                        
                         onTextChanged: {
                             if (root.activeMode === "custom" && root.timerState === "stopped") {
                                 root.totalSeconds = (parseInt(text) || 0) * 60 + (parseInt(secsInput.text) || 0)
@@ -344,15 +351,6 @@ Rectangle {
                         color: root.theme.primary
                         maximumLength: 2
                         validator: IntValidator { bottom: 0; top: 59 }
-                        
-                        Keys.onPressed: (event) => {
-                            if (event.key === Qt.Key_Left || event.key === Qt.Key_Backtab) {
-                                minsInput.forceActiveFocus()
-                                minsInput.selectAll()
-                                event.accepted = true
-                            }
-                        }
-                        
                         onTextChanged: {
                             if (root.activeMode === "custom" && root.timerState === "stopped") {
                                 root.totalSeconds = (parseInt(minsInput.text) || 0) * 60 + (parseInt(text) || 0)
@@ -376,8 +374,23 @@ Rectangle {
                     implicitHeight: 32
                     
                     background: Rectangle {
-                        color: playPauseBtn.pressed ? Qt.darker(root.theme.primary, 1.2) : (playPauseBtn.hovered ? Qt.lighter(root.theme.primary, 1.1) : root.theme.primary)
-                        radius: 6 
+                        radius: 10
+                        gradient: Gradient {
+                            GradientStop {
+                                position: 0.0
+                                color: playPauseBtn.pressed
+                                    ? Qt.darker(root.theme.primary, 1.15)
+                                    : (playPauseBtn.hovered ? Qt.lighter(root.theme.primary, 1.18) : Qt.lighter(root.theme.primary, 1.06))
+                            }
+                            GradientStop {
+                                position: 1.0
+                                color: playPauseBtn.pressed
+                                    ? Qt.darker(root.theme.primary, 1.3)
+                                    : (playPauseBtn.hovered ? Qt.lighter(root.theme.primary, 1.02) : Qt.darker(root.theme.primary, 1.05))
+                            }
+                        }
+                        border.width: 1
+                        border.color: Qt.rgba(1.0, 1.0, 1.0, 0.18)
                     }
                     
                     contentItem: Text {
@@ -412,9 +425,9 @@ Rectangle {
                     
                     background: Rectangle {
                         color: resetBtn.pressed ? Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3) : (resetBtn.hovered ? Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.15) : "transparent")
-                        border.color: root.theme.outline
+                        border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.5)
                         border.width: 1
-                        radius: 6
+                        radius: 10
                     }
                     contentItem: Text {
                         text: qsTr("Reset")
@@ -427,78 +440,8 @@ Rectangle {
                     }
                     onClicked: {
                         soundProcess.running = false
-                        killSoundHelper.running = true
                         root.setMode(root.activeMode)
                     }
-                }
-            }
-        }
-    }
-
-    // Alarm Ringing Overlay
-    Rectangle {
-        id: alarmOverlay
-        anchors.fill: parent
-        radius: parent.radius
-        color: Qt.rgba(0.08, 0.08, 0.08, 0.95)
-        visible: root.isAlarmRinging
-
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: 12
-
-            // Pulsing Alarm Icon
-            Text {
-                id: alarmIcon
-                Layout.alignment: Qt.AlignHCenter
-                text: "\uf0f3" // Bell icon
-                font.family: root.iconFontFamily
-                font.pixelSize: 28
-                color: root.theme.primary
-
-                SequentialAnimation on opacity {
-                    loops: Animation.Infinite
-                    running: root.isAlarmRinging
-                    NumberAnimation { from: 1.0; to: 0.3; duration: 500; easing.type: Easing.InOutQuad }
-                    NumberAnimation { from: 0.3; to: 1.0; duration: 500; easing.type: Easing.InOutQuad }
-                }
-            }
-
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: qsTr("Timer Finished!")
-                font.family: root.textFontFamily
-                font.pixelSize: 14
-                font.weight: Font.Bold
-                color: root.theme.on_surface
-            }
-
-            Button {
-                id: dismissBtn
-                Layout.alignment: Qt.AlignHCenter
-                implicitWidth: 120
-                implicitHeight: 32
-
-                background: Rectangle {
-                    color: dismissBtn.pressed ? Qt.darker(root.theme.primary, 1.2) : (dismissBtn.hovered ? Qt.lighter(root.theme.primary, 1.1) : root.theme.primary)
-                    radius: 6
-                }
-
-                contentItem: Text {
-                    text: qsTr("Dismiss")
-                    font.family: root.textFontFamily
-                    font.pixelSize: 12
-                    font.weight: Font.Bold
-                    color: root.theme.on_primary
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    root.isAlarmRinging = false
-                    soundProcess.running = false
-                    killSoundHelper.running = true
-                    root.setMode(root.activeMode)
                 }
             }
         }

@@ -11,20 +11,20 @@ Rectangle {
     implicitHeight: 240
     radius: 12
     
-    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.92)
+    color: root.theme.surface_container
     border.width: 0
 
     // Extra layering for thickness and opacity
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
-        color: Qt.rgba(0, 0, 0, 0.35)
+        color: Qt.rgba(0, 0, 0, 0.45) // Deep contrast layer
     }
 
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
-        color: Qt.rgba(1.0, 1.0, 1.0, 0.04)
+        color: Qt.rgba(1.0, 1.0, 1.0, 0.05) // Frosted shine layer
     }
 
 
@@ -258,9 +258,9 @@ Rectangle {
                 placeholderTextColor: root.theme.on_surface_variant
                 
                 background: Rectangle {
-                    color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.6)
-                    border.color: taskInput.activeFocus ? root.theme.primary : "transparent"
-                    border.width: taskInput.activeFocus ? 1 : 0
+                    color: Qt.rgba(root.theme.secondary_container.r, root.theme.secondary_container.g, root.theme.secondary_container.b, 0.7)
+                    border.color: taskInput.activeFocus ? root.theme.primary : Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.25)
+                    border.width: 1
                     radius: 6
                 }
 
