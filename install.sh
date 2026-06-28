@@ -105,7 +105,7 @@ if [ -n "$AUR_HELPER" ]; then
     log_success "Found AUR helper: ${BOLD}${AUR_HELPER}${RESET}"
 else
     log_warning "No AUR helper (paru or yay) detected."
-    log_info "You will need to manually install AUR packages (quickshell, matugen, tide-island, zen-browser-bin)."
+    log_info "You will need to manually install AUR packages (quickshell, matugen, tide-island."
 fi
 
 # --- Step 3: Package Installation ---
@@ -115,6 +115,7 @@ REQUIRED_PACMAN=(
     "btop" "fastfetch" "fish" "kitty" "yazi" "python" "python-pillow" "jq"
     "wireplumber" "brightnessctl" "hyprpicker" "hyprshot" "tesseract"
     "tesseract-data-eng" "zbar" "grim" "slurp" "wf-recorder" "libnotify"
+    "ttf-inter" "ttf-jetbrains-mono-nerd"
 )
 REQUIRED_AUR=(
     "quickshell" "matugen" "tide-island"
