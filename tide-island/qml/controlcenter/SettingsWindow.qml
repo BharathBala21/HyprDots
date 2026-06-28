@@ -2046,6 +2046,41 @@ FloatingWindow {
                             }
                         }
 
+                        SettingsCard {
+                            title: "Reset Spotify Theme"
+                            
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 100
+                                height: 28
+                                radius: 6
+                                color: resetSpicetifyBtnMouse.containsMouse ? colorButtonBgHover : colorButtonBg
+                                border.width: 1
+                                border.color: colorOutline
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Reset"
+                                    color: colorPrimary
+                                    font.pixelSize: 12
+                                    font.family: "Inter Display"
+                                    font.weight: Font.Medium
+                                }
+
+                                MouseArea {
+                                    id: resetSpicetifyBtnMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: {
+                                        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--restore-spicetify"]);
+                                        spicetifyInstalled = false;
+                                    }
+                                }
+                            }
+                        }
+
                         Item { width: 1; height: 12 } // spacing
 
                         // Regenerate Button

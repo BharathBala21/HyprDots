@@ -198,6 +198,18 @@ def apply_spicetify():
         print(f"Failed to apply Spicetify: {e}", file=sys.stderr)
         return False
 
+def restore_spicetify():
+    spicetify_bin = os.path.expanduser("~/.spicetify/spicetify")
+    spicetify_cmd = spicetify_bin if os.path.exists(spicetify_bin) else (shutil.which("spicetify") or "spicetify")
+    print("Running spicetify restore...")
+    try:
+        subprocess.run([spicetify_cmd, "restore"], check=True)
+        print("Spotify restored to default successfully!")
+        return True
+    except Exception as e:
+        print(f"Failed to restore Spotify: {e}", file=sys.stderr)
+        return False
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Update user config and apply matugen")
@@ -217,6 +229,7 @@ def main():
     # Spicetify arguments
     parser.add_argument("--install-spicetify", action="store_true", help="Install and configure Spicetify with matugen scheme")
     parser.add_argument("--apply-spicetify", action="store_true", help="Apply spicetify custom theme colors")
+    parser.add_argument("--restore-spicetify", action="store_true", help="Restore Spotify to default (revert spicetify)")
 
     args = parser.parse_args()
 
@@ -231,6 +244,8 @@ def main():
         install_spicetify()
     if args.apply_spicetify:
         apply_spicetify()
+    if args.restore_spicetify:
+        restore_spicetify()
 
     config_path = os.path.expanduser("~/.config/tide-island/userconfig.json")
     config = {}
