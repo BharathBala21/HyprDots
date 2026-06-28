@@ -115,7 +115,7 @@ REQUIRED_PACMAN=(
     "btop" "fastfetch" "fish" "kitty" "yazi" "python" "python-pillow" "jq"
 )
 REQUIRED_AUR=(
-    "quickshell" "matugen" "tide-island" "zen-browser-bin"
+    "quickshell" "matugen" "tide-island"
 )
 
 install_packages() {
@@ -202,9 +202,9 @@ setup_configs() {
                     continue
                 fi
 
-                # Backup existing
-                log_info "Backing up existing ${dest_path} to ${dest_path}.bak.${timestamp}"
-                mv "$dest_path" "${dest_path}.bak.${timestamp}"
+                # Delete existing
+                log_info "Removing existing configuration: ${dest_path}"
+                rm -rf "$dest_path"
             fi
 
             # Create symlink
@@ -238,8 +238,8 @@ setup_cursor() {
                 if [ -L "$dest_cursor" ] && [ "$(readlink -f "$dest_cursor")" = "$cursor_src" ]; then
                     log_info "Moga cursor is already symlinked in ~/.local/share/icons."
                 else
-                    log_info "Backing up existing cursor theme in ~/.local/share/icons."
-                    mv "$dest_cursor" "${dest_cursor}.bak.$(date +%Y%m%d_%H%M%S)"
+                    log_info "Removing existing cursor theme: ${dest_cursor}"
+                    rm -rf "$dest_cursor"
                     ln -sf "$cursor_src" "$dest_cursor"
                     log_success "Symlinked Moga cursor theme to ~/.local/share/icons/Moga"
                 fi
@@ -303,9 +303,9 @@ setup_tide_island() {
     if [ "$needs_symlink" = true ]; then
         echo -e "\n${YELLOW}Tide Island Launcher requires /usr/share/tide-island to link to the QML source directory.${RESET}"
         if prompt_yes_no "Do you want to create the symbolic link in /usr/share/ (requires sudo)?" "y"; then
-            if [ -e "$target_share" ] && [ ! -L "$target_share" ]; then
-                log_info "Backing up existing non-symlink directory /usr/share/tide-island..."
-                sudo mv "$target_share" "${target_share}.bak.$(date +%Y%m%d_%H%M%S)"
+            if [ -e "$target_share" ]; then
+                log_info "Removing existing /usr/share/tide-island..."
+                sudo rm -rf "$target_share"
             fi
             sudo ln -sfn "$source_tide" "$target_share"
             log_success "Symlinked /usr/share/tide-island -> $source_tide"
