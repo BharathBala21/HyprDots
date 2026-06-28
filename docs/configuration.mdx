@@ -1,15 +1,15 @@
 ---
 title: Configuration
-description: How to configure the HyerDOTS desktop, themes, and widgets.
+description: How to configure the HyprDots desktop, themes, and widgets.
 ---
 
-HyerDOTS is built from modular configuration layers so you can tune one area without changing the whole setup.
+HyprDots is built from modular configuration layers so you can tune one area without changing the whole setup.
 
 ## Hyprland configuration
 
 The `hypr/` folder is the desktop core.
 
-- `hyprland.lua` — base Hyprland options and input maps
+- `hyprland.lua` — main configuration entrypoint
 - `hyprpaper.conf` — wallpaper manager settings
 - `hypridle.conf` — idle and lockscreen behavior
 - `monitors.lua` — monitor layout and scaling
@@ -35,19 +35,7 @@ Use `hypr/hyprlua/custom` for machine-specific tweaks:
 
 `matugen/` builds a shared color palette from your wallpaper.
 
-The repository uses templates for:
-
-- `kitty`
-- `yazi`
-- `btop`
-- `hyprland`
-- `cava`
-- `steam`
-- `obsidian`
-- `starship`
-- `firefox`
-- `vscode`
-- `quickshell`
+Templates cover the desktop, terminal tools, editors, browsers, media apps, and Tide Island/Quickshell. See [Repository Structure](/structure) for the directory map instead of editing generated color files directly.
 
 If you update your wallpaper, rerun Matugen and restart the relevant apps.
 
@@ -71,14 +59,16 @@ Open `matugen/config.toml` to change:
 
 The installer links this directory to `/usr/share/tide-island` so the runtime loads from the repo.
 
-## App configuration directories
+## Default applications
 
-- `kitty/` — terminal theme and settings
-- `fish/` — shell prompt and environment
-- `dunst/` — notification styling
-- `btop/` — system monitor theme
-- `cava/` — audio visualizer settings
-- `fastfetch/` — system information display
+The defaults are defined in `hypr/hyprlua/env.lua`:
+
+- terminal: Kitty
+- file manager: Dolphin
+- editor: Visual Studio Code
+- browser: Zen Browser
+
+Change these variables if your system uses different applications. Related shortcuts are listed in [Keybindings](/keybindings).
 
 ## Updating configuration
 

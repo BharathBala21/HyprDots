@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Common fixes and diagnostics for HyerDOTS.
+description: Common fixes and diagnostics for HyprDots.
 ---
 
 When issues appear, the most common causes are missing packages, symlink conflicts, or theme/config mismatches.
@@ -19,7 +19,7 @@ paru -S quickshell matugen tide-island
 
 ## Config not linked into `~/.config`
 
-If HyerDOTS files are not visible in your config directory:
+If HyprDots files are not visible in your config directory:
 
 - check for conflicting files in `~/.config`
 - rerun `./install.sh` and allow symlink creation
@@ -45,7 +45,7 @@ If the dynamic island or Quickshell UI does not appear:
 - ensure `/usr/share/tide-island` points to the repo
 - confirm `quickshell` is installed and executable
 - verify `hypr/hyprlua/exec.lua` runs on startup
-- check `tidе-island/bin` helper scripts for errors
+- check `tide-island/bin` helper scripts for errors
 
 ## Hyprland startup issues
 
@@ -54,6 +54,10 @@ If Hyprland fails to start or crashes:
 - inspect logs in `~/.local/share/hyprland/`
 - validate `hyprland.lua` syntax
 - temporarily comment out rules in `hypr/hyprlua/windowrule.lua`
+
+## Shortcut opens the wrong application
+
+Edit the application variables in `hypr/hyprlua/env.lua`, then reload Hyprland. The shipped defaults expect Kitty, Dolphin, Visual Studio Code, and Zen Browser.
 
 ## Useful diagnostics
 

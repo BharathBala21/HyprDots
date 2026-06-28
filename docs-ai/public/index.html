@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Ask questions about HyprDots using its official documentation.">
+  <title>Ask HyprDots</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <a class="brand" href="https://docs.page/BharathBala21/HyprDots">HyprDots</a>
+      <span>Documentation AI</span>
+    </header>
+
+    <section class="hero">
+      <span class="eyebrow">Powered by Groq</span>
+      <h1>Ask the documentation.</h1>
+      <p>Answers are grounded only in the official HyprDots documentation.</p>
+    </section>
+
+    <section id="conversation" class="conversation" aria-live="polite">
+      <div class="message assistant">
+        <p>Hi! Ask me about installation, configuration, keybindings, customization, or troubleshooting.</p>
+      </div>
+    </section>
+
+    <div class="suggestions" aria-label="Suggested questions">
+      <button type="button">How do I install HyprDots?</button>
+      <button type="button">How do I change my wallpaper?</button>
+      <button type="button">Why is Tide Island not appearing?</button>
+    </div>
+
+    <form id="chat-form">
+      <label class="sr-only" for="question">Ask a documentation question</label>
+      <textarea id="question" maxlength="500" rows="2" placeholder="Ask about HyprDots…" required></textarea>
+      <button id="submit" type="submit">Ask</button>
+    </form>
+    <p class="notice">The assistant refuses questions that are not covered by the documentation.</p>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

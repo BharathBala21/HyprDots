@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.page/schema.json",
-  "name": "HyerDOTS",
+  "name": "HyprDots",
   "description": "Curated Arch Linux + Hyprland dotfiles with Matugen theming and Tide Island widgets.",
   "theme": {
     "defaultTheme": "dark",
@@ -17,6 +17,7 @@
     "showGitHubCard": true,
     "links": [
       { "title": "GitHub", "href": "https://github.com/BharathBala21/HyprDots", "cta": true },
+      { "title": "Ask AI", "href": "/ask-ai", "cta": true },
       { "title": "Installation", "href": "/installation" },
       { "title": "Configuration", "href": "/configuration" }
     ]
@@ -26,12 +27,6 @@
   "banner": {},
   "favicon": "",
   "og": { "github": true },
-  "agent": {
-    "key": "",
-    "placeholder": "Ask about HyerDOTS setup and configuration...",
-    "questions": [],
-    "limits": { "ip": 200, "repo": 10000 }
-  },
   "mcp": { "enabled": true },
   "anchors": [],
   "variables": {},
@@ -51,7 +46,8 @@
       "pages": [
         { "title": "Home", "href": "/", "icon": "rocket" },
         { "title": "Installation", "href": "/installation", "icon": "download" },
-        { "title": "Configuration", "href": "/configuration", "icon": "settings" }
+        { "title": "Configuration", "href": "/configuration", "icon": "settings" },
+        { "title": "Keybindings", "href": "/keybindings", "icon": "keyboard" }
       ]
     },
     {

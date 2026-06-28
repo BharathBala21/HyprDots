@@ -1,17 +1,9 @@
 ---
 title: Customization
-description: Personalize HyerDOTS by editing configs, themes, and runtime overrides.
+description: Personalize HyprDots by editing configs, themes, and runtime overrides.
 ---
 
-This page explains how to customize HyerDOTS without losing the repository source of truth.
-
-## Repository-first workflow
-
-HyerDOTS is intended to be edited in the repository, then installed or symlinked into `~/.config`.
-
-- keep repo files as the canonical config
-- avoid committing machine-specific secrets
-- use local overrides for per-device customizations
+This page explains how to customize HyprDots without losing the repository source of truth.
 
 ## Customizing Hyprland behavior
 
@@ -32,6 +24,8 @@ Use `hypr/hyprlua/custom` for machine-specific settings.
 - create local files when the installer prompts you
 - add hardware-specific fixes or local paths
 - keep the repo version unchanged
+
+The installer creates `hypr/hyprlua/custom/exec.lua` when it is missing. This file is ignored by Git and is the appropriate place for machine-specific startup commands.
 
 ## Wallpaper and theme customization
 
@@ -58,15 +52,7 @@ Edit `tide-island/` to tune the home screen and island UI.
 If you need a terminal theme change, update the `kitty` files and restart Kitty.
 If you want a shell update, edit the `fish` files and restart the shell.
 
-## Preserving custom config
-
-For local tweaks without affecting the repo:
-
-- use `hypr/hyprlua/custom`
-- keep personal overrides outside git
-- apply custom files only on the target machine
-
 ## Summary
 
-HyerDOTS is designed to be both customizable and maintainable.
+HyprDots is designed to be both customizable and maintainable.
 Use the repository as the source of truth, and reserve local overrides for device-specific adjustments.

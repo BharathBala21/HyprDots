@@ -1,0 +1,14 @@
+{
+  "name": "hyprdots-docs-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:context": "node scripts/build-context.mjs",
+    "dev": "npm run build:context && wrangler dev",
+    "deploy": "npm run build:context && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
