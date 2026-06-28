@@ -55,6 +55,8 @@ FloatingWindow {
     // VS Code configurations
     property string vscodeTheme: "Matugen"
     property bool vscodeAutoUpdate: true
+    property bool vscodeExtensionInstalled: false
+    property bool spicetifyInstalled: false
 
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
@@ -280,7 +282,7 @@ FloatingWindow {
             "python3",
             "-c",
             "import json, os; " +
-            "theme = 'Default'; auto_up = True; " +
+            "theme = 'Default'; auto_up = True; ext_installed = False; spicetify_installed = False; " +
             "for p in ['~/.config/Code/User/settings.json', '~/.config/VSCodium/User/settings.json', '~/.config/Code - Insiders/User/settings.json']:" +
             "    path = os.path.expanduser(p); " +
             "    if os.path.exists(path): " +
@@ -290,7 +292,15 @@ FloatingWindow {
             "            auto_up = d.get('matugenTheme.autoUpdate', auto_up); " +
             "            break; " +
             "        except: pass; " +
-            "print(json.dumps({'theme': theme, 'autoUpdate': auto_up}))"
+            "for ext_dir in ['~/.vscode/extensions', '~/.vscode-oss/extensions']:" +
+            "    full_ext = os.path.expanduser(ext_dir); " +
+            "    if os.path.exists(full_ext):" +
+            "        for item in os.listdir(full_ext):" +
+            "            if item.startswith('haikalllp.matugen-theme'):" +
+            "                ext_installed = True; break;" +
+            "if os.path.exists(os.path.expanduser('~/.spicetify/spicetify')):" +
+            "    spicetify_installed = True;" +
+            "print(json.dumps({'theme': theme, 'autoUpdate': auto_up, 'extensionInstalled': ext_installed, 'spicetifyInstalled': spicetify_installed}))"
         ]
         running: true
         stdout: StdioCollector {
@@ -300,6 +310,8 @@ FloatingWindow {
                         var res = JSON.parse(this.text);
                         vscodeTheme = res.theme;
                         vscodeAutoUpdate = res.autoUpdate;
+                        vscodeExtensionInstalled = res.extensionInstalled;
+                        spicetifyInstalled = res.spicetifyInstalled;
                     } catch (e) {
                         console.log("Error reading VS Code config: " + e);
                     }
@@ -1861,14 +1873,14 @@ FloatingWindow {
                                 width: 100
                                 height: 28
                                 radius: 6
-                                color: installBtnMouse.containsMouse ? colorButtonBgHover : colorButtonBg
+                                color: vscodeExtensionInstalled ? colorSecondaryContainer : (installBtnMouse.containsMouse ? colorButtonBgHover : colorButtonBg)
                                 border.width: 1
-                                border.color: colorOutline
+                                border.color: vscodeExtensionInstalled ? colorPrimary : colorOutline
 
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "Install"
-                                    color: colorPrimary
+                                    text: vscodeExtensionInstalled ? "✓ Installed" : "Install"
+                                    color: vscodeExtensionInstalled ? colorPrimary : colorOnSurface
                                     font.pixelSize: 12
                                     font.family: "Inter Display"
                                     font.weight: Font.Medium
@@ -1877,9 +1889,11 @@ FloatingWindow {
                                 MouseArea {
                                     id: installBtnMouse
                                     anchors.fill: parent
-                                    hoverEnabled: true
+                                    hoverEnabled: !vscodeExtensionInstalled
+                                    enabled: !vscodeExtensionInstalled
                                     onClicked: {
                                         Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--install-vscode-extension"]);
+                                        vscodeExtensionInstalled = true;
                                     }
                                 }
                             }
@@ -1945,6 +1959,89 @@ FloatingWindow {
                                 onToggled: (newValue) => {
                                     vscodeAutoUpdate = newValue;
                                     Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--set-vscode-autoupdate", newValue ? "true" : "false"]);
+                                }
+                            }
+                        }
+
+                        Item { width: 1; height: 8 } // spacing
+
+                        Text {
+                            text: "Spotify (Spicetify)"
+                            color: colorOnSurface
+                            font.pixelSize: 14
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                            topPadding: 12
+                            bottomPadding: 2
+                        }
+
+                        SettingsCard {
+                            title: "Setup Spicetify"
+                            
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 100
+                                height: 28
+                                radius: 6
+                                color: spicetifyInstalled ? colorSecondaryContainer : (installSpicetifyBtnMouse.containsMouse ? colorButtonBgHover : colorButtonBg)
+                                border.width: 1
+                                border.color: spicetifyInstalled ? colorPrimary : colorOutline
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: spicetifyInstalled ? "✓ Setup" : "Setup"
+                                    color: spicetifyInstalled ? colorPrimary : colorOnSurface
+                                    font.pixelSize: 12
+                                    font.family: "Inter Display"
+                                    font.weight: Font.Medium
+                                }
+
+                                MouseArea {
+                                    id: installSpicetifyBtnMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: !spicetifyInstalled
+                                    enabled: !spicetifyInstalled
+                                    onClicked: {
+                                        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--install-spicetify"]);
+                                        spicetifyInstalled = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: "Apply Spotify Theme"
+                            
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 100
+                                height: 28
+                                radius: 6
+                                color: applySpicetifyBtnMouse.containsMouse ? colorButtonBgHover : colorButtonBg
+                                border.width: 1
+                                border.color: colorOutline
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Apply"
+                                    color: colorPrimary
+                                    font.pixelSize: 12
+                                    font.family: "Inter Display"
+                                    font.weight: Font.Medium
+                                }
+
+                                MouseArea {
+                                    id: applySpicetifyBtnMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: {
+                                        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--apply-spicetify"]);
+                                    }
                                 }
                             }
                         }
