@@ -14,6 +14,7 @@ Rectangle {
     border.width: 1
 
     property QtObject theme
+    property string iconFontFamily: ""
 
     // Calendar state
     property int currentMonth: new Date().getMonth()
@@ -119,8 +120,10 @@ Rectangle {
                     
                     Text {
                         anchors.centerIn: parent
-                        text: "📅"
+                        text: "\uf073"
+                        font.family: root.iconFontFamily
                         font.pixelSize: 11
+                        color: root.theme.primary
                     }
                 }
 

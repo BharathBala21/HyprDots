@@ -14,6 +14,7 @@ Rectangle {
     border.width: 1
 
     property QtObject theme
+    property string iconFontFamily: ""
 
     // Counts
     property int doneCount: 0
@@ -59,8 +60,10 @@ Rectangle {
                     
                     Text {
                         anchors.centerIn: parent
-                        text: "📋"
+                        text: "\uf0ae"
+                        font.family: root.iconFontFamily
                         font.pixelSize: 11
+                        color: root.theme.primary
                     }
                 }
 

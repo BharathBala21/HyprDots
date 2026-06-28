@@ -15,6 +15,7 @@ Rectangle {
     border.width: 1
 
     property QtObject theme
+    property string iconFontFamily: ""
 
     // Timer variables
     property int totalSeconds: 600
@@ -77,8 +78,10 @@ Rectangle {
                     
                     Text {
                         anchors.centerIn: parent
-                        text: "⏳"
+                        text: "\uf252"
+                        font.family: root.iconFontFamily
                         font.pixelSize: 11
+                        color: root.theme.primary
                     }
                 }
 

@@ -13,6 +13,11 @@ Item {
     // Track if there are open windows in the active workspace
     property bool hasOpenWindows: false
 
+
+    // Font families passed down from tide-island shell
+    property string iconFontFamily: ""
+    property string textFontFamily: ""
+
     // Instantiate Matugen theme loader with passed colors
     MatugenTheme {
         id: theme
@@ -59,7 +64,7 @@ Item {
         width: 300
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        anchors.topMargin: 48 // Start below the status bar
+        anchors.topMargin: 64 // Pushed widgets downwards to look cleaner
         anchors.bottomMargin: 16
 
         // Slide animation: closed is off-screen, open is at x: 16
@@ -94,24 +99,28 @@ Item {
                 TimerWidget {
                     theme: theme
                     width: parent.width
+                    iconFontFamily: root.iconFontFamily
                 }
 
                 // 2. Calendar Widget
                 CalendarWidget {
                     theme: theme
                     width: parent.width
+                    iconFontFamily: root.iconFontFamily
                 }
 
                 // 3. World Clock Widget
                 WorldClockWidget {
                     theme: theme
                     width: parent.width
+                    iconFontFamily: root.iconFontFamily
                 }
 
                 // 4. Todo List Widget
                 TodoListWidget {
                     theme: theme
                     width: parent.width
+                    iconFontFamily: root.iconFontFamily
                 }
             }
         }

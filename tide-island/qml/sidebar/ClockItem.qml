@@ -11,53 +11,38 @@ Item {
     property date currentDate
     property var tzList
     property int selectedIndex
+    property string iconFontFamily: ""
 
     signal selectionChanged(int idx)
 
-    // Calculate time details in the timezone
+    // Calculate target timezone time details using standard UTC offsets
+    // This bypasses QML's incomplete toLocaleString timezone support!
     readonly property var tzDetails: {
         if (!tzList || selectedIndex < 0 || selectedIndex >= tzList.length) {
             return { hours: 0, minutes: 0, seconds: 0, timeString: "00:00" }
         }
         
-        var zone = tzList[selectedIndex].zone
-        try {
-            var options = {
-                timeZone: zone,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            }
-            var localeStr = currentDate.toLocaleString("en-US", options)
-            var match = localeStr.match(/(\d+):(\d+):(\d+)/)
-            if (match) {
-                var h = parseInt(match[1])
-                var m = parseInt(match[2])
-                var s = parseInt(match[3])
-                
-                var hStr = h < 10 ? "0" + h : h
-                var mStr = m < 10 ? "0" + m : m
-                
-                return {
-                    hours: h,
-                    minutes: m,
-                    seconds: s,
-                    timeString: hStr + ":" + mStr
-                }
-            }
-        } catch(e) {
-            console.log("Error formatting timezone:", e)
-        }
+        var targetTz = tzList[selectedIndex];
+        var offsetMinutes = targetTz.offset; // e.g. 330 for India (+5:30)
         
-        var lh = currentDate.getHours()
-        var lm = currentDate.getMinutes()
-        var ls = currentDate.getSeconds()
+        // Calculate UTC milliseconds and add target offset milliseconds
+        var localTime = currentDate.getTime();
+        var localOffsetMs = currentDate.getTimezoneOffset() * 60000;
+        var utcMs = localTime + localOffsetMs;
+        var targetDate = new Date(utcMs + (offsetMinutes * 60000));
+        
+        var h = targetDate.getHours();
+        var m = targetDate.getMinutes();
+        var s = targetDate.getSeconds();
+        
+        var hStr = h < 10 ? "0" + h : h
+        var mStr = m < 10 ? "0" + m : m
+        
         return {
-            hours: lh,
-            minutes: lm,
-            seconds: ls,
-            timeString: (lh < 10 ? "0" + lh : lh) + ":" + (lm < 10 ? "0" + lm : lm)
+            hours: h,
+            minutes: m,
+            seconds: s,
+            timeString: hStr + ":" + mStr
         }
     }
 
@@ -70,7 +55,7 @@ Item {
         anchors.fill: parent
         spacing: 4
 
-        // City dropdown
+        // City dropdown button
         ComboBox {
             id: cityCombo
             Layout.fillWidth: true
@@ -79,25 +64,9 @@ Item {
             model: root.tzList
             textRole: "name"
 
-            delegate: ItemDelegate {
-                id: itemDel
-                width: cityCombo.width
-                height: 22
-                contentItem: Text {
-                    text: modelData.name
-                    color: itemDel.highlighted ? root.theme.primary : root.theme.on_surface
-                    font.pixelSize: 10
-                    verticalAlignment: Text.AlignVCenter
-                    leftPadding: 6
-                }
-                background: Rectangle {
-                    color: itemDel.hovered || itemDel.highlighted ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : "transparent"
-                    radius: 4
-                }
-            }
-
+            // Just make the main button look like a text button
             contentItem: Text {
-                text: cityCombo.currentText
+                text: root.tzList && root.tzList[root.selectedIndex] ? root.tzList[root.selectedIndex].name : ""
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
                 color: root.theme.on_surface
@@ -131,17 +100,90 @@ Item {
                 }
             }
 
+            // Custom search-based popup menu
             popup: Popup {
+                id: comboPopup
                 y: cityCombo.height + 2
-                width: cityCombo.width
-                implicitHeight: contentItem.implicitHeight + 4
-                padding: 2
+                width: 150
+                implicitHeight: Math.min(220, popupLayout.implicitHeight + 10)
+                padding: 4
 
-                contentItem: ListView {
-                    clip: true
-                    implicitHeight: contentHeight
-                    model: cityCombo.popup.visible ? cityCombo.delegateModel : null
-                    currentIndex: cityCombo.highlightedIndex
+                ColumnLayout {
+                    id: popupLayout
+                    anchors.fill: parent
+                    spacing: 4
+
+                    // Search input box
+                    TextField {
+                        id: searchField
+                        Layout.fillWidth: true
+                        implicitHeight: 24
+                        placeholderText: qsTr("Search...")
+                        font.pixelSize: 10
+                        color: root.theme.on_surface
+                        placeholderTextColor: root.theme.on_surface_variant
+                        
+                        background: Rectangle {
+                            color: Qt.rgba(root.theme.surface_container.r, root.theme.surface_container.g, root.theme.surface_container.b, 0.5)
+                            border.color: searchField.activeFocus ? root.theme.primary : Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.2)
+                            border.width: 1
+                            radius: 4
+                        }
+
+                        // Set focus to input box when opened
+                        Connections {
+                            target: comboPopup
+                            function onOpened() {
+                                searchField.text = ""
+                                searchField.forceActiveFocus()
+                            }
+                        }
+                    }
+
+                    // Scrollable list of filtered results
+                    ListView {
+                        id: comboList
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        
+                        model: {
+                            var txt = searchField.text.trim().toLowerCase();
+                            if (txt === "") {
+                                return root.tzList;
+                            }
+                            var res = [];
+                            for (var i = 0; i < root.tzList.length; i++) {
+                                if (root.tzList[i].name.toLowerCase().indexOf(txt) !== -1) {
+                                    res.push(root.tzList[i]);
+                                }
+                            }
+                            return res;
+                        }
+
+                        delegate: ItemDelegate {
+                            id: itemDel
+                            width: comboList.width
+                            height: 22
+                            
+                            contentItem: Text {
+                                text: modelData.name
+                                color: itemDel.highlighted ? root.theme.primary : root.theme.on_surface
+                                font.pixelSize: 10
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 4
+                            }
+                            background: Rectangle {
+                                color: itemDel.hovered || itemDel.highlighted ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : "transparent"
+                                radius: 4
+                            }
+                            
+                            onClicked: {
+                                root.selectionChanged(modelData.origIndex);
+                                comboPopup.close();
+                            }
+                        }
+                    }
                 }
 
                 background: Rectangle {
@@ -150,10 +192,6 @@ Item {
                     border.width: 1
                     radius: 8
                 }
-            }
-
-            onActivated: (index) => {
-                root.selectionChanged(index)
             }
         }
 
@@ -166,7 +204,7 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: "#121212" // Solid dark clock face (macOS style)
+                color: "#121212" // Solid dark clock face
                 border.color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.3)
                 border.width: 1.5
 

@@ -83,6 +83,10 @@ PanelWindow {
         ? !!shellRootController.screenRecordingActive
         : false
     readonly property bool hasOpenWindowsInWorkspace: {
+        const dummy1 = ToplevelManager.toplevels ? ToplevelManager.toplevels.values.length : 0;
+        const dummy2 = Hyprland.activeToplevel;
+        const dummy3 = hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 0;
+
         if (!hyprMonitor || !hyprMonitor.activeWorkspace) {
             return false;
         }
@@ -92,10 +96,7 @@ PanelWindow {
                 for (let i = 0; i < count; i++) {
                     const tl = Hyprland.toplevels.get(i);
                     if (tl && tl.workspace && tl.workspace.id === hyprMonitor.activeWorkspace.id) {
-                        const appid = tl.wayland ? tl.wayland.appid : "";
-                        if (appid !== "quickshell" && appid !== "") {
-                            return true;
-                        }
+                        return true;
                     }
                 }
             }
@@ -220,7 +221,7 @@ PanelWindow {
             height: (sidebar.visible && root.sidebarOpen) ? root.height : 0
         }
     }
-    implicitHeight: (islandContainer.islandState === "powermenu" || root.sidebarOpen) ? screen.height : 680
+    implicitHeight: screen.height
     exclusiveZone: 38
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu" || root.sidebarOpen)
@@ -2619,6 +2620,8 @@ PanelWindow {
             themeColors: root.themeColors
             isOpen: root.sidebarOpen
             hasOpenWindows: root.hasOpenWindowsInWorkspace
+            iconFontFamily: root.iconFontFamily
+            textFontFamily: root.textFontFamily
             anchors.fill: parent
         }
 
