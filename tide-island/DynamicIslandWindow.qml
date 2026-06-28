@@ -1787,6 +1787,26 @@ PanelWindow {
                 property bool suppressNextClick: false
                 property bool preparedOverviewOnPress: false
 
+                onWheel: (wheel) => {
+                    const isResting = islandContainer.islandState === islandContainer.restingState
+                        || islandContainer.islandState === "split"
+                        || islandContainer.islandState === "long_capsule"
+                        || islandContainer.islandState === "custom"
+                        || islandContainer.islandState === "lyrics"
+                        || islandContainer.islandState === "utilities";
+
+                    if (isResting) {
+                        if (wheel.angleDelta.y > 0) {
+                            hyprDispatch.focusWorkspace("r-1");
+                        } else if (wheel.angleDelta.y < 0) {
+                            hyprDispatch.focusWorkspace("r+1");
+                        }
+                        wheel.accepted = true;
+                    } else {
+                        wheel.accepted = false;
+                    }
+                }
+
                 Timer {
                     id: swipeSuppressReset
                     interval: 180
