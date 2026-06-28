@@ -146,11 +146,28 @@ Item {
                         
                         Keys.onEscapePressed: comboPopup.close()
                         
-                        // Down arrow moves focus to the list
+                        // Down arrow navigates options without losing TextField focus
                         Keys.onDownPressed: {
                             if (comboList.count > 0) {
-                                comboList.currentIndex = 0;
-                                comboList.forceActiveFocus();
+                                comboList.currentIndex = (comboList.currentIndex + 1) % comboList.count;
+                            }
+                        }
+
+                        // Up arrow navigates options without losing TextField focus
+                        Keys.onUpPressed: {
+                            if (comboList.count > 0) {
+                                comboList.currentIndex = (comboList.currentIndex - 1 + comboList.count) % comboList.count;
+                            }
+                        }
+
+                        // Return key selects the active option
+                        Keys.onReturnPressed: {
+                            if (comboList.count > 0 && comboList.currentIndex >= 0 && comboList.currentIndex < comboList.count) {
+                                var currentData = comboList.model[comboList.currentIndex];
+                                if (currentData) {
+                                    root.selectionChanged(currentData.origIndex);
+                                    comboPopup.close();
+                                }
                             }
                         }
                     }
@@ -162,7 +179,6 @@ Item {
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         spacing: 2
-                        focus: true
                         
                         model: {
                             var txt = searchField.text.trim().toLowerCase();
@@ -178,24 +194,9 @@ Item {
                             return res;
                         }
 
-                        // Up arrow on first item moves focus back to search field
-                        Keys.onUpPressed: {
-                            if (currentIndex === 0) {
-                                searchField.forceActiveFocus();
-                            } else {
-                                decrementCurrentIndex();
-                            }
-                        }
-                        
-                        // Enter/Return key selects the current item
-                        Keys.onReturnPressed: {
-                            if (currentIndex >= 0 && currentIndex < count) {
-                                var currentData = model[currentIndex];
-                                if (currentData) {
-                                    root.selectionChanged(currentData.origIndex);
-                                    comboPopup.close();
-                                }
-                            }
+                        // Auto-scroll the active keyboard item into view
+                        onCurrentIndexChanged: {
+                            positionViewAtIndex(currentIndex, ListView.Contain);
                         }
 
                         delegate: ItemDelegate {

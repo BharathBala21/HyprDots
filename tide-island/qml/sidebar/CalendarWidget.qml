@@ -21,6 +21,12 @@ Rectangle {
     property int currentYear: new Date().getFullYear()
     property var gridDays: []
 
+    // View Mode: "days", "months", "years"
+    property string viewMode: "days"
+    
+    // Year range offset page (for 12-year grid navigation)
+    property int startYearOfPage: currentYear - 5
+
     readonly property var monthNames: [
         qsTr("January"), qsTr("February"), qsTr("March"), qsTr("April"),
         qsTr("May"), qsTr("June"), qsTr("July"), qsTr("August"),
@@ -76,21 +82,33 @@ Rectangle {
         gridDays = days
     }
 
-    function prevMonth() {
-        if (currentMonth === 0) {
-            currentMonth = 11
+    function prev() {
+        if (viewMode === "days") {
+            if (currentMonth === 0) {
+                currentMonth = 11
+                currentYear--
+            } else {
+                currentMonth--
+            }
+        } else if (viewMode === "months") {
             currentYear--
-        } else {
-            currentMonth--
+        } else if (viewMode === "years") {
+            startYearOfPage -= 12
         }
     }
 
-    function nextMonth() {
-        if (currentMonth === 11) {
-            currentMonth = 0
+    function next() {
+        if (viewMode === "days") {
+            if (currentMonth === 11) {
+                currentMonth = 0
+                currentYear++
+            } else {
+                currentMonth++
+            }
+        } else if (viewMode === "months") {
             currentYear++
-        } else {
-            currentMonth++
+        } else if (viewMode === "years") {
+            startYearOfPage += 12
         }
     }
 
@@ -98,6 +116,8 @@ Rectangle {
         var today = new Date()
         currentMonth = today.getMonth()
         currentYear = today.getFullYear()
+        startYearOfPage = currentYear - 5
+        viewMode = "days"
     }
 
     ColumnLayout {
@@ -127,11 +147,60 @@ Rectangle {
                     }
                 }
 
-                Text {
-                    text: root.monthNames[root.currentMonth] + " " + root.currentYear
-                    color: root.theme.on_surface
-                    font.pixelSize: 13
-                    font.weight: Font.DemiBold
+                // Clickable Header Month/Year Selector
+                RowLayout {
+                    spacing: 2
+
+                    Button {
+                        id: headerMonthBtn
+                        implicitWidth: contentItem.implicitWidth + 8
+                        implicitHeight: 24
+                        background: Rectangle {
+                            color: headerMonthBtn.hovered ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.1) : "transparent"
+                            radius: 4
+                        }
+                        contentItem: Text {
+                            text: root.monthNames[root.currentMonth]
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                            color: root.viewMode === "months" ? root.theme.primary : root.theme.on_surface
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: {
+                            if (root.viewMode === "months") {
+                                root.viewMode = "days"
+                            } else {
+                                root.viewMode = "months"
+                            }
+                        }
+                    }
+
+                    Button {
+                        id: headerYearBtn
+                        implicitWidth: contentItem.implicitWidth + 8
+                        implicitHeight: 24
+                        background: Rectangle {
+                            color: headerYearBtn.hovered ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.1) : "transparent"
+                            radius: 4
+                        }
+                        contentItem: Text {
+                            text: root.currentYear
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                            color: root.viewMode === "years" ? root.theme.primary : root.theme.on_surface
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: {
+                            if (root.viewMode === "years") {
+                                root.viewMode = "days"
+                            } else {
+                                root.startYearOfPage = root.currentYear - 5
+                                root.viewMode = "years"
+                            }
+                        }
+                    }
                 }
             }
 
@@ -157,7 +226,7 @@ Rectangle {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
-                    onClicked: root.prevMonth()
+                    onClicked: root.prev()
                 }
 
                 Button {
@@ -196,80 +265,177 @@ Rectangle {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
-                    onClicked: root.nextMonth()
+                    onClicked: root.next()
                 }
             }
         }
 
-        // Calendar Grid
-        ColumnLayout {
+        // Main View Content Area
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 4
 
-            // Weekday labels
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 0
-                Repeater {
-                    model: [qsTr("S"), qsTr("M"), qsTr("T"), qsTr("W"), qsTr("T"), qsTr("F"), qsTr("S")]
-                    delegate: Text {
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                        text: modelData
-                        font.pixelSize: 10
-                        font.weight: Font.Medium
-                        color: index === 0 || index === 6 ? root.theme.primary : root.theme.on_surface_variant
+            // 1. DAYS VIEW
+            ColumnLayout {
+                id: daysView
+                anchors.fill: parent
+                visible: root.viewMode === "days"
+                spacing: 4
+
+                // Weekday labels
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    Repeater {
+                        model: [qsTr("S"), qsTr("M"), qsTr("T"), qsTr("W"), qsTr("T"), qsTr("F"), qsTr("S")]
+                        delegate: Text {
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                            text: modelData
+                            font.pixelSize: 10
+                            font.weight: Font.Medium
+                            color: index === 0 || index === 6 ? root.theme.primary : root.theme.on_surface_variant
+                        }
+                    }
+                }
+
+                // Divider
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.1)
+                }
+
+                // Days grid
+                Grid {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    columns: 7
+                    spacing: 0
+
+                    readonly property real cellWidth: width / 7
+                    readonly property real cellHeight: height / 6
+
+                    Repeater {
+                        model: root.gridDays
+                        delegate: Item {
+                            width: parent.cellWidth
+                            height: parent.cellHeight
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: Math.min(parent.width, parent.height) - 4
+                                height: width
+                                radius: width / 2
+                                color: modelData.isToday ? root.theme.primary : "transparent"
+                                
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: modelData.day
+                                    font.pixelSize: 10
+                                    font.weight: modelData.isToday ? Font.Bold : Font.Normal
+                                    color: {
+                                        if (modelData.isToday)
+                                            return root.theme.on_primary
+                                        if (modelData.isCurrentMonth)
+                                            return root.theme.on_surface
+                                        return root.theme.on_surface_variant
+                                    }
+                                    opacity: modelData.isCurrentMonth ? 1.0 : 0.35
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // Divider
-            Rectangle {
-                Layout.fillWidth: true
-                height: 1
-                color: Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.1)
-            }
-
-            // Days grid
+            // 2. MONTHS VIEW (4x3 Grid)
             Grid {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                columns: 7
-                spacing: 0
+                id: monthsView
+                anchors.fill: parent
+                visible: root.viewMode === "months"
+                columns: 4
+                rows: 3
+                spacing: 6
 
-                readonly property real cellWidth: width / 7
-                readonly property real cellHeight: height / 6
+                readonly property real cellWidth: (width - (spacing * 3)) / 4
+                readonly property real cellHeight: (height - (spacing * 2)) / 3
 
                 Repeater {
-                    model: root.gridDays
-                    delegate: Item {
-                        width: parent.cellWidth
-                        height: parent.cellHeight
+                    model: [
+                        qsTr("Jan"), qsTr("Feb"), qsTr("Mar"), qsTr("Apr"),
+                        qsTr("May"), qsTr("Jun"), qsTr("Jul"), qsTr("Aug"),
+                        qsTr("Sep"), qsTr("Oct"), qsTr("Nov"), qsTr("Dec")
+                    ]
+                    delegate: Button {
+                        id: mBtn
+                        width: monthsView.cellWidth
+                        height: monthsView.cellHeight
 
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: Math.min(parent.width, parent.height) - 4
-                            height: width
-                            radius: width / 2
-                            
-                            // Highlight today with solid primary color (macOS style)
-                            color: modelData.isToday ? root.theme.primary : "transparent"
-                            
-                            Text {
-                                anchors.centerIn: parent
-                                text: modelData.day
-                                font.pixelSize: 10
-                                font.weight: modelData.isToday ? Font.Bold : Font.Normal
-                                color: {
-                                    if (modelData.isToday)
-                                        return root.theme.on_primary
-                                    if (modelData.isCurrentMonth)
-                                        return root.theme.on_surface
-                                    return root.theme.on_surface_variant
-                                }
-                                opacity: modelData.isCurrentMonth ? 1.0 : 0.35
-                            }
+                        background: Rectangle {
+                            color: root.currentMonth === index ? root.theme.primary : (mBtn.hovered ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.05))
+                            radius: 8
+                            border.color: root.currentMonth === index ? "transparent" : Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.15)
+                            border.width: 1
+                        }
+
+                        contentItem: Text {
+                            text: modelData
+                            font.pixelSize: 11
+                            font.weight: root.currentMonth === index ? Font.Bold : Font.Normal
+                            color: root.currentMonth === index ? root.theme.on_primary : root.theme.on_surface
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            root.currentMonth = index
+                            root.viewMode = "days"
+                        }
+                    }
+                }
+            }
+
+            // 3. YEARS VIEW (4x3 Grid)
+            Grid {
+                id: yearsView
+                anchors.fill: parent
+                visible: root.viewMode === "years"
+                columns: 4
+                rows: 3
+                spacing: 6
+
+                readonly property real cellWidth: (width - (spacing * 3)) / 4
+                readonly property real cellHeight: (height - (spacing * 2)) / 3
+
+                Repeater {
+                    model: 12
+                    delegate: Button {
+                        id: yBtn
+                        width: yearsView.cellWidth
+                        height: yearsView.cellHeight
+
+                        readonly property int yearValue: root.startYearOfPage + index
+
+                        background: Rectangle {
+                            color: root.currentYear === yBtn.yearValue ? root.theme.primary : (yBtn.hovered ? Qt.rgba(root.theme.primary.r, root.theme.primary.g, root.theme.primary.b, 0.15) : Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.05))
+                            radius: 8
+                            border.color: root.currentYear === yBtn.yearValue ? "transparent" : Qt.rgba(root.theme.outline.r, root.theme.outline.g, root.theme.outline.b, 0.15)
+                            border.width: 1
+                        }
+
+                        contentItem: Text {
+                            text: yBtn.yearValue
+                            font.pixelSize: 11
+                            font.weight: root.currentYear === yBtn.yearValue ? Font.Bold : Font.Normal
+                            color: root.currentYear === yBtn.yearValue ? root.theme.on_primary : root.theme.on_surface
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            root.currentYear = yBtn.yearValue
+                            root.viewMode = "days"
                         }
                     }
                 }
