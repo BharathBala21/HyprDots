@@ -14,6 +14,7 @@ Scope {
     property bool superReleaseMightTrigger: false
     property bool settingsWindowOpen: false
     property bool cheatsheetWindowOpen: false
+    property bool cheatsheetOpenOnStartup: false
 
     property real nightLightTemp: 0.0
     onNightLightTempChanged: {
@@ -66,6 +67,18 @@ Scope {
         }
     }
 
+    FileView {
+        id: cheatsheetConfigWatcher
+        path: getHomePath() + "/.config/tide-island/cheatsheet_config.json"
+        watchChanges: true
+        blockLoading: true
+        printErrors: false
+
+        onFileChanged: {
+            cheatsheetConfigWatcher.reload();
+        }
+    }
+
     function parseColorsQml(qmlText) {
         if (!qmlText) return null;
         const colors = {};
@@ -75,6 +88,12 @@ Scope {
             colors[match[1]] = match[2];
         }
         return colors;
+    }
+
+    function setCheatsheetOpenOnStartup(val) {
+        shellRoot.cheatsheetOpenOnStartup = val;
+        const config = { openOnStartup: val };
+        cheatsheetConfigWatcher.setText(JSON.stringify(config, null, 4));
     }
 
     readonly property var matugenThemeColors: parseColorsQml(colorsWatcher.text())
@@ -393,6 +412,23 @@ Scope {
         startupCheckHypridleProcess.running = true;
         startupQueryHyprsunsetProcess.running = true;
         startupPpQueryProcess.running = true;
+
+        // Load cheatsheet config on completed
+        cheatsheetConfigWatcher.reload();
+        const configText = cheatsheetConfigWatcher.text();
+        if (configText) {
+            try {
+                const config = JSON.parse(configText);
+                if (config) {
+                    shellRoot.cheatsheetOpenOnStartup = !!config.openOnStartup;
+                    if (shellRoot.cheatsheetOpenOnStartup) {
+                        shellRoot.cheatsheetWindowOpen = true;
+                    }
+                }
+            } catch (e) {
+                console.log("Error parsing cheatsheet config on completion:", e);
+            }
+        }
     }
 
     Variants {
@@ -429,6 +465,11 @@ Scope {
         
         onStatusChanged: {
             if (status === Loader.Ready) {
+                item.themeColors = Qt.binding(() => shellRoot.matugenThemeColors);
+                item.openOnStartup = Qt.binding(() => shellRoot.cheatsheetOpenOnStartup);
+                item.toggleOpenOnStartup.connect((val) => {
+                    shellRoot.setCheatsheetOpenOnStartup(val);
+                });
                 item.cheatsheetClosed.connect(() => {
                     shellRoot.cheatsheetWindowOpen = false;
                 });

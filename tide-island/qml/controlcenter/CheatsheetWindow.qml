@@ -7,8 +7,8 @@ FloatingWindow {
     id: root
 
     title: "Cheat sheet"
-    implicitWidth: 1060
-    implicitHeight: 600
+    implicitWidth: 1120 // Slightly widened to provide cozy breathing room for descriptions
+    implicitHeight: 620
     color: "transparent"
 
     signal cheatsheetClosed()
@@ -23,12 +23,18 @@ FloatingWindow {
         cheatsheetClosed();
     }
 
+    function close() {
+        cheatsheetClosed();
+    }
+
     readonly property string iconFontFamily: UserConfig.iconFontFamily
     readonly property string textFontFamily: UserConfig.textFontFamily
     readonly property string heroFontFamily: UserConfig.heroFontFamily
 
     // Matugen dynamic theme colors
-    readonly property var themeColors: shellRoot.matugenThemeColors
+    property var themeColors: shellRoot.matugenThemeColors
+    property bool openOnStartup: false
+    signal toggleOpenOnStartup(bool val)
 
     readonly property color colorBackground: themeColors ? themeColors.background : "#0b0c10"
     readonly property color colorPrimary: themeColors ? themeColors.primary : "#c084fc"
@@ -38,20 +44,13 @@ FloatingWindow {
     readonly property color colorSecondaryContainer: themeColors ? themeColors.secondary_container : Qt.rgba(1, 1, 1, 0.08)
     readonly property color colorOnSecondaryContainer: themeColors ? themeColors.on_secondary_container : "#f8fafc"
 
-    // Defer focus to the window root to handle escape key press
+    // Defer focus to the background container to handle escape key press without warnings
     Timer {
         id: focusTimer
         interval: 10
         running: true
         repeat: false
-        onTriggered: root.forceActiveFocus()
-    }
-
-    Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape) {
-            root.close();
-            event.accepted = true;
-        }
+        onTriggered: cheatsheetContentContainer.forceActiveFocus()
     }
 
     // Helper function to parse key combo string into friendly symbols
@@ -140,7 +139,10 @@ FloatingWindow {
         { keys: "Super+A", desc: "Control center" },
         { keys: "Super+L", desc: "Lock screen" },
         { keys: "Ctrl+Shift+Esc", desc: "System monitor" },
-        { keys: "Super+U", desc: "Utilities" }
+        { keys: "Super+U", desc: "Utilities" },
+        { keys: "Super+/", desc: "Toggle cheatsheet" },
+        { keys: "Super+Shift+R", desc: "Reload shell" },
+        { keys: "Super+Shift+Q", desc: "Exit shell" }
     ]
 
     readonly property var appsMediaBinds: [
@@ -154,22 +156,31 @@ FloatingWindow {
         { keys: "Super+Shift+S", desc: "Snip area" },
         { keys: "Print", desc: "Snip screen" },
         { keys: "Super+Shift+W", desc: "Snip window" },
-        { keys: "Super+R", desc: "Screen recording" }
+        { keys: "Super+R", desc: "Start/Stop Screen recording" }
     ]
 
     // Background styling with custom rounding to match tide-island theme
     Rectangle {
+        id: cheatsheetContentContainer
         anchors.fill: parent
         color: colorBackground
         border.width: 0
         border.color: colorOutline
         radius: 30
+        focus: true
+
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Escape) {
+                root.close();
+                event.accepted = true;
+            }
+        }
     }
 
     // Main Layout column
     Column {
         anchors.fill: parent
-        anchors.margins: 20
+        anchors.margins: 24
         spacing: 16
 
         // Header Section
@@ -177,15 +188,120 @@ FloatingWindow {
             width: parent.width
             height: 40
 
-            Text {
-                id: titleText
+            // Open on startup toggle on the left
+            Row {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+
+                Text {
+                    text: "Open on startup"
+                    font.family: root.textFontFamily
+                    font.pixelSize: 13
+                    color: colorOnSurfaceVariant
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                // Switch widget
+                MouseArea {
+                    id: startupToggle
+                    width: 38
+                    height: 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    hoverEnabled: true
+                    onClicked: {
+                        root.toggleOpenOnStartup(!root.openOnStartup);
+                    }
+
+                    Rectangle {
+                        id: switchTrack
+                        anchors.fill: parent
+                        radius: height / 2
+                        color: root.openOnStartup ? colorPrimary : (startupToggle.containsMouse ? colorSecondaryContainer : Qt.rgba(1, 1, 1, 0.05))
+                        border.width: 1
+                        border.color: root.openOnStartup ? "transparent" : colorOutline
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Rectangle {
+                            id: switchThumb
+                            width: 16
+                            height: 16
+                            radius: 8
+                            color: root.openOnStartup ? colorBackground : (startupToggle.containsMouse ? colorOnSurface : colorOnSurfaceVariant)
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: root.openOnStartup ? (parent.width - width - 3) : 3
+                            Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.InOutQuad } }
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                    }
+                }
+            }
+
+            // Centered title and keycap shortcut
+            Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Cheat sheet"
-                font.family: root.heroFontFamily
-                font.pixelSize: 24
-                font.bold: true
-                color: colorOnSurface
+                spacing: 12
+
+                Text {
+                    id: titleText
+                    text: "Cheat sheet"
+                    font.family: root.heroFontFamily
+                    font.pixelSize: 24
+                    font.bold: true
+                    color: colorOnSurface
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                // Keycap shortcut modular group
+                Row {
+                    id: headerShortcutRow
+                    spacing: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    
+                    readonly property var headerKeys: ["", "/"]
+
+                    Repeater {
+                        model: headerShortcutRow.headerKeys
+
+                        Row {
+                            spacing: 6
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            // Individual modular keycap
+                            Rectangle {
+                                height: 24
+                                width: Math.max(24, headerKeyText.implicitWidth + 12)
+                                radius: 6
+                                color: colorSecondaryContainer
+                                border.width: 1
+                                border.color: colorOutline
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    id: headerKeyText
+                                    text: modelData
+                                    font.family: modelData === "" ? root.iconFontFamily : root.textFontFamily
+                                    font.pixelSize: modelData === "" ? 12 : 11
+                                    font.bold: true
+                                    color: colorOnSecondaryContainer
+                                    anchors.centerIn: parent
+                                }
+                            }
+
+                            // Plus separator logic
+                            Text {
+                                text: "+"
+                                font.family: root.textFontFamily
+                                font.pixelSize: 12
+                                color: colorOnSurfaceVariant
+                                opacity: 0.5
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: index < headerShortcutRow.headerKeys.length - 1
+                            }
+                        }
+                    }
+                }
             }
 
             // Close button (x)
@@ -196,7 +312,7 @@ FloatingWindow {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 hoverEnabled: true
-                onClicked: shellRoot.cheatsheetWindowOpen = false
+                onClicked: root.close()
 
                 Rectangle {
                     anchors.fill: parent
@@ -223,11 +339,11 @@ FloatingWindow {
             color: colorOutline
         }
 
-        // Scrollable Area containing keybind columns to prevent any overflow issues
+        // Scrollable Area containing keybind columns
         ScrollView {
             id: scrollView
             width: parent.width
-            height: parent.height - 40 - 16 - 17 // Remaining height
+            height: parent.height - 40 - 16 - 24 // Adjusted to offset bottom margins cleanly
             clip: true
             
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -235,24 +351,24 @@ FloatingWindow {
 
             Row {
                 width: scrollView.availableWidth
-                spacing: 20
+                spacing: 24 // Increased column gap slightly for easier parsing
 
                 // Column 1: Window
                 Column {
-                    width: (parent.width - 60) / 4
-                    spacing: 14
+                    width: (parent.width - 72) / 4
+                    spacing: 16
 
                     Text {
                         text: "Window"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 18
+                        font.pixelSize: 16
                         font.bold: true
                         color: colorPrimary
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 10
+                        spacing: 4
                         Repeater {
                             model: root.windowBinds
                             delegate: shortcutRowDelegate
@@ -262,20 +378,20 @@ FloatingWindow {
 
                 // Column 2: Workspace
                 Column {
-                    width: (parent.width - 60) / 4
-                    spacing: 14
+                    width: (parent.width - 72) / 4
+                    spacing: 16
 
                     Text {
                         text: "Workspace"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 18
+                        font.pixelSize: 16
                         font.bold: true
                         color: colorPrimary
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 10
+                        spacing: 4
                         Repeater {
                             model: root.workspaceBinds
                             delegate: shortcutRowDelegate
@@ -285,20 +401,20 @@ FloatingWindow {
 
                 // Column 3: Shell & System
                 Column {
-                    width: (parent.width - 60) / 4
-                    spacing: 14
+                    width: (parent.width - 72) / 4
+                    spacing: 16
 
                     Text {
                         text: "Shell & System"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 18
+                        font.pixelSize: 16
                         font.bold: true
                         color: colorPrimary
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 10
+                        spacing: 4
                         Repeater {
                             model: root.shellBinds
                             delegate: shortcutRowDelegate
@@ -308,20 +424,20 @@ FloatingWindow {
 
                 // Column 4: Apps & Media
                 Column {
-                    width: (parent.width - 60) / 4
-                    spacing: 14
+                    width: (parent.width - 72) / 4
+                    spacing: 16
 
                     Text {
                         text: "Apps & Media"
                         font.family: root.heroFontFamily
-                        font.pixelSize: 18
+                        font.pixelSize: 16
                         font.bold: true
                         color: colorPrimary
                     }
 
                     Column {
                         width: parent.width
-                        spacing: 10
+                        spacing: 4
                         Repeater {
                             model: root.appsMediaBinds
                             delegate: shortcutRowDelegate
@@ -332,71 +448,91 @@ FloatingWindow {
         }
     }
 
-    // Row delegate for keycaps and description
+    // Row delegate optimized for instant readability and visual binding alignment
     Component {
         id: shortcutRowDelegate
         Item {
             width: parent.width
-            height: 32
+            height: 34
 
-            Row {
-                id: keysRow
+            // Alternating rows / clean hit box backdrop to guide line tracking
+            Rectangle {
+                anchors.fill: parent
+                radius: 6
+                color: Qt.rgba(1, 1, 1, index % 2 === 0 ? 0.015 : 0.0)
+            }
+
+            // Fixed-width track container for the shortcut keys to align all text descriptions perfectly
+            Item {
+                id: keysContainer
+                width: parent.width * 0.48 // Reserves stable alignment footprint across long combos (e.g., Super+Shift+Arrow Keys)
+                height: parent.height
                 anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 5
+                anchors.leftMargin: 4
 
-                readonly property var keysArray: root.parseKeys(modelData.keys)
+                Row {
+                    id: keysRow
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
 
-                Repeater {
-                    model: keysRow.keysArray
+                    readonly property var keysArray: root.parseKeys(modelData.keys)
 
-                    Row {
-                        spacing: 5
-                        anchors.verticalCenter: parent.verticalCenter
+                    Repeater {
+                        model: keysRow.keysArray
 
-                        Rectangle {
-                            height: 26
-                            width: keyText.text === "" ? 26 : Math.max(26, keyText.implicitWidth + 12)
-                            radius: 6
-                            color: colorSecondaryContainer
-                            border.width: 1
-                            border.color: colorOutline
+                        Row {
+                            spacing: 4
                             anchors.verticalCenter: parent.verticalCenter
+
+                            Rectangle {
+                                height: 24
+                                width: (modelData === "" || modelData === "") ? 24 : Math.max(24, keyText.implicitWidth + 10)
+                                radius: 5
+                                color: colorSecondaryContainer
+                                border.width: 1
+                                border.color: colorOutline
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    id: keyText
+                                    text: modelData
+                                    font.family: (modelData === "" || modelData === "") ? root.iconFontFamily : root.textFontFamily
+                                    font.pixelSize: (modelData === "" || modelData === "") ? 13 : 11
+                                    font.bold: (modelData !== "" && modelData !== "")
+                                    color: colorOnSecondaryContainer
+                                    anchors.centerIn: parent
+                                }
+                            }
 
                             Text {
-                                id: keyText
-                                text: modelData
-                                font.family: modelData === "" ? root.iconFontFamily : root.textFontFamily
-                                font.pixelSize: modelData === "" ? 14 : 13
-                                font.bold: modelData !== ""
-                                color: colorOnSecondaryContainer
-                                anchors.centerIn: parent
+                                text: "+"
+                                font.family: root.textFontFamily
+                                font.pixelSize: 11
+                                color: colorOnSurfaceVariant
+                                opacity: 0.4
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: index < keysRow.keysArray.length - 1
                             }
-                        }
-
-                        Text {
-                            text: "+"
-                            font.family: root.textFontFamily
-                            font.pixelSize: 13
-                            color: colorOnSurfaceVariant
-                            opacity: 0.5
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: index < keysRow.keysArray.length - 1
                         }
                     }
                 }
             }
 
-            // Description label aligned to the right, elided if the column is too narrow to avoid overlapping
+            // Description text is now left-aligned adjacent to the keys container with an elide protective layer
             Text {
+                anchors.left: keysContainer.right
+                anchors.leftMargin: 6
                 anchors.right: parent.right
+                anchors.rightMargin: 4
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - keysRow.width - 8
+                
                 text: modelData.desc
-                color: colorOnSurfaceVariant
+                color: colorOnSurface
+                opacity: 0.85
                 font.family: root.textFontFamily
-                font.pixelSize: 14
-                horizontalAlignment: Text.AlignRight
+                font.pixelSize: 13
+                horizontalAlignment: Text.AlignLeft
                 elide: Text.ElideRight
             }
         }
