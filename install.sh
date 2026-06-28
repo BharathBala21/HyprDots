@@ -205,9 +205,14 @@ setup_configs() {
                     continue
                 fi
 
-                # Delete existing
-                log_info "Removing existing configuration: ${dest_path}"
-                rm -rf "$dest_path"
+                # Delete existing safely
+                if [ -L "$dest_path" ]; then
+                    log_info "Removing existing symlink: ${dest_path}"
+                    rm -f "$dest_path"
+                else
+                    log_info "Removing existing directory: ${dest_path}"
+                    rm -rf "$dest_path"
+                fi
             fi
 
             # Create symlink
@@ -260,8 +265,13 @@ setup_cursor() {
                 if [ -L "$dest_cursor" ] && [ "$(readlink -f "$dest_cursor")" = "$cursor_src" ]; then
                     log_info "Moga cursor is already symlinked in ~/.local/share/icons."
                 else
-                    log_info "Removing existing cursor theme: ${dest_cursor}"
-                    rm -rf "$dest_cursor"
+                    if [ -L "$dest_cursor" ]; then
+                        log_info "Removing existing cursor symlink: ${dest_cursor}"
+                        rm -f "$dest_cursor"
+                    else
+                        log_info "Removing existing cursor directory: ${dest_cursor}"
+                        rm -rf "$dest_cursor"
+                    fi
                     ln -sf "$cursor_src" "$dest_cursor"
                     log_success "Symlinked Moga cursor theme to ~/.local/share/icons/Moga"
                 fi
@@ -331,8 +341,11 @@ setup_tide_island() {
     if [ "$needs_symlink" = true ]; then
         echo -e "\n${YELLOW}Tide Island Launcher requires /usr/share/tide-island to link to the QML source directory.${RESET}"
         if prompt_yes_no "Do you want to create the symbolic link in /usr/share/ (requires sudo)?" "y"; then
-            if [ -e "$target_share" ]; then
-                log_info "Removing existing /usr/share/tide-island..."
+            if [ -L "$target_share" ]; then
+                log_info "Removing existing symlink /usr/share/tide-island..."
+                sudo rm -f "$target_share"
+            elif [ -d "$target_share" ]; then
+                log_info "Removing existing directory /usr/share/tide-island..."
                 sudo rm -rf "$target_share"
             fi
             sudo ln -sfn "$source_tide" "$target_share"
