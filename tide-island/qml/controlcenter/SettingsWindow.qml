@@ -44,6 +44,11 @@ FloatingWindow {
     property real ruleOpacity: 1.0
 
     property int activeSection: 0
+    onActiveSectionChanged: {
+        if (activeSection !== undefined) {
+            saveSettingsState("activeSection", activeSection);
+        }
+    }
 
     // Matugen configurations
     property string matugenMode: "dark"
@@ -57,6 +62,7 @@ FloatingWindow {
     property bool vscodeAutoUpdate: true
     property bool vscodeExtensionInstalled: false
     property bool spicetifyInstalled: false
+    property string obsidianVaultPath: ""
 
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
@@ -251,23 +257,76 @@ FloatingWindow {
         Quickshell.execDetached(args);
     }
 
+    function saveSettingsState(key, value) {
+        var pyCode = "import json, os; " +
+                     "path = os.path.expanduser('~/.cache/tide-island/settings_state.json'); " +
+                     "os.makedirs(os.path.dirname(path), exist_ok=True); " +
+                     "d = {}; " +
+                     "if os.path.exists(path): " +
+                     "    try: d = json.load(open(path)) " +
+                     "    except: pass; " +
+                     "d['" + key + "'] = " + JSON.stringify(value) + "; " +
+                     "with open(path, 'w') as f: json.dump(d, f, indent=4)"
+        Quickshell.execDetached(["python3", "-c", pyCode]);
+    }
+
     Process {
-        id: matugenConfigReadProcess
+        id: settingsStateReadProcess
         command: [
-            "cat",
-            Qt.getenv("HOME") + "/.config/tide-island/userconfig.json"
+            "python3",
+            "-c",
+            "import json, os; " +
+            "path = os.path.expanduser('~/.cache/tide-island/settings_state.json'); " +
+            "d = {}; " +
+            "if os.path.exists(path): " +
+            "    try: d = json.load(open(path)) " +
+            "    except: pass; " +
+            "print(json.dumps(d))"
         ]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 if (this.text) {
                     try {
+                        console.log("DEBUG settingsStateReadProcess: " + this.text);
+                        var state = JSON.parse(this.text);
+                        if (state.activeSection !== undefined) activeSection = parseInt(state.activeSection);
+                        if (state.obsidianVaultPath !== undefined) {
+                            console.log("DEBUG settingsStateReadProcess path: " + state.obsidianVaultPath);
+                            obsidianVaultPath = state.obsidianVaultPath;
+                        }
+                    } catch (e) {
+                        console.log("Error parsing settings_state.json: " + e);
+                    }
+                }
+            }
+        }
+    }
+
+    Process {
+        id: matugenConfigReadProcess
+        command: [
+            "cat",
+            Quickshell.env("HOME") + "/.config/tide-island/userconfig.json"
+        ]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        console.log("DEBUG matugenConfigReadProcess: " + this.text);
                         var config = JSON.parse(this.text);
                         if (config.matugenMode !== undefined) matugenMode = config.matugenMode;
                         if (config.matugenType !== undefined) matugenType = config.matugenType;
                         if (config.matugenContrast !== undefined) matugenContrast = parseFloat(config.matugenContrast);
                         if (config.matugenPrefer !== undefined) matugenPrefer = config.matugenPrefer;
                         if (config.matugenSourceColorIndex !== undefined) matugenSourceColorIndex = parseInt(config.matugenSourceColorIndex);
+                        if (config.obsidianVaultPath !== undefined) {
+                            console.log("DEBUG matugenConfigReadProcess path: " + config.obsidianVaultPath);
+                            if (obsidianVaultPath === "") {
+                                obsidianVaultPath = config.obsidianVaultPath;
+                            }
+                        }
                     } catch (e) {
                         console.log("Error parsing userconfig.json: " + e);
                     }
@@ -328,7 +387,7 @@ FloatingWindow {
         id: generalReadProcess
         command: [
             "cat",
-            Qt.getenv("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
+            Quickshell.env("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
         ]
         running: true
         stdout: StdioCollector {
@@ -351,7 +410,7 @@ FloatingWindow {
         id: decorationReadProcess
         command: [
             "cat",
-            Qt.getenv("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
+            Quickshell.env("HOME") + "/.local/src/HyprDots/hypr/hyprlua/gui.lua"
         ]
         running: true
         stdout: StdioCollector {
@@ -646,39 +705,32 @@ FloatingWindow {
     }
 
     // Reusable Custom Input Text Field
-    component SettingsInput: Rectangle {
+    component SettingsInput: TextField {
         id: inputRoot
-        property alias text: textInput.text
-        property string placeholder: ""
+        property alias placeholder: inputRoot.placeholderText
+        placeholderText: ""
+        color: colorOnSurface
+        placeholderTextColor: colorOnSurfaceVariant
+        font.pixelSize: 12
+        font.family: "Inter Display"
         
         width: 140
         height: 28
-        radius: 6
-        color: colorSecondaryContainer
-        border.width: textInput.activeFocus ? 1 : 0
-        border.color: colorPrimary
+        leftPadding: 8
+        rightPadding: 8
+        topPadding: 0
+        bottomPadding: 0
+        verticalAlignment: TextInput.AlignVCenter
         
-        TextInput {
-            id: textInput
-            anchors.fill: parent
-            anchors.leftMargin: 8
-            anchors.rightMargin: 8
-            verticalAlignment: TextInput.AlignVCenter
-            color: colorOnSurface
-            font.pixelSize: 12
-            font.family: "Inter Display"
-            onAccepted: {
-                scrollView.forceActiveFocus();
-            }
-            
-            Text {
-                text: inputRoot.placeholder
-                color: colorOnSurfaceVariant
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                visible: textInput.text === "" && !textInput.activeFocus
-                anchors.verticalCenter: parent.verticalCenter
-            }
+        background: Rectangle {
+            color: colorSecondaryContainer
+            radius: 6
+            border.width: inputRoot.activeFocus ? 1 : 0
+            border.color: colorPrimary
+        }
+        
+        onAccepted: {
+            scrollView.forceActiveFocus();
         }
     }
 
@@ -2076,6 +2128,73 @@ FloatingWindow {
                                     onClicked: {
                                         Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--restore-spicetify"]);
                                         spicetifyInstalled = false;
+                                    }
+                                }
+                            }
+                        }
+
+                        Item { width: 1; height: 8 } // spacing
+
+                        Text {
+                            text: "Obsidian Integration"
+                            color: colorOnSurface
+                            font.pixelSize: 14
+                            font.family: "Inter Display"
+                            font.weight: Font.Bold
+                            leftPadding: 6
+                            topPadding: 12
+                            bottomPadding: 2
+                        }
+
+                        SettingsCard {
+                            title: "Vault Location"
+                            
+                            Row {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 8
+
+                                SettingsInput {
+                                    id: obsidianVaultInput
+                                    width: 170
+                                    text: obsidianVaultPath
+                                    placeholderText: "~/Obsidian-Vault"
+                                    
+                                    onTextChanged: {
+                                        if (activeFocus) {
+                                            obsidianVaultPath = text;
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 50
+                                    height: 28
+                                    radius: 6
+                                    color: saveObsidianBtnMouse.containsMouse ? colorButtonBgHover : colorButtonBg
+                                    border.width: 1
+                                    border.color: colorOutline
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "Save"
+                                        color: colorPrimary
+                                        font.pixelSize: 12
+                                        font.family: "Inter Display"
+                                        font.weight: Font.Medium
+                                    }
+
+                                    MouseArea {
+                                        id: saveObsidianBtnMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        onClicked: {
+                                            scrollView.forceActiveFocus();
+                                            obsidianVaultPath = obsidianVaultInput.text;
+                                            saveSettingsState("obsidianVaultPath", obsidianVaultPath);
+                                            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_user_config.py", "--set-obsidian-vault", obsidianVaultPath]);
+                                        }
                                     }
                                 }
                             }

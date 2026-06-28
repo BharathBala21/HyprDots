@@ -210,6 +210,40 @@ def restore_spicetify():
         print(f"Failed to restore Spotify: {e}", file=sys.stderr)
         return False
 
+def sync_obsidian_theme(config):
+    vault_path = config.get("obsidianVaultPath")
+    if not vault_path:
+        return
+    vault_path = os.path.expanduser(vault_path)
+    if not os.path.isdir(vault_path):
+        print(f"Obsidian vault directory not found: {vault_path}", file=sys.stderr)
+        return
+    
+    # Target snippet directory: vault_path/.obsidian/snippets/
+    snippets_dir = os.path.join(vault_path, ".obsidian", "snippets")
+    os.makedirs(snippets_dir, exist_ok=True)
+    
+    src = os.path.expanduser("~/.cache/matugen/obsidian-matugen.css")
+    dst = os.path.join(snippets_dir, "matugen.css")
+    
+    if os.path.exists(src):
+        try:
+            shutil.copy2(src, dst)
+            print(f"Successfully copied Obsidian theme to {dst}")
+        except Exception as e:
+            print(f"Failed to copy Obsidian theme: {e}", file=sys.stderr)
+    else:
+        # Fallback to default generated file if cache is not at that exact path
+        fallback_src = os.path.expanduser("~/Obsidian-Vault/Pirates' Vault/.obsidian/snippets/matugen.css")
+        if os.path.exists(fallback_src):
+            try:
+                shutil.copy2(fallback_src, dst)
+                print(f"Successfully copied Obsidian theme from fallback to {dst}")
+            except Exception as e:
+                print(f"Failed to copy Obsidian theme from fallback: {e}", file=sys.stderr)
+        else:
+            print(f"Obsidian template cache not found: {src}", file=sys.stderr)
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Update user config and apply matugen")
@@ -230,6 +264,9 @@ def main():
     parser.add_argument("--install-spicetify", action="store_true", help="Install and configure Spicetify with matugen scheme")
     parser.add_argument("--apply-spicetify", action="store_true", help="Apply spicetify custom theme colors")
     parser.add_argument("--restore-spicetify", action="store_true", help="Restore Spotify to default (revert spicetify)")
+
+    # Obsidian arguments
+    parser.add_argument("--set-obsidian-vault", help="Set Obsidian vault directory path")
 
     args = parser.parse_args()
 
@@ -276,6 +313,9 @@ def main():
     if args.wallpaper is not None:
         config['wallpaperPath'] = args.wallpaper
         changed = True
+    if args.set_obsidian_vault is not None:
+        config['obsidianVaultPath'] = args.set_obsidian_vault
+        changed = True
 
     if changed:
         try:
@@ -285,7 +325,16 @@ def main():
             print(f"Error writing config: {e}", file=sys.stderr)
 
     # Now apply matugen if needed
-    if changed or args.apply_only or args.wallpaper is not None:
+    should_run_matugen = (
+        args.apply_only or 
+        args.wallpaper is not None or 
+        args.mode is not None or 
+        args.type is not None or 
+        args.contrast is not None or 
+        args.prefer is not None or 
+        args.source_color_index is not None
+    )
+    if should_run_matugen:
         wallpaper_path = config.get('wallpaperPath')
         if not wallpaper_path:
             print("No wallpaper path found in config, cannot apply matugen", file=sys.stderr)
@@ -317,12 +366,17 @@ def main():
             subprocess.run(cmd, check=True)
             # Sync VS Code themes manually right after matugen is run to ensure consistency
             sync_vscode_themes_manually()
+            sync_obsidian_theme(config)
         except subprocess.CalledProcessError as e:
             print(f"Error running matugen: {e}", file=sys.stderr)
 
     # Sync VS Code themes manually if VS Code theme settings were updated directly
     if args.install_vscode_extension or args.set_vscode_theme is not None or args.set_vscode_autoupdate is not None:
         sync_vscode_themes_manually()
+
+    # Sync Obsidian if vault was updated directly
+    if args.set_obsidian_vault is not None:
+        sync_obsidian_theme(config)
 
 if __name__ == "__main__":
     main()
