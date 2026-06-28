@@ -91,5 +91,5 @@ output_path = '~/.local/state/quickshell/generated/colors.json'
 [templates.spotify]
 input_path = '~/.config/matugen/templates/spicetify.ini'
 output_path = '~/.config/spicetify/Themes/Sleek/color.ini'
-post_hook = '~/.spicetify/spicetify watch -s 2>&1 | sed "/Reloaded Spotify/q"'
+post_hook = 'spicetify apply --no-restart'
 # ...

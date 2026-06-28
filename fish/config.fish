@@ -18,3 +18,4 @@ end
 
 
 
+fish_add_path /home/pirate/.spicetify
