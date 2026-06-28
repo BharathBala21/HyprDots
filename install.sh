@@ -179,6 +179,72 @@ install_packages() {
 
 install_packages
 
+# --- Step 3.5: Auto-create Ignored Config Files ---
+create_ignored_files() {
+    log_info "Verifying ignored configuration files are present..."
+
+    # Ensure hypr/hyprlua/custom/ directory exists
+    local custom_dir="${REPO_DIR}/hypr/hyprlua/custom"
+    if [ ! -d "$custom_dir" ]; then
+        log_info "Creating missing custom directory: ${custom_dir}"
+        mkdir -p "$custom_dir"
+    fi
+
+    # Ensure hypr/hyprlua/custom/exec.lua exists
+    local custom_exec="${custom_dir}/exec.lua"
+    if [ ! -f "$custom_exec" ]; then
+        log_info "Creating missing exec.lua placeholder: ${custom_exec}"
+        touch "$custom_exec"
+    fi
+
+    # Ensure hypr/hyprlua/gui.lua exists
+    local gui_lua="${REPO_DIR}/hypr/hyprlua/gui.lua"
+    if [ ! -f "$gui_lua" ]; then
+        log_info "Creating missing gui.lua from default template: ${gui_lua}"
+        cat << 'EOF' > "$gui_lua"
+local mat = require("colors")
+
+hl.config (
+{
+    general = {
+        gaps_out = 15,
+        gaps_in = 5,
+        border_size = 2,
+        col = {
+            active_border = mat.primary,
+            inactive_border = mat.surface
+        }
+    },
+    decoration = {
+        rounding = 12,
+        shadow = {
+            color = mat.outline,
+            color_inactive = mat.outline_variant,
+            range = 1
+        },
+        blur = {
+            enabled = true,
+            size = 8,
+            passes = 1,
+            ignore_opacity = true,
+            new_optimizations = true,
+            xray = false,
+            noise = 0.0117,
+            contrast = 0.8916,
+            brightness = 0.8172,
+            vibrancy = 0.1696,
+            vibrancy_darkness = 0.0000
+        }
+    }
+}
+)
+EOF
+        log_success "Created gui.lua"
+    fi
+}
+
+create_ignored_files
+
 # --- Step 4: Symlink Configurations in ~/.config ---
 CONFIG_DIRS=("btop" "cava" "dunst" "fastfetch" "fish" "hypr" "kitty" "matugen" "yazi")
 
