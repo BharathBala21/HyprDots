@@ -316,70 +316,7 @@ setup_tide_island() {
 
 setup_tide_island
 
-# --- Step 8: Zen Browser Profile Restore ---
-restore_zen_profile() {
-    local zen_backups_dir="${REPO_DIR}/zen"
-    
-    if [ -d "$zen_backups_dir" ]; then
-        local backups=("$zen_backups_dir"/*.tar.gz)
-        if [ -e "${backups[0]}" ]; then
-            echo -e "\n${YELLOW}Zen Browser backups found in the repository:${RESET}"
-            for b in "${backups[@]}"; do
-                echo -e "  - $(basename "$b")"
-            done
-            
-            if prompt_yes_no "Do you want to restore one of these Zen Browser profile configurations?" "y"; then
-                log_info "Starting Zen Browser restore process..."
-                # Run the restore script, overriding the backup folder
-                ZEN_BACKUP_DIR="$zen_backups_dir" bash "${REPO_DIR}/Scripts/zen-backup.sh" restore
-            fi
-        fi
-    fi
-}
 
-restore_zen_profile
-
-# --- Step 9: Obsidian CSS Snippets ---
-setup_obsidian_snippets() {
-    local obsidian_config="${HOME}/.config/obsidian/obsidian.json"
-    local snippets_src="${REPO_DIR}/obsidian_snippets"
-
-    if [ -d "$snippets_src" ] && [ -f "$obsidian_config" ] && command -v jq &>/dev/null; then
-        log_info "Obsidian configuration detected."
-        # Read all vault paths
-        local vaults
-        vaults=$(jq -r '.vaults[].path' "$obsidian_config" 2>/dev/null || true)
-
-        if [ -n "$vaults" ]; then
-            echo -e "\n${YELLOW}Detected Obsidian vaults:${RESET}"
-            IFS=$'\n' read -rd '' -a vault_array <<< "$vaults" || true
-            for v in "${vault_array[@]}"; do
-                echo -e "  - $v"
-            done
-
-            if prompt_yes_no "Do you want to install CSS snippets (sticky notes, logbook theme) to these vaults?" "y"; then
-                for v in "${vault_array[@]}"; do
-                    if [ -d "$v" ]; then
-                        local snippets_dest="${v}/.obsidian/snippets"
-                        mkdir -p "$snippets_dest"
-                        
-                        for css in "$snippets_src"/*.css; do
-                            [ -e "$css" ] || continue
-                            local snippet_name
-                            snippet_name=$(basename "$css")
-                            
-                            ln -sf "$css" "${snippets_dest}/${snippet_name}"
-                            log_success "Symlinked $snippet_name to Obsidian Vault: $(basename "$v")"
-                        done
-                    fi
-                done
-                log_info "Note: You can enable the CSS snippets in Obsidian Settings > Appearance > CSS snippets."
-            fi
-        fi
-    fi
-}
-
-setup_obsidian_snippets
 
 # --- Final Step ---
 echo -e "\n========================================================"
