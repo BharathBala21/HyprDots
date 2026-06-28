@@ -5,4 +5,7 @@ hl.on("hyprland.start", function ()
   hl.exec_cmd("hypridle")
   hl.exec_cmd("wl-paste --type text --watch cliphist store # Stores only text data")
   hl.exec_cmd("wl-paste --type image --watch cliphist store # Stores only text data")
+  
+  -- Open cheatsheet on first boot (using flag file ~/.cache/hyprdots_first_boot)
+  hl.exec_cmd("if [ -f ~/.cache/hyprdots_first_boot ]; then rm -f ~/.cache/hyprdots_first_boot && sleep 2 && qs ipc -p ~/.local/src/HyprDots/tide-island/ call island toggleCheatsheet; fi")
 end)

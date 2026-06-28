@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # backup location
-zenBackupDir="$HOME/Backups/ZenBrowser"
+zenBackupDir="${ZEN_BACKUP_DIR:-$HOME/Backups/ZenBrowser}"
 staging="$zenBackupDir/temp_staging"
 timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
 
