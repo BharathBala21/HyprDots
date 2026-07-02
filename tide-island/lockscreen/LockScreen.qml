@@ -889,7 +889,7 @@ Item {
                             Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
 
                             Text {
-                                text: ""
+                                text: ""
                                 font.family: "JetBrainsMono Nerd Font, URW Gothic, sans-serif"
                                 font.pixelSize: 14
                                 color: mouseAreaNext.containsMouse ? colorOnSurfaceVariant : colorPrimary
