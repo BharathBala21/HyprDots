@@ -118,11 +118,11 @@ include(GNUInstallDirs)
 
 # Install Quickshell entry points and QML component folders to /usr/share/tide-island
 install(FILES
-    shell.qml
-    DynamicIslandWindow.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../shell.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../DynamicIslandWindow.qml
     DESTINATION ${CMAKE_INSTALL_DATADIR}/tide-island
 )
-install(DIRECTORY qml
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../qml
     DESTINATION ${CMAKE_INSTALL_DATADIR}/tide-island
     FILES_MATCHING PATTERN "*.qml"
 )
