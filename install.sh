@@ -193,28 +193,16 @@ build_and_install_tide_island() {
         sudo rm -rf "/usr/share/tide-island"
     fi
 
-    log_info "Downloading Tide-Island stable source tarball..."
-    local temp_dir
-    temp_dir=$(mktemp -d)
-    local tarball="${temp_dir}/tide-island.tar.gz"
-    local commit="106d38f4e1f4e683156564c1ae122ef7abc2a3cb"
-    
-    if ! curl -L "https://github.com/enhaoswen/Tide-island/archive/${commit}.tar.gz" -o "$tarball"; then
-        log_error "Failed to download Tide-Island source code."
-        rm -rf "$temp_dir"
-        return 1
-    fi
-    
-    log_info "Extracting source..."
-    tar -xf "$tarball" -C "$temp_dir"
-    local src_dir="${temp_dir}/Tide-island-${commit}"
-    local build_dir="${temp_dir}/build"
+    log_info "Building Tide-Island C++ backend from local source..."
+    local src_dir="${REPO_DIR}/tide-island/src"
+    local build_dir="${src_dir}/build"
 
-    log_info "Building Tide-Island from source..."
+    # Run cmake configuration
     cmake -S "$src_dir" -B "$build_dir" \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE=Release
         
+    # Build
     cmake --build "$build_dir"
     
     # Install to system directories (plugins, launcher, service)
@@ -231,8 +219,8 @@ build_and_install_tide_island() {
     chmod +x "${REPO_DIR}/tide-island/bin/lyricsmpris"
     chmod +x "${REPO_DIR}/tide-island/bin/tide-island-setup"
     
-    # Clean up temporary build files
-    rm -rf "$temp_dir"
+    # Clean up local build directory
+    rm -rf "$build_dir"
     log_success "Tide-Island successfully built and installed from source."
 }
 

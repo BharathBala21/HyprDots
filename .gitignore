@@ -12,4 +12,4 @@ __pycache__/
 # Tide-Island build and binary files
 tide-island/bin/lyricsmpris
 tide-island/bin/tide-island-setup
-tide-island/build/
+tide-island/src/build/
