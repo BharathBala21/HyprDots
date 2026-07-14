@@ -103,7 +103,7 @@ if [ -n "$AUR_HELPER" ]; then
     log_success "Found AUR helper: ${BOLD}${AUR_HELPER}${RESET}"
 else
     log_warning "No AUR helper (paru or yay) detected."
-    log_info "You will need to manually install AUR packages (quickshell, matugen, tide-island."
+    log_info "You will need to manually install AUR packages (quickshell, matugen)."
 fi
 
 # --- Step 3: Package Installation ---
@@ -113,10 +113,12 @@ REQUIRED_PACMAN=(
     "btop" "fastfetch" "fish" "kitty" "yazi" "python" "python-pillow" "jq"
     "wireplumber" "brightnessctl" "hyprpicker" "hyprshot" "tesseract"
     "tesseract-data-eng" "zbar" "grim" "slurp" "wf-recorder" "libnotify"
-     "ttf-jetbrains-mono-nerd"
+    "ttf-jetbrains-mono-nerd"
+    "cmake" "qt6-base" "qt6-declarative" "qt6-connectivity" "qt6-svg"
+    "libpulse" "hyprsunset" "upower" "bluez" "bluez-utils"
 )
 REQUIRED_AUR=(
-    "quickshell" "matugen" "tide-island"
+    "quickshell" "matugen"
 )
 
 install_packages() {
@@ -175,6 +177,53 @@ install_packages() {
     fi
 }
 
+build_and_install_tide_island() {
+    # Check if tide-island package is installed, if so remove it
+    if pacman -Qq tide-island &>/dev/null; then
+        log_info "Removing existing AUR package 'tide-island' to prevent conflicts..."
+        sudo pacman -Rns --noconfirm tide-island
+    fi
+
+    # Ensure /usr/share/tide-island is not a directory or symlink before build/install
+    if [ -L "/usr/share/tide-island" ]; then
+        log_info "Removing existing symlink /usr/share/tide-island before installation..."
+        sudo rm -f "/usr/share/tide-island"
+    elif [ -d "/usr/share/tide-island" ]; then
+        log_info "Removing existing directory /usr/share/tide-island before installation..."
+        sudo rm -rf "/usr/share/tide-island"
+    fi
+
+    log_info "Building Tide-Island C++ backend from local source..."
+    local src_dir="${REPO_DIR}/tide-island/src"
+    local build_dir="${src_dir}/build"
+
+    # Run cmake configuration
+    cmake -S "$src_dir" -B "$build_dir" \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_BUILD_TYPE=Release
+        
+    # Build
+    cmake --build "$build_dir"
+    
+    # Install to system directories (plugins, launcher, service)
+    log_info "Installing compiled Tide-Island assets to system directories (requires sudo)..."
+    sudo cmake --install "$build_dir"
+
+    # Copy the freshly built binaries back to the repository's bin/ directory
+    # so they are available via the /usr/share/tide-island symlink
+    log_info "Deploying new binaries to repository bin/ folder..."
+    mkdir -p "${REPO_DIR}/tide-island/bin"
+    cp -f "$build_dir/lyricsmpris" "${REPO_DIR}/tide-island/bin/"
+    cp -f "$build_dir/tide-island-setup" "${REPO_DIR}/tide-island/bin/"
+    
+    chmod +x "${REPO_DIR}/tide-island/bin/lyricsmpris"
+    chmod +x "${REPO_DIR}/tide-island/bin/tide-island-setup"
+    
+    # Clean up local build directory
+    rm -rf "$build_dir"
+    log_success "Tide-Island successfully built and installed from source."
+}
+
 # --- Pre-installation Symlink Safety Cleanup ---
 # If /usr/share/tide-island is a symbolic link, we must remove it BEFORE running
 # the package manager (pacman/yay). Otherwise, pacman will follow the symlink
@@ -185,6 +234,7 @@ if [ -L "/usr/share/tide-island" ]; then
 fi
 
 install_packages
+build_and_install_tide_island
 
 # --- Step 3.5: Auto-create Ignored Config Files ---
 create_ignored_files() {
@@ -452,8 +502,11 @@ setup_tide_island() {
     if command -v jq &>/dev/null; then
         log_info "Updating Tide Island configuration with the default wallpaper path..."
         local temp_json
-        temp_json=$(jq --arg path "${HOME}/Pictures/Wallpapers/tom_jazz.png" '.wallpaperPath = $path' "$tide_config")
-        echo "$temp_json" > "$tide_config"
+        if temp_json=$(sed '/^[[:space:]]*\/\//d' "$tide_config" | jq --arg path "${HOME}/Pictures/Wallpapers/tom_jazz.png" '.wallpaperPath = $path' 2>/dev/null); then
+            echo "$temp_json" > "$tide_config"
+        else
+            log_warning "Failed to parse and update Tide Island userconfig.json with jq. Skipping automatically updating wallpaper path."
+        fi
     fi
 }
 

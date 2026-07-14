@@ -8,3 +8,8 @@ fish/fish_variables
 hypr/hyprlua/gui.lua
 hypr/hyprlua/custom/*
 __pycache__/
+
+# Tide-Island build and binary files
+tide-island/bin/lyricsmpris
+tide-island/bin/tide-island-setup
+tide-island/src/build/
