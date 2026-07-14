@@ -514,8 +514,11 @@ setup_tide_island() {
     if command -v jq &>/dev/null; then
         log_info "Updating Tide Island configuration with the default wallpaper path..."
         local temp_json
-        temp_json=$(jq --arg path "${HOME}/Pictures/Wallpapers/tom_jazz.png" '.wallpaperPath = $path' "$tide_config")
-        echo "$temp_json" > "$tide_config"
+        if temp_json=$(sed '/^[[:space:]]*\/\//d' "$tide_config" | jq --arg path "${HOME}/Pictures/Wallpapers/tom_jazz.png" '.wallpaperPath = $path' 2>/dev/null); then
+            echo "$temp_json" > "$tide_config"
+        else
+            log_warning "Failed to parse and update Tide Island userconfig.json with jq. Skipping automatically updating wallpaper path."
+        fi
     fi
 }
 
