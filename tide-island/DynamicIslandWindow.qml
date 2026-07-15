@@ -9,15 +9,10 @@ import "qml/controlcenter"
 import "qml/connectivity"
 import "qml/island"
 import "qml/workspace"
-import "qml/sidebar"
 
 PanelWindow {
     id: root
     property var shellRootController: null
-    property bool sidebarOpen: false
-    property real floatingTimerX: root.width - 320
-    property real floatingTimerY: 64
-    readonly property bool isFloatingTimerActive: (timerWidget.timerState === "running" || timerWidget.timerState === "paused" || timerWidget.isAlarmRinging) && !root.sidebarOpen
     readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
     property real nightLightTemp: shellRootController ? shellRootController.nightLightTemp : 0.0
     onNightLightTempChanged: {
@@ -85,27 +80,6 @@ PanelWindow {
         && shellRootController.screenRecordingActive !== undefined
         ? !!shellRootController.screenRecordingActive
         : false
-    readonly property bool hasOpenWindowsInWorkspace: {
-        const dummy1 = ToplevelManager.toplevels ? ToplevelManager.toplevels.values.length : 0;
-        const dummy2 = Hyprland.activeToplevel;
-        const dummy3 = hyprMonitor.activeWorkspace ? hyprMonitor.activeWorkspace.id : 0;
-
-        if (!hyprMonitor || !hyprMonitor.activeWorkspace) {
-            return false;
-        }
-        if (Hyprland.toplevels) {
-            const count = Hyprland.toplevels.count;
-            if (typeof count === "number") {
-                for (let i = 0; i < count; i++) {
-                    const tl = Hyprland.toplevels.get(i);
-                    if (tl && tl.workspace && tl.workspace.id === hyprMonitor.activeWorkspace.id) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
     readonly property bool launcherLayerVisible: islandContainer.islandState === "launcher"
     readonly property bool clipboardLayerVisible: islandContainer.islandState === "clipboard"
     readonly property bool emojiPickerLayerVisible: islandContainer.islandState === "emojis"
@@ -207,38 +181,14 @@ PanelWindow {
             width: topLeftComponent.visible ? Math.ceil(topLeftComponent.width) : 0
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
-
-        Region {
-            intersection: Intersection.Combine
-            x: Math.floor(togglePill.x)
-            y: Math.floor(togglePill.y)
-            width: togglePill.visible ? Math.ceil(togglePill.width) : 0
-            height: togglePill.visible ? Math.ceil(togglePill.height) : 0
-        }
-
-        Region {
-            intersection: Intersection.Combine
-            x: 0
-            y: 0
-            width: (sidebar.visible && root.sidebarOpen) ? 360 : 0
-            height: (sidebar.visible && root.sidebarOpen) ? root.height : 0
-        }
-
-        Region {
-            intersection: Intersection.Combine
-            x: Math.floor(timerWidget.x)
-            y: Math.floor(timerWidget.y)
-            width: (timerWidget.visible && root.isFloatingTimerActive) ? Math.ceil(timerWidget.width) : 0
-            height: (timerWidget.visible && root.isFloatingTimerActive) ? Math.ceil(timerWidget.height) : 0
-        }
     }
-    implicitHeight: screen.height
+    implicitHeight: (islandContainer.islandState === "powermenu") ? screen.height : 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu" || root.sidebarOpen)
-    WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible && !root.sidebarOpen) ? WlrLayer.Top : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu" || root.sidebarOpen)
-        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu" || root.sidebarOpen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu")
+    WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu")
+        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "powermenu") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
@@ -2598,78 +2548,19 @@ PanelWindow {
             textFontFamily: root.textFontFamily
         }
 
-        PillButton {
-            id: togglePill
-            visible: !root.isWorkspaceFullscreen
-            theme: sidebar.theme
-            sidebarActive: root.sidebarOpen
-            anchors.left: parent.left
-            anchors.leftMargin: 16
-            anchors.top: parent.top
-            anchors.topMargin: 4
-            onClicked: root.sidebarOpen = !root.sidebarOpen
-        }
-
         TopLeftLyrics {
             id: topLeftComponent
             visible: !root.isWorkspaceFullscreen
-            anchors.left: togglePill.right
-            anchors.leftMargin: 12
+            anchors.left: parent.left
+            anchors.leftMargin: 16
             anchors.top: parent.top
             anchors.topMargin: 4
             lyricText: islandContainer.lyricsDisplayText
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
-            maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32 - 44
+            maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32
             islandState: islandContainer.islandState
-        }
-
-        Sidebar {
-            id: sidebar
-            visible: !root.isWorkspaceFullscreen
-            themeColors: root.themeColors
-            isOpen: root.sidebarOpen
-            hasOpenWindows: root.hasOpenWindowsInWorkspace
-            iconFontFamily: root.iconFontFamily
-            textFontFamily: root.textFontFamily
-            anchors.fill: parent
-        }
-
-        TimerWidget {
-            id: timerWidget
-            theme: sidebar.theme
-            iconFontFamily: root.iconFontFamily
-            textFontFamily: root.textFontFamily
-
-            isFloating: root.isFloatingTimerActive
-
-            width: !root.isFloatingTimerActive ? (sidebar.panel ? sidebar.panel.width : 300) : 300
-            height: sidebar.timerHeight
-
-            x: !root.isFloatingTimerActive 
-               ? (sidebar.panel ? (sidebar.panel.x) : -400) 
-               : root.floatingTimerX
-            
-            y: !root.isFloatingTimerActive 
-               ? (sidebar.panel ? (sidebar.panel.y - sidebar.flickableContentY) : 48) 
-               : root.floatingTimerY
-
-            visible: !root.isWorkspaceFullscreen && (root.sidebarOpen || root.isFloatingTimerActive)
-
-            Behavior on x {
-                enabled: !timerWidget.isDragging && !root.sidebarOpen
-                NumberAnimation { duration: 350; easing.type: Easing.OutQuint }
-            }
-            Behavior on y {
-                enabled: !timerWidget.isDragging && !root.sidebarOpen
-                NumberAnimation { duration: 350; easing.type: Easing.OutQuint }
-            }
-
-            onDragMoved: (dx, dy) => {
-                root.floatingTimerX = Math.max(10, Math.min(root.width - width - 10, root.floatingTimerX + dx))
-                root.floatingTimerY = Math.max(10, Math.min(root.height - height - 10, root.floatingTimerY + dy))
-            }
         }
 
         TopRightTray {
