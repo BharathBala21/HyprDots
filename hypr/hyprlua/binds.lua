@@ -108,12 +108,12 @@ hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(browser))
 --special workspaces
 hl.bind("SUPER + ALT + S", function ()
     hl.dispatch(hl.dsp.workspace.toggle_special("spotify_special"))
-    hl.workspace_rule({ workspace = "special:spotify_special", on_created_empty = "spotify" })
+    hl.workspace_rule({ workspace = "special:spotify_special", on_created_empty = "spotify-launcher" })
 end)
 
 hl.bind("SUPER+ALT+D", function ()
     hl.dispatch(hl.dsp.workspace.toggle_special("discord_special"))
-    hl.workspace_rule({workspace = "special:discord_special", on_created_empty = "discord"})
+    hl.workspace_rule({workspace = "special:discord_special", on_created_empty = "vesktop"})
 end)
 
 hl.bind("SUPER+ALT+E", function ()
@@ -206,3 +206,12 @@ hl.bind(
         "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleCheatsheet"
     )
 )
+
+
+-- SCROLLING BINDS
+hl.bind(mainMod .. " + equal", hl.dsp.layout("colresize +0.1"))
+hl.bind(mainMod .. " + minus", hl.dsp.layout("colresize -0.1"))
+hl.bind(mainMod .. " + bracketright", hl.dsp.layout("consume_or_expel next"))
+hl.bind(mainMod .. " + bracketleft", hl.dsp.layout("consume_or_expel prev"))
+hl.bind(mainMod .. " + semicolon", hl.dsp.layout("swapcol l"))
+hl.bind(mainMod .. " + apostrophe", hl.dsp.layout("swapcol r"))

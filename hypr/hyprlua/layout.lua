@@ -8,7 +8,9 @@ hl.config({
         precise_mouse_move = true,
     },
     scrolling = {
-        direction = "down"
+        direction = "right",
+        focus_fit_method = 1,
+        -- follow_min_visible = 0
     }
   }
   )
