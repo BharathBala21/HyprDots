@@ -80,4 +80,9 @@ hl.window_rule({
     persistent_size = true
 })
 
+hl.window_rule({
+    match = { class = "kitty" },
+    persistent_size = true
+})
+
 

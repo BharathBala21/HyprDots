@@ -8,4 +8,5 @@ hl.on("hyprland.start", function ()
   
   -- Open cheatsheet on first boot (using flag file ~/.cache/hyprdots_first_boot)
   hl.exec_cmd("if [ -f ~/.cache/hyprdots_first_boot ]; then rm -f ~/.cache/hyprdots_first_boot && sleep 2 && qs ipc -p ~/.local/src/HyprDots/tide-island/ call island toggleCheatsheet; fi")
+  hl.exec_cmd("hyprctl plugin load /home/pirate/Pirate/hyprplugins/hyprland-scroll-overview/build/libscrolloverview.so")
 end)

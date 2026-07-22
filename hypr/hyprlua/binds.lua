@@ -11,9 +11,6 @@ hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
 
--- Cycle through windows with "ALT + TAB"
-hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
-hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
 
 
 -- Laptop multimedia keys for volume and LCD brightness
@@ -52,8 +49,8 @@ hl.bind(mainMod .. "+ 9",hl.dsp.focus({workspace = 9}))
 hl.bind("SUPER + CTRL + left",  hl.dsp.focus({ workspace = "r-1" }))
 hl.bind("SUPER + CTRL + right", hl.dsp.focus({ workspace = "r+1" }))
 -- 2. Using mouse scroll
-hl.bind("SUPER + mouse_up", hl.dsp.focus({ workspace = "r+1" }))
-hl.bind("SUPER + mouse_down", hl.dsp.focus({ workspace = "r-1" }))
+hl.bind("SUPER + SHIFT+mouse_up", hl.dsp.focus({ workspace = "r+1" }))
+hl.bind("SUPER + SHIFT+mouse_down", hl.dsp.focus({ workspace = "r-1" }))
 
 --move window to a specific tab
 hl.bind(mainMod .. " + ALT + 1",hl.dsp.window.move({workspace = 1  }) )
@@ -77,12 +74,12 @@ hl.bind(mainMod .. "+SHIFT + right",hl.dsp.window.move({direction = "right"}))
 
 
 --fullscreen a window
-hl.bind(mainMod .. "+F",hl.dsp.window.fullscreen({mode = "fullscreen"}))
+hl.bind(mainMod .. "+SHIFT + F",hl.dsp.window.fullscreen({mode = "fullscreen"}))
 -- maximize a window
-hl.bind(mainMod .. "+D",hl.dsp.window.fullscreen({mode = "maximized"}))
+hl.bind(mainMod .. "+F",hl.dsp.window.fullscreen({mode = "maximized"}))
 
 hl.bind(
-    "SUPER + SUPER_L",
+    "SUPER + D",
     hl.dsp.exec_cmd(
         "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleLauncher"
     ),
@@ -176,13 +173,7 @@ end)
 
 
 
---TIDE-ISLAND-OVERVIEW
-hl.bind(
-    "SUPER + TAB",
-    hl.dsp.exec_cmd(
-        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call overview toggle"
-    )
-)
+
 
 hl.bind(
     "SUPER + A",
@@ -215,3 +206,12 @@ hl.bind(mainMod .. " + bracketright", hl.dsp.layout("consume_or_expel next"))
 hl.bind(mainMod .. " + bracketleft", hl.dsp.layout("consume_or_expel prev"))
 hl.bind(mainMod .. " + semicolon", hl.dsp.layout("swapcol l"))
 hl.bind(mainMod .. " + apostrophe", hl.dsp.layout("swapcol r"))
+
+
+--NIRI-LIKE_OVERVIEW
+hl.bind("SUPER + TAB", function()
+    hl.plugin.scrolloverview.overview("toggle")
+end)
+
+hl.bind("SUPER + mouse_up", hl.dsp.focus({ direction = "right" }))
+hl.bind("SUPER + mouse_down", hl.dsp.focus({ direction = "left" }))
