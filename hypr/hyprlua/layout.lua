@@ -10,7 +10,7 @@ hl.config({
     scrolling = {
         direction = "right",
         focus_fit_method = 1,
-        -- follow_min_visible = 0
+        follow_min_visible = 100
     }
   }
   )
