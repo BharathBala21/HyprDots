@@ -105,12 +105,12 @@ hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(browser))
 --special workspaces
 hl.bind("SUPER + ALT + S", function ()
     hl.dispatch(hl.dsp.workspace.toggle_special("spotify_special"))
-    hl.workspace_rule({ workspace = "special:spotify_special", on_created_empty = "spotify-launcher" })
+    hl.workspace_rule({ workspace = "special:spotify_special", on_created_empty = "spotify" })
 end)
 
 hl.bind("SUPER+ALT+D", function ()
     hl.dispatch(hl.dsp.workspace.toggle_special("discord_special"))
-    hl.workspace_rule({workspace = "special:discord_special", on_created_empty = "vesktop"})
+    hl.workspace_rule({workspace = "special:discord_special", on_created_empty = "discord"})
 end)
 
 hl.bind("SUPER+ALT+E", function ()
@@ -182,10 +182,10 @@ hl.bind(
     )
 )
 
--- btop
-hl.bind("CTRL + SHIFT + code:9",
-    hl.dsp.exec_cmd("pgrep -x btop && pkill -x btop || kitty --title btop btop")
-)
+-- -- btop
+-- hl.bind("CTRL + SHIFT + code:9",
+--     hl.dsp.exec_cmd("pgrep -x btop && pkill -x btop || kitty --title btop btop")
+-- )
 
 -- Lock screen
 hl.bind("SUPER + L", hl.dsp.exec_cmd("~/.local/src/HyprDots/tide-island/lockscreen/lock.sh"))
