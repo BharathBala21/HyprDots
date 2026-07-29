@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 import Quickshell.Wayland
@@ -394,6 +395,19 @@ PanelWindow {
         overviewWallpaperCache.prewarm();
     }
 
+    Process {
+        id: notificationSoundProcess
+        command: ["pw-play", Quickshell.shellDir + "/assets/notification.mp3"]
+        running: false
+    }
+
+    function playNotificationSound() {
+        if (notificationSoundProcess.running) {
+            notificationSoundProcess.running = false;
+        }
+        notificationSoundProcess.running = true;
+    }
+
     function showNotification(appName, summary, body) {
         let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
         notificationHistory.append({
@@ -406,6 +420,7 @@ PanelWindow {
             notificationHistory.remove(0);
         }
         if (!root.dndActive) {
+            root.playNotificationSound();
             islandContainer.showNotificationCapsule(appName, summary, body);
         }
     }
