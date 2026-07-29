@@ -2255,6 +2255,7 @@ PanelWindow {
                         textFontFamily: root.textFontFamily
                         heroFontFamily: root.heroFontFamily
                         showCondition: islandContainer.islandState === "wallpapers"
+                        shellRootController: root.shellRootController
                         onCloseRequested: {
                             islandContainer.islandState = "normal";
                         }

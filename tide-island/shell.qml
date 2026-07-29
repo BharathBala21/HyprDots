@@ -23,6 +23,15 @@ Scope {
     }
     property bool caffeineMode: false
     property int batteryModeIndex: 1
+    property bool darkMode: true
+
+    function toggleDarkMode() {
+        shellRoot.darkMode = !shellRoot.darkMode;
+        const modeStr = shellRoot.darkMode ? "dark" : "light";
+        console.log("[DarkMode] Toggling dark mode to: " + modeStr);
+        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/apply_theme_mode.py", modeStr]);
+    }
+
 
 
     Timer {
@@ -269,6 +278,10 @@ Scope {
         function toggleCheatsheet() {
             shellRoot.toggleCheatsheetAll();
         }
+
+        function toggleDarkMode() {
+            shellRoot.toggleDarkMode();
+        }
     }
 
     GlobalShortcut {
@@ -376,6 +389,23 @@ Scope {
         }
     }
 
+    Process {
+        id: startupQueryDarkModeProcess
+        command: ["sh", "-c", "cat " + getHomePath() + "/.cache/tide-island/theme_mode 2>/dev/null || gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || echo 'dark'"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const text = this.text ? this.text.trim().toLowerCase() : "";
+                if (text.indexOf("light") !== -1) {
+                    shellRoot.darkMode = false;
+                } else {
+                    shellRoot.darkMode = true;
+                }
+                console.log("[DarkMode] Startup query result: darkMode = " + shellRoot.darkMode);
+            }
+        }
+    }
+
     Component.onDestruction: {
         shuttingDown = true;
     }
@@ -386,6 +416,7 @@ Scope {
         startupCheckHypridleProcess.running = true;
         startupQueryHyprsunsetProcess.running = true;
         startupPpQueryProcess.running = true;
+        startupQueryDarkModeProcess.running = true;
     }
 
     Variants {

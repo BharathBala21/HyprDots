@@ -89,6 +89,7 @@ Item {
     property string batteryModeLastCommandOutput: ""
     property int batteryModeRefreshPollsRemaining: 0
     property bool caffeineMode: false
+    readonly property bool darkMode: shellRootController ? shellRootController.darkMode : true
 
     property real tempLevel: 0.0
     property real localTemp: tempLevel
@@ -1401,6 +1402,39 @@ Item {
                 spacing: 12
 
                 Rectangle {
+                    id: themeToggleButton
+                    width: 24
+                    height: 24
+                    radius: 12
+                    color: themeToggleMouse.containsMouse ? "#26ffffff" : StyleTokens.transparent
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: darkMode ? "\uf186" : "\uf185"
+                        color: themeToggleMouse.containsMouse ? "#ffffff" : StyleTokens.textSecondary
+                        font.pixelSize: 14
+                        font.family: iconFontFamily
+                    }
+
+                    MouseArea {
+                        id: themeToggleMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (controlCenter.shellRootController) {
+                                controlCenter.shellRootController.toggleDarkMode();
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
                     id: settingsButton
                     width: 24
                     height: 24
@@ -1831,8 +1865,84 @@ Item {
             }
 
             Rectangle {
-                id: powerModeCard
+                id: darkModeCard
                 width: shortTileWidth
+                height: 64
+                radius: 20
+                color: darkMode ? cardAccent : moduleColor
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
+
+                Rectangle {
+                    id: darkModeIconCircle
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 36
+                    height: 36
+                    radius: 18
+                    color: darkMode ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: darkMode ? "\uf186" : "\uf185"
+                        color: darkMode ? "#121418" : cardAccent
+                        font.pixelSize: 16
+                        font.family: iconFontFamily
+                    }
+                }
+
+                Column {
+                    anchors.left: darkModeIconCircle.right
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    Text {
+                        width: parent.width
+                        text: "Dark Mode"
+                        color: darkMode ? "#121418" : "#ffffff"
+                        font.pixelSize: 13
+                        font.family: textFontFamily
+                        font.weight: Font.DemiBold
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: darkMode ? "On" : "Off"
+                        color: darkMode ? "#2c3e35" : "#a5aab5"
+                        font.pixelSize: 10
+                        font.family: textFontFamily
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (controlCenter.shellRootController) {
+                            controlCenter.shellRootController.toggleDarkMode();
+                        }
+                    }
+                }
+            }
+        }
+
+        Row {
+            id: tilesRow3
+            width: parent.width
+            spacing: 12
+
+            Rectangle {
+                id: powerModeCard
+                width: parent.width
                 height: 64
                 radius: 20
                 color: {
@@ -1886,7 +1996,7 @@ Item {
 
                     Text {
                         width: parent.width
-                        text: "Power "
+                        text: "Power Profile"
                         color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : "#ffffff"
                         font.pixelSize: 13
                         font.family: textFontFamily
@@ -1935,6 +2045,7 @@ Item {
 
                 MouseArea {
                     anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         controlCenter.toggleConnectivityOverlay("battery");
                     }

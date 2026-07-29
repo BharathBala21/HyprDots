@@ -11,6 +11,7 @@ FocusScope {
     property string textFontFamily: ""
     property string heroFontFamily: ""
     property bool showCondition: false
+    property var shellRootController: null
 
     signal closeRequested()
 
@@ -84,7 +85,8 @@ FocusScope {
 
     function confirmWallpaper(path) {
         previewWallpaper(path);
-        Quickshell.execDetached(["matugen", "image", "-v", "--source-color-index", "0", path]);
+        const mode = (shellRootController && !shellRootController.darkMode) ? "light" : "dark";
+        Quickshell.execDetached(["matugen", "image", "--mode", mode, "-v", "--source-color-index", "0", path]);
         root.initialWallpaper = path; // Confirm it as the active wallpaper (reverting won't change it back)    
         root.closeRequested();
     }
