@@ -2,11 +2,19 @@ local mat = require("colors")
 hl.config (
     {
         decoration = {
-            rounding = 7,
+            rounding = 18,
+            dim_inactive = true,
+            dim_strength = 0.35,
             shadow = {
-                color = mat.outline,
-                color_inactive = mat.outline_variant,
-                range = 1
+                color = "rgba(00000040)",
+                color_inactive = "rgba(00000040)",
+                range = 20,
+                -- sharp = true,
+                -- render_power = 10
+            },
+            glow = {
+                -- enabled = true,
+                range = 50
             },
             blur = {
                 enabled = true,
@@ -20,7 +28,10 @@ hl.config (
                 brightness = 0.8172,
                 vibrancy = 0.1696,
                 vibrancy_darkness = 0.0000
-            }
+            },
+            motion_blur = {
+                enabled = true
+            },
         },
     }
 )

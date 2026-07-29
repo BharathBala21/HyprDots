@@ -1,0 +1,5 @@
+[[mgr.prepend_keymap]]
+on   = "!"
+for  = "unix"
+run  = 'shell "fish" --block'
+desc = "Open fish shell here"
