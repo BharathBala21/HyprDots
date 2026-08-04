@@ -54,9 +54,31 @@ FocusScope {
 
     readonly property var currentNote: (filteredNotes.length > 0 && selectedIndex >= 0 && selectedIndex < filteredNotes.length) ? filteredNotes[selectedIndex] : null
 
+    FileView {
+        id: notepadCfgWatcher
+        path: (Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "user")) + "/.config/tide-island/userconfig.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: notepadCfgWatcher.reload()
+    }
+
+    readonly property var userCfgData: {
+        try {
+            return notepadCfgWatcher.text() ? JSON.parse(notepadCfgWatcher.text()) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
     onShowConditionChanged: {
         if (showCondition) {
             loadNotesFromBackend();
+            if (userCfgData.notepadDefaultMode !== undefined) {
+                root.isPreviewMode = (userCfgData.notepadDefaultMode === "preview");
+            }
+            if (userCfgData.notepadAutoSave !== undefined) {
+                root.autoSaveEnabled = userCfgData.notepadAutoSave;
+            }
             focusTimer.restart();
         }
     }
@@ -185,7 +207,12 @@ FocusScope {
 
     function togglePreviewMode() {
         root.isPreviewMode = !root.isPreviewMode;
-        showToast(root.isPreviewMode ? "Preview Mode (Read-only)" : "Edit Mode");
+        showToast(root.isPreviewMode ? "Preview Mode" : "Edit Mode");
+        Quickshell.execDetached([
+            "python3",
+            Quickshell.shellDir + "/bin/update_tide_config.py",
+            "--notepad-default-mode", root.isPreviewMode ? "preview" : "edit"
+        ]);
     }
 
     function toggleAutoSave() {
@@ -197,6 +224,11 @@ FocusScope {
             root.autoSaveStatus = "Auto-save Off";
             showToast("Auto-save disabled (Press Ctrl+S to save)");
         }
+        Quickshell.execDetached([
+            "python3",
+            Quickshell.shellDir + "/bin/update_tide_config.py",
+            "--notepad-auto-save", root.autoSaveEnabled ? "true" : "false"
+        ]);
     }
 
     function insertMarkdown(prefix, suffix) {
