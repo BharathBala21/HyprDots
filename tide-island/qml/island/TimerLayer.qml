@@ -46,6 +46,10 @@ Item {
         return Math.floor((remainingSeconds % 3600) / 60);
     }
 
+    function getSeconds() {
+        return remainingSeconds % 60;
+    }
+
     Row {
         anchors.centerIn: parent
         spacing: 24
@@ -109,13 +113,13 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            // Top Row: Hours & Minutes Stepper Inputs
+            // Top Row: Hours, Minutes & Seconds Stepper Inputs
             Row {
-                spacing: 10
+                spacing: 8
 
                 // Hours Input
                 Rectangle {
-                    width: 95
+                    width: 88
                     height: 38
                     radius: 10
                     color: root.darkCardBg
@@ -124,7 +128,7 @@ Item {
                         anchors.centerIn: parent
                         text: root.getHours() + " hr"
                         color: root.textColor
-                        font.pixelSize: 14
+                        font.pixelSize: 13
                         font.family: root.textFontFamily
                         font.weight: Font.Medium
                     }
@@ -155,7 +159,7 @@ Item {
 
                 // Minutes Input
                 Rectangle {
-                    width: 95
+                    width: 88
                     height: 38
                     radius: 10
                     color: root.darkCardBg
@@ -164,7 +168,7 @@ Item {
                         anchors.centerIn: parent
                         text: (root.getMinutes() < 10 ? "0" + root.getMinutes() : root.getMinutes()) + " min"
                         color: root.textColor
-                        font.pixelSize: 14
+                        font.pixelSize: 13
                         font.family: root.textFontFamily
                         font.weight: Font.Medium
                     }
@@ -192,15 +196,55 @@ Item {
                         }
                     }
                 }
+
+                // Seconds Input
+                Rectangle {
+                    width: 88
+                    height: 38
+                    radius: 10
+                    color: root.darkCardBg
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: (root.getSeconds() < 10 ? "0" + root.getSeconds() : root.getSeconds()) + " sec"
+                        color: root.textColor
+                        font.pixelSize: 13
+                        font.family: root.textFontFamily
+                        font.weight: Font.Medium
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                        onClicked: (mouse) => {
+                            if (!root.isRunning) {
+                                if (mouse.button === Qt.LeftButton) {
+                                    root.adjustTimeRequested(1);
+                                } else if (mouse.button === Qt.RightButton) {
+                                    root.adjustTimeRequested(-1);
+                                }
+                            }
+                        }
+
+                        onWheel: (wheel) => {
+                            if (!root.isRunning) {
+                                if (wheel.angleDelta.y > 0) root.adjustTimeRequested(5);
+                                else if (wheel.angleDelta.y < 0) root.adjustTimeRequested(-5);
+                            }
+                        }
+                    }
+                }
             }
 
             // Bottom Row: Start/Stop & Reset Buttons
             Row {
-                spacing: 10
+                spacing: 8
 
                 // Start / Stop Button
                 Rectangle {
-                    width: 95
+                    width: 136
                     height: 38
                     radius: 10
                     color: root.orangeAccent
@@ -229,7 +273,7 @@ Item {
 
                 // Reset Button
                 Rectangle {
-                    width: 95
+                    width: 136
                     height: 38
                     radius: 10
                     color: root.darkCardBg

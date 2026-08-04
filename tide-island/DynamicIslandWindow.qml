@@ -94,8 +94,7 @@ PanelWindow {
                 root.timerRemainingSeconds -= 1;
                 if (root.timerRemainingSeconds === 0) {
                     root.timerRunning = false;
-                    root.playAlertSound();
-                    root.showNotification("Timer", "Timer Finished!", "Your countdown timer has expired.");
+                    root.playTimerUpSound();
                 }
             }
         }
@@ -446,11 +445,24 @@ PanelWindow {
         running: false
     }
 
+    Process {
+        id: timerUpSoundProcess
+        command: ["pw-play", Quickshell.shellDir + "/assets/time_up.mp3"]
+        running: false
+    }
+
     function playNotificationSound() {
         if (notificationSoundProcess.running) {
             notificationSoundProcess.running = false;
         }
         notificationSoundProcess.running = true;
+    }
+
+    function playTimerUpSound() {
+        if (timerUpSoundProcess.running) {
+            timerUpSoundProcess.running = false;
+        }
+        timerUpSoundProcess.running = true;
     }
 
     function showNotification(appName, summary, body) {
