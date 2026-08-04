@@ -19,9 +19,3 @@ hl.config({
     },
 })
 
--- -- hyprland.lua
--- hl.bind("SUPER + tg", function()
---     hl.plugin.scrolloverview.overview("toggle")
--- end)
-
-
