@@ -7,7 +7,6 @@ Item {
 
     signal closeRequested()
     signal wallpaperRequested()
-    signal notepadRequested()
     property var shellRootController: null
     property string iconFontFamily: ""
     property string textFontFamily: ""
@@ -72,11 +71,6 @@ Item {
 
         if (item.name === "wallpaper") {
             root.wallpaperRequested();
-            return;
-        }
-
-        if (item.name === "notepad") {
-            root.notepadRequested();
             return;
         }
 
@@ -150,7 +144,6 @@ Item {
     ListModel {
         id: utilitiesModel
         ListElement { name: "screenshot"; icon: "\uf030"; label: "Screenshot" }
-        ListElement { name: "notepad"; icon: "\uf24a"; label: "Notepad" }
         ListElement { name: "wallpaper"; icon: "\uf03e"; label: "Wallpaper" }
         ListElement { name: "screenrecord"; icon: "\uf03d"; label: "Record" }
         ListElement { name: "colorpicker"; icon: "\uf1fb"; label: "Picker" }

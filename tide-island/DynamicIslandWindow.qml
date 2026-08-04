@@ -2133,9 +2133,6 @@ PanelWindow {
                         onWallpaperRequested: {
                             islandContainer.showWallpapers();
                         }
-                        onNotepadRequested: {
-                            islandContainer.showNotepad();
-                        }
                     }
                 }
             }
