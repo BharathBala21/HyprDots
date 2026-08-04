@@ -24,6 +24,12 @@ Item {
     readonly property color textColor: "#ffffff"
 
     anchors.fill: parent
+    focus: true
+
+    Keys.onEscapePressed: (event) => {
+        root.closeRequested();
+        event.accepted = true;
+    }
 
     function formatTimeDisplay(secs) {
         const h = Math.floor(secs / 3600);

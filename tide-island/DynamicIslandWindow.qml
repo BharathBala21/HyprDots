@@ -203,18 +203,18 @@ PanelWindow {
     implicitHeight: 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer")
     WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
-        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer")
+        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
         id: launcherGrab
-        active: root.monitorFocused && (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities")
+        active: root.monitorFocused && (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer")
         windows: [ root ]
         onCleared: {
-            if (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities") {
+            if (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer") {
                 islandContainer.smartRestoreState();
             }
         }
@@ -742,6 +742,7 @@ PanelWindow {
             || islandState === "emojis"
             || islandState === "wallpapers"
             || islandState === "utilities"
+            || islandState === "timer"
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
