@@ -80,6 +80,27 @@ PanelWindow {
         }
     }
 
+    property int timerTotalSeconds: 300
+    property int timerRemainingSeconds: 300
+    property bool timerRunning: false
+
+    Timer {
+        id: countdownTimer
+        interval: 1000
+        repeat: true
+        running: root.timerRunning
+        onTriggered: {
+            if (root.timerRemainingSeconds > 0) {
+                root.timerRemainingSeconds -= 1;
+                if (root.timerRemainingSeconds === 0) {
+                    root.timerRunning = false;
+                    root.playAlertSound();
+                    root.showNotification("Timer", "Timer Finished!", "Your countdown timer has expired.");
+                }
+            }
+        }
+    }
+
     ListModel {
         id: notificationHistory
     }
@@ -138,6 +159,14 @@ PanelWindow {
             y: Math.floor(batteryConnectivityDetailShell.y)
             width: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.width) : 0
             height: batteryConnectivityDetailShell.visible ? Math.ceil(batteryConnectivityDetailShell.height) : 0
+        }
+
+        Region {
+            intersection: Intersection.Combine
+            x: Math.floor(timerActiveBadge.x)
+            y: Math.floor(timerActiveBadge.y)
+            width: timerActiveBadge.visible ? Math.ceil(timerActiveBadge.width) : 0
+            height: timerActiveBadge.visible ? Math.ceil(timerActiveBadge.height) : 0
         }
 
         Region {
@@ -469,6 +498,10 @@ PanelWindow {
 
     function toggleWallpapers() {
         islandContainer.toggleWallpapers();
+    }
+
+    function toggleTimer() {
+        islandContainer.toggleTimer();
     }
 
     onOverviewVisibleChanged: {
@@ -1341,6 +1374,22 @@ PanelWindow {
             stopAutoHideTimer();
         }
 
+        function showTimer() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "timer";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function toggleTimer() {
+            if (islandState === "timer")
+                smartRestoreState();
+            else
+                showTimer();
+        }
+
         function toggleLauncher() {
             if (islandState === "launcher")
                 smartRestoreState();
@@ -1565,6 +1614,8 @@ PanelWindow {
                 case "expanded":
                 case "bluetooth_expanded":
                     return 400;
+                case "timer":
+                    return 460;
                 case "notification":
                     if (!notificationLoader.item) return 272;
                     return Math.max(
@@ -1597,6 +1648,8 @@ PanelWindow {
                 case "expanded":
                 case "bluetooth_expanded":
                     return 165;
+                case "timer":
+                    return 130;
                 case "notification":
                     return notificationLoader.item
                         ? Math.max(56, Math.min(68, notificationLoader.item.preferredHeight))
@@ -1628,6 +1681,8 @@ PanelWindow {
                 case "expanded":
                 case "bluetooth_expanded":
                     return 40;
+                case "timer":
+                    return 32;
                 case "notification":
                     return mainCapsule.targetHeight / 2;
                 case "utilities":
@@ -2210,6 +2265,50 @@ PanelWindow {
             }
 
             Loader {
+                id: timerLoader
+                anchors.fill: parent
+                active: true
+                asynchronous: false
+                visible: islandContainer.islandState === "timer"
+                focus: islandContainer.islandState === "timer"
+
+                sourceComponent: Component {
+                    TimerLayer {
+                        remainingSeconds: root.timerRemainingSeconds
+                        totalSeconds: root.timerTotalSeconds
+                        isRunning: root.timerRunning
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        heroFontFamily: root.heroFontFamily
+
+                        onStartRequested: {
+                            if (root.timerRemainingSeconds > 0) {
+                                root.timerRunning = true;
+                            }
+                        }
+                        onStopRequested: {
+                            root.timerRunning = false;
+                        }
+                        onResetRequested: {
+                            root.timerRunning = false;
+                            root.timerRemainingSeconds = 0;
+                            root.timerTotalSeconds = 0;
+                        }
+                        onAdjustTimeRequested: (delta) => {
+                            if (!root.timerRunning) {
+                                const nextVal = Math.max(0, root.timerRemainingSeconds + delta);
+                                root.timerRemainingSeconds = nextVal;
+                                root.timerTotalSeconds = nextVal;
+                            }
+                        }
+                        onCloseRequested: {
+                            islandContainer.smartRestoreState();
+                        }
+                    }
+                }
+            }
+
+            Loader {
                 id: launcherLoader
                 anchors.fill: parent
                 active: true
@@ -2325,7 +2424,72 @@ PanelWindow {
                     }
                 }
             }
+        }
 
+        Rectangle {
+            id: timerActiveBadge
+            z: 10
+            width: 36
+            height: 36
+            radius: 18
+            color: "#000000"
+            anchors.verticalCenter: mainCapsule.verticalCenter
+            anchors.left: mainCapsule.right
+            anchors.leftMargin: 8
+            visible: root.timerRunning && islandContainer.islandState !== "timer" && !root.overviewVisible
+
+            Canvas {
+                id: badgeRingCanvas
+                anchors.fill: parent
+                antialiasing: true
+
+                property real progress: root.timerTotalSeconds > 0 ? (root.timerRemainingSeconds / root.timerTotalSeconds) : 0
+
+                onProgressChanged: requestPaint()
+
+                onPaint: {
+                    const ctx = getContext("2d");
+                    ctx.clearRect(0, 0, width, height);
+
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    const radius = (width - 6) / 2;
+                    const startAngle = -Math.PI / 2;
+
+                    // Track Ring
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeStyle = "#2c2c2e";
+                    ctx.stroke();
+
+                    // Active Progress Ring Arc
+                    if (progress > 0) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radius, startAngle, startAngle + (2 * Math.PI * progress), false);
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeStyle = "#ff9500";
+                        ctx.lineCap = "round";
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "\uf017"
+                font.family: root.iconFontFamily
+                font.pixelSize: 15
+                color: "#ff9500"
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    islandContainer.showTimer();
+                }
+            }
         }
 
         ConnectivityDetailShell {
