@@ -87,9 +87,16 @@ hl.bind(
 )
 
 hl.bind(
-    "SUPER + U",
+    mainMod .. " + U",
     hl.dsp.exec_cmd(
         "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleUtilities"
+    )
+)
+
+hl.bind(
+    mainMod .. " + ALT + U",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleTimer"
     )
 )
 

@@ -275,6 +275,13 @@ Scope {
             });
         }
 
+        function toggleTimer() {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.toggleTimer)
+                    window.toggleTimer();
+            });
+        }
+
         function toggleCheatsheet() {
             shellRoot.toggleCheatsheetAll();
         }
