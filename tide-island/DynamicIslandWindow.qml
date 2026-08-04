@@ -2115,19 +2115,27 @@ PanelWindow {
 
                 sourceComponent: Component {
                     SwipeUtilitiesLayer {
-                        focus: islandContainer.utilitiesLayerVisible
-                        iconFontFamily: root.iconFontFamily
-                        textFontFamily: root.textFontFamily
-                        timeFontFamily: root.heroFontFamily
-                        timeText: root.timeText
-                        showCondition: islandContainer.utilitiesLayerVisible
-                        showSecondaryText: !root.overviewVisible
-                        transitionProgress: islandContainer.swipeTransitionProgress
+                        focus: true
                         shellRootController: root.shellRootController
                         screenRecordingActive: root.screenRecordingActive
-                        onCloseRequested: islandContainer.closeUtilitiesInstantly()
-                        onWallpaperRequested: islandContainer.showWallpapers()
-                        onNotepadRequested: islandContainer.showNotepad()
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        timeFontFamily: root.timeFontFamily
+                        timeText: timeObj.currentTime
+                        showSecondaryText: islandContainer.workspaceOriginSide !== "right"
+                            && islandContainer.splitOriginSide !== "right"
+                        transitionProgress: islandContainer.islandState === "utilities" ? 1.0 : islandContainer.rightSwipeProgress
+                        showCondition: true
+                        onPreferredWidthChanged: islandContainer.syncUtilitiesCapsuleWidth()
+                        onCloseRequested: {
+                            islandContainer.closeUtilitiesInstantly();
+                        }
+                        onWallpaperRequested: {
+                            islandContainer.showWallpapers();
+                        }
+                        onNotepadRequested: {
+                            islandContainer.showNotepad();
+                        }
                     }
                 }
             }
