@@ -12,6 +12,7 @@ Scope {
     property bool wfRecorderRunning: false
     property bool shuttingDown: false
     property bool superReleaseMightTrigger: false
+    property bool settingsWindowOpen: false
     property bool cheatsheetWindowOpen: false
 
     property real nightLightTemp: 0.0
@@ -428,6 +429,20 @@ Scope {
 
             screen: modelData
             shellRootController: shellRoot
+        }
+    }
+
+    Loader {
+        id: settingsWindowLoader
+        active: shellRoot.settingsWindowOpen
+        source: "qml/controlcenter/SettingsWindow.qml"
+        
+        onStatusChanged: {
+            if (status === Loader.Ready) {
+                item.settingsClosed.connect(() => {
+                    shellRoot.settingsWindowOpen = false;
+                });
+            }
         }
     }
 

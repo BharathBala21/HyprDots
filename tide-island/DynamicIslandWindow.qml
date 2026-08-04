@@ -62,8 +62,23 @@ PanelWindow {
     readonly property bool wallpapersLayerVisible: islandContainer.islandState === "wallpapers"
     readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
     readonly property bool controlCenterLayerVisible: islandContainer.islandState === "control_center"
-
     readonly property var userConfig: UserConfig
+
+    FileView {
+        id: islandCfgWatcher
+        path: (Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "user")) + "/.config/tide-island/userconfig.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: islandCfgWatcher.reload()
+    }
+
+    readonly property var activeUserConfig: {
+        try {
+            return islandCfgWatcher.text() ? JSON.parse(islandCfgWatcher.text()) : {};
+        } catch (e) {
+            return {};
+        }
+    }
 
     ListModel {
         id: notificationHistory
@@ -181,6 +196,17 @@ PanelWindow {
     readonly property string textFontFamily: userConfig.textFontFamily
     readonly property string heroFontFamily: userConfig.heroFontFamily
     readonly property string timeFontFamily: userConfig.timeFontFamily
+
+    Connections {
+        target: root.shellRootController
+        function onSettingsWindowOpenChanged() {
+            if (root.shellRootController && root.shellRootController.settingsWindowOpen) {
+                if (islandContainer.islandState === "control_center") {
+                    islandContainer.smartRestoreState();
+                }
+            }
+        }
+    }
 
     readonly property string defaultSplitIcon: "\ud83c\udfa7"
     readonly property string notificationStatusIcon: "\uf0f3"
@@ -1474,6 +1500,7 @@ PanelWindow {
         }
 
         onCurrentTrackChanged: {
+            if (activeUserConfig.disableAutoExpandOnTrackChange) return;
             if (currentTrack !== ""
                     && islandState !== "control_center"
                     && islandState !== "notification"
@@ -1491,6 +1518,8 @@ PanelWindow {
         Rectangle {
             id: mainCapsule
             z: 5
+            opacity: (activeUserConfig.islandAutoHideEnabled && islandContainer.islandState === "normal" && !capsuleMouseArea.containsMouse) ? 0.0 : 1.0
+            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
             property int morphDuration: 400
             property real outlineWidth: root.overviewContentVisible ? 1 : 0
             property color outlineColor: root.overviewContentVisible ? root.overviewCapsuleBorderColor : StyleTokens.clearBlack
@@ -1814,15 +1843,18 @@ PanelWindow {
                         return;
                     }
 
-                    if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandPrimaryButton)) {
+                    const primAction = activeUserConfig.dynamicIslandPrimaryAction || userConfig.dynamicIslandPrimaryAction;
+                    const secAction = activeUserConfig.dynamicIslandSecondaryAction || userConfig.dynamicIslandSecondaryAction;
+
+                    if (mouse.button === Qt.LeftButton || mouse.button === userConfig.mouseButton(userConfig.dynamicIslandPrimaryButton)) {
                         preparedOverviewOnPress = false;
-                        islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandPrimaryAction);
+                        islandContainer.handleConfiguredClickAction(primAction);
                         return;
                     }
 
-                    if (mouse.button === userConfig.mouseButton(userConfig.dynamicIslandSecondaryButton)) {
+                    if (mouse.button === Qt.RightButton || mouse.button === userConfig.mouseButton(userConfig.dynamicIslandSecondaryButton)) {
                         preparedOverviewOnPress = false;
-                        islandContainer.handleConfiguredClickAction(userConfig.dynamicIslandSecondaryAction);
+                        islandContainer.handleConfiguredClickAction(secAction);
                     }
                 }
             }

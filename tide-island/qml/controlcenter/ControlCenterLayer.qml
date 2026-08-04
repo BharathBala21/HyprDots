@@ -1387,9 +1387,47 @@ Item {
                     anchors.leftMargin: 10
                     anchors.baseline: timeLabel.baseline
                     text: currentDateLabel
-                    color: textSecondary
-                    font.pixelSize: 12
-                    font.family: textFontFamily
+                }
+            }
+
+            Row {
+                id: headerRightRow
+                anchors.right: parent.right
+                anchors.rightMargin: 2
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 12
+
+                Rectangle {
+                    id: settingsButton
+                    width: 24
+                    height: 24
+                    radius: 12
+                    color: settingsButtonMouse.containsMouse ? "#26ffffff" : StyleTokens.transparent
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf013" // Gear icon
+                        color: settingsButtonMouse.containsMouse ? "#ffffff" : StyleTokens.textSecondary
+                        font.pixelSize: 14
+                        font.family: iconFontFamily
+                    }
+
+                    MouseArea {
+                        id: settingsButtonMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (controlCenter.shellRootController) {
+                                controlCenter.shellRootController.settingsWindowOpen = !controlCenter.shellRootController.settingsWindowOpen;
+                            }
+                        }
+                    }
                 }
             }
         }
