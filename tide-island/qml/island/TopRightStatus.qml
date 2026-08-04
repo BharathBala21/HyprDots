@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 import IslandBackend
 import "../common"
 
@@ -12,6 +14,24 @@ Item {
     property string iconFontFamily: ""
     property string textFontFamily: ""
     property real currentVolume: 0
+
+    FileView {
+        id: statusCfgWatcher
+        path: (Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "user")) + "/.config/tide-island/userconfig.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: statusCfgWatcher.reload()
+    }
+
+    readonly property var statusCfgData: {
+        try {
+            return statusCfgWatcher.text() ? JSON.parse(statusCfgWatcher.text()) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    readonly property bool showBatteryPercentage: statusCfgData.showBatteryPercentage !== undefined ? statusCfgData.showBatteryPercentage : true
 
     implicitWidth: contentRow.width + 24
     implicitHeight: 32
@@ -121,6 +141,7 @@ Item {
                 font.weight: Font.DemiBold
                 color: "white"
                 anchors.verticalCenter: parent.verticalCenter
+                visible: root.showBatteryPercentage
             }
 
             Item {

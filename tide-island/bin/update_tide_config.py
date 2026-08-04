@@ -8,6 +8,7 @@ def main():
     parser = argparse.ArgumentParser(description="Update Tide Island userconfig.json")
     parser.add_argument("--clock-format", choices=["12", "24"], help="Clock format (12 or 24)")
     parser.add_argument("--disable-auto-expand", choices=["true", "false"], help="Disable auto expand on track change")
+    parser.add_argument("--show-battery-percentage", choices=["true", "false"], help="Show/hide battery percentage text")
     parser.add_argument("--primary-action", help="Primary click action")
     parser.add_argument("--secondary-action", help="Secondary click action")
 
@@ -26,6 +27,8 @@ def main():
         config['clockFormat'] = args.clock_format
     if args.disable_auto_expand is not None:
         config['disableAutoExpandOnTrackChange'] = (args.disable_auto_expand.lower() == "true")
+    if args.show_battery_percentage is not None:
+        config['showBatteryPercentage'] = (args.show_battery_percentage.lower() == "true")
     if args.primary_action is not None:
         config['dynamicIslandPrimaryAction'] = args.primary_action
     if args.secondary_action is not None:

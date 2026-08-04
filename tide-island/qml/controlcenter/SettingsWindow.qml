@@ -46,6 +46,7 @@ FloatingWindow {
 
     property string clockFormat: cfgData.clockFormat !== undefined ? String(cfgData.clockFormat) : (UserConfig.clockFormat || "24")
     property bool autoExpandOnTrackChange: cfgData.disableAutoExpandOnTrackChange !== undefined ? !cfgData.disableAutoExpandOnTrackChange : !UserConfig.disableAutoExpandOnTrackChange
+    property bool showBatteryPercentage: cfgData.showBatteryPercentage !== undefined ? cfgData.showBatteryPercentage : true
     property string primaryAction: cfgData.dynamicIslandPrimaryAction || UserConfig.dynamicIslandPrimaryAction || "toggleExpandedPlayer"
     property string secondaryAction: cfgData.dynamicIslandSecondaryAction || UserConfig.dynamicIslandSecondaryAction || "toggleControlCenter"
 
@@ -71,6 +72,7 @@ FloatingWindow {
             Quickshell.shellDir + "/bin/update_tide_config.py",
             "--clock-format", clockFormat,
             "--disable-auto-expand", autoExpandOnTrackChange ? "false" : "true",
+            "--show-battery-percentage", showBatteryPercentage ? "true" : "false",
             "--primary-action", primaryAction,
             "--secondary-action", secondaryAction
         ]);
@@ -297,6 +299,22 @@ FloatingWindow {
                     checked: autoExpandOnTrackChange
                     onToggled: (newValue) => {
                         autoExpandOnTrackChange = newValue;
+                        saveSettings();
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Show Battery Percentage"
+                subtitle: "Display numerical percentage next to the battery icon"
+
+                SettingsSwitch {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -24
+                    checked: showBatteryPercentage
+                    onToggled: (newValue) => {
+                        showBatteryPercentage = newValue;
                         saveSettings();
                     }
                 }
