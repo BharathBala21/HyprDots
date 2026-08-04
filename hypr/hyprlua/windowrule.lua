@@ -86,3 +86,9 @@ hl.window_rule({
 })
 
 
+hl.window_rule({
+    match = {workspace = 5},
+    float = true,
+    persistent_size = true
+})
+
