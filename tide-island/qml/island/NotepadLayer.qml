@@ -745,8 +745,8 @@ FocusScope {
 
                             // Todo Task Button
                             Rectangle {
-                                width: 44; height: 20; radius: 4; color: "#2000f0c2"; border.color: "#00f0c2"; border.width: 1
-                                Text { anchors.centerIn: parent; text: "☑ Todo"; font.pixelSize: 10; font.bold: true; color: "#00f0c2" }
+                                width: 24; height: 20; radius: 4; color: "#14ffffff"
+                                Text { anchors.centerIn: parent; text: "☑"; font.pixelSize: 11; color: "#e0e0e0" }
                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("- [ ] ", "") }
                             }
 
