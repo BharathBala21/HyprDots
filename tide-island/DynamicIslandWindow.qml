@@ -1659,8 +1659,9 @@ PanelWindow {
                 case "clipboard":
                 case "emojis":
                 case "wallpapers":
-                case "notepad":
                     return 680;
+                case "notepad":
+                    return 780;
                 case "expanded":
                 case "bluetooth_expanded":
                     return 400;
@@ -1696,7 +1697,7 @@ PanelWindow {
                 case "wallpapers":
                     return 420;
                 case "notepad":
-                    return 480;
+                    return 500;
                 case "expanded":
                 case "bluetooth_expanded":
                     return 165;

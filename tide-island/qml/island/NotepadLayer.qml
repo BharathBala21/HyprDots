@@ -17,6 +17,7 @@ FocusScope {
     signal closeRequested()
 
     anchors.fill: parent
+    clip: true
     visible: opacity > 0 || notepadOpacityAnim.running
     opacity: showCondition ? 1 : 0
 
@@ -105,7 +106,7 @@ FocusScope {
         toastTimer.restart();
     }
 
-    // Backend I/O processes
+    // Backend I/O process
     Process {
         id: loadProcess
         command: ["python3", Quickshell.shellDir + "/bin/notes_manager.py", "list"]
@@ -256,6 +257,7 @@ FocusScope {
         anchors.fill: parent
         color: "transparent"
         radius: 20
+        clip: true
 
         ColumnLayout {
             anchors.fill: parent
@@ -265,17 +267,17 @@ FocusScope {
             // 1. Top Header Bar
             RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 36
-                spacing: 8
+                Layout.preferredHeight: 34
+                spacing: 6
 
                 // Notepad Header Icon & Title
                 RowLayout {
-                    spacing: 8
+                    spacing: 6
                     Layout.alignment: Qt.AlignVCenter
 
                     Rectangle {
-                        Layout.preferredWidth: 30
-                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: 28
+                        Layout.preferredHeight: 28
                         radius: 8
                         color: "#22ffffff"
 
@@ -283,7 +285,7 @@ FocusScope {
                             anchors.centerIn: parent
                             text: "\uf24a" // Note icon
                             font.family: root.iconFontFamily
-                            font.pixelSize: 14
+                            font.pixelSize: 13
                             color: "#00f0c2"
                         }
                     }
@@ -291,15 +293,15 @@ FocusScope {
                     Text {
                         text: "Notepad"
                         font.family: root.heroFontFamily !== "" ? root.heroFontFamily : root.textFontFamily
-                        font.pixelSize: 17
+                        font.pixelSize: 16
                         font.bold: true
                         color: "#ffffff"
                     }
 
                     Rectangle {
-                        Layout.preferredWidth: noteCountText.implicitWidth + 12
-                        Layout.preferredHeight: 20
-                        radius: 10
+                        Layout.preferredWidth: noteCountText.implicitWidth + 10
+                        Layout.preferredHeight: 18
+                        radius: 9
                         color: "#1affffff"
 
                         Text {
@@ -307,13 +309,13 @@ FocusScope {
                             anchors.centerIn: parent
                             text: filteredNotes.length + " notes"
                             font.family: root.textFontFamily
-                            font.pixelSize: 11
+                            font.pixelSize: 10
                             color: "#a0a0a0"
                         }
                     }
                 }
 
-                Item { Layout.fillWidth: true } // Spacer
+                Item { Layout.fillWidth: true } // Flexible Spacer
 
                 // Category Filter Pills
                 Row {
@@ -326,7 +328,7 @@ FocusScope {
                             required property string modelData
                             required property int index
 
-                            width: catText.implicitWidth + 14
+                            width: catText.implicitWidth + 12
                             height: 24
                             radius: 12
                             color: selectedCategoryFilter === modelData ? (categoryColors[modelData] || "#00f0c2") : "#14ffffff"
@@ -353,31 +355,31 @@ FocusScope {
                     }
                 }
 
-                Item { Layout.preferredWidth: 8 }
+                Item { Layout.preferredWidth: 6 }
 
-                // Quick Action Buttons (New Note, Copy, Pin, Delete, Close)
+                // Action Buttons (+ New, Auto-save Toggle, Save, Pin, Delete, Close)
                 // New Note Button
                 Rectangle {
-                    Layout.preferredWidth: newBtnRow.implicitWidth + 16
-                    Layout.preferredHeight: 28
-                    radius: 14
+                    Layout.preferredWidth: newBtnRow.implicitWidth + 14
+                    Layout.preferredHeight: 26
+                    radius: 13
                     color: "#00f0c2"
 
                     Row {
                         id: newBtnRow
                         anchors.centerIn: parent
-                        spacing: 5
+                        spacing: 4
                         Text {
                             text: "\uf067"
                             font.family: root.iconFontFamily
-                            font.pixelSize: 11
+                            font.pixelSize: 10
                             color: "#0d0e15"
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
                             text: "New"
                             font.family: root.textFontFamily
-                            font.pixelSize: 12
+                            font.pixelSize: 11
                             font.bold: true
                             color: "#0d0e15"
                             anchors.verticalCenter: parent.verticalCenter
@@ -393,9 +395,9 @@ FocusScope {
 
                 // Auto-Save Toggle Button
                 Rectangle {
-                    Layout.preferredWidth: autoSaveRow.implicitWidth + 14
-                    Layout.preferredHeight: 28
-                    radius: 14
+                    Layout.preferredWidth: autoSaveRow.implicitWidth + 12
+                    Layout.preferredHeight: 26
+                    radius: 13
                     color: root.autoSaveEnabled ? "#2000f0c2" : "#1effffff"
                     border.color: root.autoSaveEnabled ? "#00f0c2" : "#20ffffff"
                     border.width: 1
@@ -403,18 +405,18 @@ FocusScope {
                     Row {
                         id: autoSaveRow
                         anchors.centerIn: parent
-                        spacing: 5
+                        spacing: 4
                         Text {
                             text: root.autoSaveEnabled ? "\uf00c" : "\uf00d"
                             font.family: root.iconFontFamily
-                            font.pixelSize: 10
+                            font.pixelSize: 9
                             color: root.autoSaveEnabled ? "#00f0c2" : "#a0a0a0"
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
                             text: root.autoSaveEnabled ? "Auto-save ON" : "Auto-save OFF"
                             font.family: root.textFontFamily
-                            font.pixelSize: 11
+                            font.pixelSize: 10
                             font.bold: root.autoSaveEnabled
                             color: root.autoSaveEnabled ? "#00f0c2" : "#a0a0a0"
                             anchors.verticalCenter: parent.verticalCenter
@@ -430,9 +432,9 @@ FocusScope {
 
                 // Manual Save Button (Visible when auto-save is off or when unsaved)
                 Rectangle {
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-                    radius: 14
+                    Layout.preferredWidth: 26
+                    Layout.preferredHeight: 26
+                    radius: 13
                     color: (root.autoSaveStatus === "Unsaved" || !root.autoSaveEnabled) ? "#3000f0c2" : "#1effffff"
                     border.color: (root.autoSaveStatus === "Unsaved") ? "#00f0c2" : "transparent"
                     border.width: 1
@@ -441,7 +443,7 @@ FocusScope {
                         anchors.centerIn: parent
                         text: "\uf0c7" // Save disk icon
                         font.family: root.iconFontFamily
-                        font.pixelSize: 12
+                        font.pixelSize: 11
                         color: (root.autoSaveStatus === "Unsaved" || !root.autoSaveEnabled) ? "#00f0c2" : "#e0e0e0"
                     }
 
@@ -457,9 +459,9 @@ FocusScope {
 
                 // Pin Button
                 Rectangle {
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-                    radius: 14
+                    Layout.preferredWidth: 26
+                    Layout.preferredHeight: 26
+                    radius: 13
                     color: (currentNote && currentNote.pinned) ? "#3000f0c2" : "#1effffff"
                     visible: currentNote !== null
 
@@ -467,7 +469,7 @@ FocusScope {
                         anchors.centerIn: parent
                         text: "\uf08d" // Pin icon
                         font.family: root.iconFontFamily
-                        font.pixelSize: 12
+                        font.pixelSize: 11
                         color: (currentNote && currentNote.pinned) ? "#00f0c2" : "#e0e0e0"
                     }
 
@@ -480,9 +482,9 @@ FocusScope {
 
                 // Delete Button
                 Rectangle {
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-                    radius: 14
+                    Layout.preferredWidth: 26
+                    Layout.preferredHeight: 26
+                    radius: 13
                     color: "#20ff4444"
                     visible: currentNote !== null
 
@@ -490,7 +492,7 @@ FocusScope {
                         anchors.centerIn: parent
                         text: "\uf1f8" // Trash icon
                         font.family: root.iconFontFamily
-                        font.pixelSize: 12
+                        font.pixelSize: 11
                         color: "#ff5555"
                     }
 
@@ -503,16 +505,16 @@ FocusScope {
 
                 // Close Button
                 Rectangle {
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-                    radius: 14
+                    Layout.preferredWidth: 26
+                    Layout.preferredHeight: 26
+                    radius: 13
                     color: "#1effffff"
 
                     Text {
                         anchors.centerIn: parent
                         text: "\uf00d" // Close icon
                         font.family: root.iconFontFamily
-                        font.pixelSize: 13
+                        font.pixelSize: 12
                         color: "#a0a0a0"
                     }
 
@@ -538,6 +540,7 @@ FocusScope {
                     color: "#12121a"
                     border.color: "#1effffff"
                     border.width: 1
+                    clip: true
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -705,6 +708,7 @@ FocusScope {
                     color: "#12121a"
                     border.color: "#1effffff"
                     border.width: 1
+                    clip: true
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -735,7 +739,7 @@ FocusScope {
                                 }
                             }
 
-                            // Category Selector Chips
+                            // Category Selector Chips (Flex row with explicit bounds)
                             Row {
                                 spacing: 4
                                 Layout.alignment: Qt.AlignVCenter
@@ -833,9 +837,11 @@ FocusScope {
                                 font.pixelSize: 11
                                 font.bold: true
                                 color: "#00f0c2"
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
                             }
 
-                            Item { Layout.fillWidth: true } // Spacer
+                            Item { Layout.fillWidth: true; visible: root.toastMessage === "" } // Spacer
 
                             // Auto save status indicator
                             Row {
@@ -844,7 +850,7 @@ FocusScope {
                                     text: root.autoSaveStatus === "Saving..." ? "\uf1ce" : "\uf00c"
                                     font.family: root.iconFontFamily
                                     font.pixelSize: 10
-                                    color: root.autoSaveStatus === "Saved" ? "#34d399" : "#fbbf24"
+                                    color: root.autoSaveStatus === "Saved" ? "#34d399" : (root.autoSaveStatus === "Unsaved" ? "#fbbf24" : "#a0a0a0")
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                                 Text {
