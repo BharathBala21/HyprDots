@@ -10,16 +10,16 @@ NOTES_FILE = os.path.join(NOTES_DIR, "notes.json")
 DEFAULT_NOTES = [
     {
         "id": "note_welcome",
-        "title": "Welcome to Tide Notepad! 📝",
-        "content": "Welcome to your Tide-Island Notch Notepad!\n\n• Type your notes freely — auto-saves as you type.\n• Organize using categories: Work, Personal, Ideas, Todo.\n• Pin important notes to keep them at the top.\n• Click 'Copy' to send any note directly to your clipboard.\n• Trigger via shortcut or from the Utilities island swipe menu!",
+        "title": "Markdown Quick Guide 📝",
+        "content": "# Markdown Guide & Shortcuts\n\nUse these Markdown formats anywhere in your notes:\n\n• **Bold** : Surround text with `**bold**`\n• *Italic* : Surround text with `*italic*`\n• # Heading : Add `# ` at start of line\n• - Bullet List : Add `- ` at start of line\n• - [ ] Todo Task : Add `- [ ] ` for unchecked todo\n• - [x] Completed : Add `- [x] ` for checked todo\n• `Code` : Wrap code with backticks\n\nKeyboard Shortcuts:\n• Ctrl+N : New Note\n• Ctrl+S : Save Notes\n• Ctrl+F : Search Notes\n• Esc    : Close Notch",
         "category": "Ideas",
         "pinned": True,
         "updated_at": int(time.time())
     },
     {
-        "id": "note_shortcuts",
-        "title": "Quick Shortcuts & Tips ⚡",
-        "content": "Keyboard Shortcuts:\n- Ctrl+N : Create a new note\n- Ctrl+S : Force save note\n- Ctrl+F : Focus search bar\n- Esc    : Close notepad notch\n\nEnjoy clean & fast note-taking directly from your Dynamic Island!",
+        "id": "note_todo",
+        "title": "Daily Todo List ⚡",
+        "content": "- [x] Setup Tide Notepad\n- [ ] Try typing **bold** and *italic* notes\n- [ ] Create personal and work notes\n- [ ] Toggle Auto-save setting",
         "category": "Todo",
         "pinned": False,
         "updated_at": int(time.time() - 60)

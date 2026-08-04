@@ -206,6 +206,20 @@ FocusScope {
         }
     }
 
+    function insertMarkdown(prefix, suffix) {
+        if (!contentTextEdit) return;
+        const start = contentTextEdit.selectionStart;
+        const end = contentTextEdit.selectionEnd;
+        const oldText = contentTextEdit.text || "";
+        const selected = oldText.substring(start, end);
+        const insertion = prefix + (selected ? selected : "text") + (suffix ? suffix : "");
+        const newText = oldText.substring(0, start) + insertion + oldText.substring(end);
+        updateNoteField("content", newText);
+        contentTextEdit.forceActiveFocus();
+        const cursorTarget = start + prefix.length + (selected ? selected.length : 4);
+        contentTextEdit.select(cursorTarget, cursorTarget);
+    }
+
     function updateNoteField(field, value) {
         if (!currentNote) return;
         const targetId = currentNote.id;
@@ -774,6 +788,65 @@ FocusScope {
                                     }
                                 }
                             }
+                        }
+
+                        // Markdown Quick Formatting Toolbar
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 22
+                            spacing: 4
+
+                            Text {
+                                text: "Format:"
+                                font.family: root.textFontFamily
+                                font.pixelSize: 10
+                                color: "#606060"
+                                Layout.alignment: Qt.AlignVCenter
+                            }
+
+                            // Bold Button
+                            Rectangle {
+                                width: 22; height: 20; radius: 4; color: "#14ffffff"
+                                Text { anchors.centerIn: parent; text: "B"; font.bold: true; font.pixelSize: 11; color: "#e0e0e0" }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("**", "**") }
+                            }
+
+                            // Italic Button
+                            Rectangle {
+                                width: 22; height: 20; radius: 4; color: "#14ffffff"
+                                Text { anchors.centerIn: parent; text: "I"; font.italic: true; font.pixelSize: 11; color: "#e0e0e0" }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("*", "*") }
+                            }
+
+                            // Heading Button
+                            Rectangle {
+                                width: 22; height: 20; radius: 4; color: "#14ffffff"
+                                Text { anchors.centerIn: parent; text: "H"; font.bold: true; font.pixelSize: 11; color: "#00f0c2" }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("# ", "") }
+                            }
+
+                            // Bullet List Button
+                            Rectangle {
+                                width: 24; height: 20; radius: 4; color: "#14ffffff"
+                                Text { anchors.centerIn: parent; text: "• List"; font.pixelSize: 10; color: "#e0e0e0" }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("- ", "") }
+                            }
+
+                            // Todo Task Button
+                            Rectangle {
+                                width: 44; height: 20; radius: 4; color: "#2000f0c2"; border.color: "#00f0c2"; border.width: 1
+                                Text { anchors.centerIn: parent; text: "☑ Todo"; font.pixelSize: 10; font.bold: true; color: "#00f0c2" }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("- [ ] ", "") }
+                            }
+
+                            // Code Button
+                            Rectangle {
+                                width: 26; height: 20; radius: 4; color: "#14ffffff"
+                                Text { anchors.centerIn: parent; text: "<>"; font.pixelSize: 10; color: "#a78bfa" }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("`", "`") }
+                            }
+
+                            Item { Layout.fillWidth: true } // Spacer
                         }
 
                         // Divider Line
