@@ -142,6 +142,13 @@ hl.bind(
 )
 
 hl.bind(
+    mainMod .. " + N",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleNotepad"
+    )
+)
+
+hl.bind(
     mainMod .. " + period",
     hl.dsp.exec_cmd(
         "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleEmojis"
