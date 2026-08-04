@@ -1390,48 +1390,6 @@ Item {
                     color: textSecondary
                     font.pixelSize: 12
                     font.family: textFontFamily
-                    font.weight: Font.Medium
-                }
-            }
-
-            Row {
-                id: headerRightRow
-                anchors.right: parent.right
-                anchors.rightMargin: 2
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 12
-
-                Rectangle {
-                    id: themeToggleButton
-                    width: 24
-                    height: 24
-                    radius: 12
-                    color: themeToggleMouse.containsMouse ? "#26ffffff" : StyleTokens.transparent
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: darkMode ? "\uf186" : "\uf185"
-                        color: themeToggleMouse.containsMouse ? "#ffffff" : StyleTokens.textSecondary
-                        font.pixelSize: 14
-                        font.family: iconFontFamily
-                    }
-
-                    MouseArea {
-                        id: themeToggleMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (controlCenter.shellRootController) {
-                                controlCenter.shellRootController.toggleDarkMode();
-                            }
-                        }
-                    }
                 }
             }
         }
