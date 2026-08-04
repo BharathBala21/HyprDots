@@ -34,6 +34,7 @@ FocusScope {
     property int selectedIndex: 0
     property string searchText: ""
     property bool autoSaveEnabled: true
+    property bool isPreviewMode: false
     property string autoSaveStatus: "Saved"
     property string toastMessage: ""
 
@@ -182,6 +183,11 @@ FocusScope {
         showToast(currentNote.pinned ? "Pinned note" : "Unpinned note");
     }
 
+    function togglePreviewMode() {
+        root.isPreviewMode = !root.isPreviewMode;
+        showToast(root.isPreviewMode ? "Preview Mode (Read-only)" : "Edit Mode");
+    }
+
     function toggleAutoSave() {
         root.autoSaveEnabled = !root.autoSaveEnabled;
         if (root.autoSaveEnabled) {
@@ -205,6 +211,20 @@ FocusScope {
         contentTextEdit.forceActiveFocus();
         const cursorTarget = start + prefix.length + (selected ? selected.length : 4);
         contentTextEdit.select(cursorTarget, cursorTarget);
+    }
+
+    function toggleTodoLine(lineIndex) {
+        if (!currentNote || !currentNote.content) return;
+        const lines = currentNote.content.split("\n");
+        if (lineIndex < 0 || lineIndex >= lines.length) return;
+        const line = lines[lineIndex];
+
+        if (/^\s*[-*]\s*\[\s*\]/.test(line)) {
+            lines[lineIndex] = line.replace(/(\s*[-*]\s*\[)\s*(\])/, "$1x$2");
+        } else if (/^\s*[-*]\s*\[[xX]\]/.test(line)) {
+            lines[lineIndex] = line.replace(/(\s*[-*]\s*\[)[xX](\])/, "$1 $2");
+        }
+        updateNoteField("content", lines.join("\n"));
     }
 
     function updateNoteField(field, value) {
@@ -351,6 +371,43 @@ FocusScope {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: createNewNote()
+                    }
+                }
+
+                // Preview Mode Toggle Button
+                Rectangle {
+                    Layout.preferredWidth: previewBtnRow.implicitWidth + 12
+                    Layout.preferredHeight: 26
+                    radius: 13
+                    color: root.isPreviewMode ? "#2000f0c2" : "#1effffff"
+                    border.color: root.isPreviewMode ? "#00f0c2" : "#20ffffff"
+                    border.width: 1
+
+                    Row {
+                        id: previewBtnRow
+                        anchors.centerIn: parent
+                        spacing: 4
+                        Text {
+                            text: root.isPreviewMode ? "\uf06e" : "\uf044" // Eye vs Edit Pencil icon
+                            font.family: root.iconFontFamily
+                            font.pixelSize: 10
+                            color: root.isPreviewMode ? "#00f0c2" : "#e0e0e0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: root.isPreviewMode ? "Preview" : "Edit"
+                            font.family: root.textFontFamily
+                            font.pixelSize: 10
+                            font.bold: root.isPreviewMode
+                            color: root.isPreviewMode ? "#00f0c2" : "#e0e0e0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: togglePreviewMode()
                     }
                 }
 
@@ -686,6 +743,7 @@ FocusScope {
                                 id: titleInput
                                 Layout.fillWidth: true
                                 text: currentNote ? currentNote.title : ""
+                                readOnly: root.isPreviewMode
                                 placeholderText: "Note Title..."
                                 placeholderTextColor: "#606060"
                                 font.family: root.heroFontFamily !== "" ? root.heroFontFamily : root.textFontFamily
@@ -694,67 +752,91 @@ FocusScope {
                                 color: "#ffffff"
                                 background: null
                                 onTextChanged: {
-                                    if (currentNote && text !== currentNote.title) {
+                                    if (!root.isPreviewMode && currentNote && text !== currentNote.title) {
                                         updateNoteField("title", text);
                                     }
                                 }
                             }
                         }
 
-                        // Markdown Quick Formatting Toolbar
+                        // Markdown Quick Formatting Toolbar (Edit Mode) / Preview Badge (Preview Mode)
                         RowLayout {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 22
                             spacing: 4
 
-                            Text {
-                                text: "Format:"
-                                font.family: root.textFontFamily
-                                font.pixelSize: 10
-                                color: "#606060"
-                                Layout.alignment: Qt.AlignVCenter
+                            RowLayout {
+                                visible: !root.isPreviewMode
+                                spacing: 4
+
+                                Text {
+                                    text: "Format:"
+                                    font.family: root.textFontFamily
+                                    font.pixelSize: 10
+                                    color: "#606060"
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                // Bold Button
+                                Rectangle {
+                                    width: 22; height: 20; radius: 4; color: "#14ffffff"
+                                    Text { anchors.centerIn: parent; text: "B"; font.bold: true; font.pixelSize: 11; color: "#e0e0e0" }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("**", "**") }
+                                }
+
+                                // Italic Button
+                                Rectangle {
+                                    width: 22; height: 20; radius: 4; color: "#14ffffff"
+                                    Text { anchors.centerIn: parent; text: "I"; font.italic: true; font.pixelSize: 11; color: "#e0e0e0" }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("*", "*") }
+                                }
+
+                                // Heading Button
+                                Rectangle {
+                                    width: 22; height: 20; radius: 4; color: "#14ffffff"
+                                    Text { anchors.centerIn: parent; text: "H"; font.bold: true; font.pixelSize: 11; color: "#00f0c2" }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("# ", "") }
+                                }
+
+                                // Bullet List Button
+                                Rectangle {
+                                    width: 24; height: 20; radius: 4; color: "#14ffffff"
+                                    Text { anchors.centerIn: parent; text: "• List"; font.pixelSize: 10; color: "#e0e0e0" }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("- ", "") }
+                                }
+
+                                // Todo Task Button
+                                Rectangle {
+                                    width: 24; height: 20; radius: 4; color: "#14ffffff"
+                                    Text { anchors.centerIn: parent; text: "☑"; font.pixelSize: 11; color: "#e0e0e0" }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("- [ ] ", "") }
+                                }
+
+                                // Code Button
+                                Rectangle {
+                                    width: 26; height: 20; radius: 4; color: "#14ffffff"
+                                    Text { anchors.centerIn: parent; text: "<>"; font.pixelSize: 10; color: "#a78bfa" }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("`", "`") }
+                                }
                             }
 
-                            // Bold Button
-                            Rectangle {
-                                width: 22; height: 20; radius: 4; color: "#14ffffff"
-                                Text { anchors.centerIn: parent; text: "B"; font.bold: true; font.pixelSize: 11; color: "#e0e0e0" }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("**", "**") }
-                            }
+                            RowLayout {
+                                visible: root.isPreviewMode
+                                spacing: 6
 
-                            // Italic Button
-                            Rectangle {
-                                width: 22; height: 20; radius: 4; color: "#14ffffff"
-                                Text { anchors.centerIn: parent; text: "I"; font.italic: true; font.pixelSize: 11; color: "#e0e0e0" }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("*", "*") }
-                            }
-
-                            // Heading Button
-                            Rectangle {
-                                width: 22; height: 20; radius: 4; color: "#14ffffff"
-                                Text { anchors.centerIn: parent; text: "H"; font.bold: true; font.pixelSize: 11; color: "#00f0c2" }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("# ", "") }
-                            }
-
-                            // Bullet List Button
-                            Rectangle {
-                                width: 24; height: 20; radius: 4; color: "#14ffffff"
-                                Text { anchors.centerIn: parent; text: "• List"; font.pixelSize: 10; color: "#e0e0e0" }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("- ", "") }
-                            }
-
-                            // Todo Task Button
-                            Rectangle {
-                                width: 24; height: 20; radius: 4; color: "#14ffffff"
-                                Text { anchors.centerIn: parent; text: "☑"; font.pixelSize: 11; color: "#e0e0e0" }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("- [ ] ", "") }
-                            }
-
-                            // Code Button
-                            Rectangle {
-                                width: 26; height: 20; radius: 4; color: "#14ffffff"
-                                Text { anchors.centerIn: parent; text: "<>"; font.pixelSize: 10; color: "#a78bfa" }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: insertMarkdown("`", "`") }
+                                Text {
+                                    text: "\uf06e"
+                                    font.family: root.iconFontFamily
+                                    font.pixelSize: 11
+                                    color: "#00f0c2"
+                                }
+                                Text {
+                                    text: "Markdown Preview (Click checkboxes to toggle)"
+                                    font.family: root.textFontFamily
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: "#00f0c2"
+                                }
                             }
 
                             Item { Layout.fillWidth: true } // Spacer
@@ -767,7 +849,7 @@ FocusScope {
                             color: "#15ffffff"
                         }
 
-                        // Main Text Area for Note Content
+                        // Main Text Area for Note Content (Edit Mode vs Preview Mode)
                         ScrollView {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
@@ -776,6 +858,8 @@ FocusScope {
                             TextArea {
                                 id: contentTextEdit
                                 anchors.fill: parent
+                                visible: !root.isPreviewMode
+                                readOnly: root.isPreviewMode
                                 text: currentNote ? currentNote.content : ""
                                 placeholderText: "Write your note here... (Markdown supported)"
                                 placeholderTextColor: "#505050"
@@ -789,8 +873,75 @@ FocusScope {
                                 selectByMouse: true
 
                                 onTextChanged: {
-                                    if (currentNote && text !== currentNote.content) {
+                                    if (!root.isPreviewMode && currentNote && text !== currentNote.content) {
                                         updateNoteField("content", text);
+                                    }
+                                }
+                            }
+
+                            // Interactive Rendered Markdown & Todo Checkboxes in Preview Mode
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                visible: root.isPreviewMode
+                                spacing: 4
+
+                                Repeater {
+                                    model: (currentNote && currentNote.content) ? currentNote.content.split("\n") : []
+
+                                    delegate: RowLayout {
+                                        required property string modelData
+                                        required property int index
+
+                                        readonly property bool isTodo: /^\s*[-*]\s*\[[\s xX]\]/.test(modelData)
+                                        readonly property bool isChecked: /^\s*[-*]\s*\[[xX]\]/.test(modelData)
+                                        readonly property string cleanText: isTodo ? modelData.replace(/^\s*[-*]\s*\[[\s xX]\]\s*/, "") : modelData
+
+                                        Layout.fillWidth: true
+                                        spacing: 6
+
+                                        // Interactive Checkbox Icon
+                                        Rectangle {
+                                            visible: isTodo
+                                            width: 18
+                                            height: 18
+                                            radius: 4
+                                            color: isChecked ? "#2000f0c2" : "#14ffffff"
+                                            border.color: isChecked ? "#00f0c2" : "#60ffffff"
+                                            border.width: 1
+
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: isChecked ? "\uf00c" : ""
+                                                font.family: root.iconFontFamily
+                                                font.pixelSize: 10
+                                                color: "#00f0c2"
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: toggleTodoLine(index)
+                                            }
+                                        }
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: isTodo ? cleanText : (modelData !== "" ? modelData : " ")
+                                            textFormat: Text.MarkdownText
+                                            wrapMode: Text.Wrap
+                                            font.family: root.textFontFamily
+                                            font.pixelSize: 13
+                                            font.strikeout: isTodo && isChecked
+                                            color: (isTodo && isChecked) ? "#707070" : "#e8e8e8"
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                enabled: isTodo
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: toggleTodoLine(index)
+                                            }
+                                        }
                                     }
                                 }
                             }
