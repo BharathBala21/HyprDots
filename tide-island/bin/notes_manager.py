@@ -12,7 +12,6 @@ DEFAULT_NOTES = [
         "id": "note_welcome",
         "title": "Markdown Quick Guide 📝",
         "content": "# Markdown Guide & Shortcuts\n\nUse these Markdown formats anywhere in your notes:\n\n• **Bold** : Surround text with `**bold**`\n• *Italic* : Surround text with `*italic*`\n• # Heading : Add `# ` at start of line\n• - Bullet List : Add `- ` at start of line\n• - [ ] Todo Task : Add `- [ ] ` for unchecked todo\n• - [x] Completed : Add `- [x] ` for checked todo\n• `Code` : Wrap code with backticks\n\nKeyboard Shortcuts:\n• Ctrl+N : New Note\n• Ctrl+S : Save Notes\n• Ctrl+F : Search Notes\n• Esc    : Close Notch",
-        "category": "Ideas",
         "pinned": True,
         "updated_at": int(time.time())
     },
@@ -20,7 +19,6 @@ DEFAULT_NOTES = [
         "id": "note_todo",
         "title": "Daily Todo List ⚡",
         "content": "- [x] Setup Tide Notepad\n- [ ] Try typing **bold** and *italic* notes\n- [ ] Create personal and work notes\n- [ ] Toggle Auto-save setting",
-        "category": "Todo",
         "pinned": False,
         "updated_at": int(time.time() - 60)
     }

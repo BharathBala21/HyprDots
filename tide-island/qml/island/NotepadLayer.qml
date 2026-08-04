@@ -32,25 +32,13 @@ FocusScope {
     // State properties
     property var allNotes: []
     property int selectedIndex: 0
-    property string selectedCategoryFilter: "All"
     property string searchText: ""
     property bool autoSaveEnabled: true
     property string autoSaveStatus: "Saved"
     property string toastMessage: ""
 
-    readonly property var categoryColors: ({
-        "All": "#00f0c2",
-        "Ideas": "#a78bfa",
-        "Work": "#60a5fa",
-        "Personal": "#34d399",
-        "Todo": "#fbbf24"
-    })
-
     readonly property var filteredNotes: {
         let result = allNotes || [];
-        if (selectedCategoryFilter !== "All") {
-            result = result.filter(n => n.category === selectedCategoryFilter);
-        }
         if (searchText.trim() !== "") {
             const q = searchText.toLowerCase().trim();
             result = result.filter(n => (n.title || "").toLowerCase().indexOf(q) !== -1 || (n.content || "").toLowerCase().indexOf(q) !== -1);
@@ -156,7 +144,6 @@ FocusScope {
             id: newId,
             title: "Untitled Note",
             content: "",
-            category: root.selectedCategoryFilter === "All" ? "Ideas" : root.selectedCategoryFilter,
             pinned: false,
             updated_at: Math.floor(Date.now() / 1000)
         };
@@ -330,46 +317,6 @@ FocusScope {
                 }
 
                 Item { Layout.fillWidth: true } // Flexible Spacer
-
-                // Category Filter Pills
-                Row {
-                    spacing: 4
-                    Layout.alignment: Qt.AlignVCenter
-
-                    Repeater {
-                        model: ["All", "Ideas", "Work", "Personal", "Todo"]
-                        delegate: Rectangle {
-                            required property string modelData
-                            required property int index
-
-                            width: catText.implicitWidth + 12
-                            height: 24
-                            radius: 12
-                            color: selectedCategoryFilter === modelData ? (categoryColors[modelData] || "#00f0c2") : "#14ffffff"
-
-                            Text {
-                                id: catText
-                                anchors.centerIn: parent
-                                text: parent.modelData
-                                font.family: root.textFontFamily
-                                font.pixelSize: 11
-                                font.bold: selectedCategoryFilter === parent.modelData
-                                color: selectedCategoryFilter === parent.modelData ? "#0d0e15" : "#c0c0c0"
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.selectedCategoryFilter = parent.modelData;
-                                    root.selectedIndex = 0;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Item { Layout.preferredWidth: 6 }
 
                 // Action Buttons (+ New, Auto-save Toggle, Save, Pin, Delete, Close)
                 // New Note Button
@@ -642,12 +589,12 @@ FocusScope {
                                         anchors.margins: 8
                                         spacing: 8
 
-                                        // Category color tag bar
+                                        // Accent indicator bar
                                         Rectangle {
-                                            Layout.preferredWidth: 4
+                                            Layout.preferredWidth: 3
                                             Layout.fillHeight: true
                                             radius: 2
-                                            color: categoryColors[modelData.category] || "#00f0c2"
+                                            color: index === root.selectedIndex ? "#00f0c2" : "#20ffffff"
                                         }
 
                                         ColumnLayout {
@@ -730,7 +677,7 @@ FocusScope {
                         spacing: 8
                         visible: currentNote !== null
 
-                        // Note Title + Category Selection Row
+                        // Note Title Header Row
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 8
@@ -749,42 +696,6 @@ FocusScope {
                                 onTextChanged: {
                                     if (currentNote && text !== currentNote.title) {
                                         updateNoteField("title", text);
-                                    }
-                                }
-                            }
-
-                            // Category Selector Chips (Flex row with explicit bounds)
-                            Row {
-                                spacing: 4
-                                Layout.alignment: Qt.AlignVCenter
-
-                                Repeater {
-                                    model: ["Ideas", "Work", "Personal", "Todo"]
-                                    delegate: Rectangle {
-                                        required property string modelData
-
-                                        width: tagText.implicitWidth + 10
-                                        height: 20
-                                        radius: 10
-                                        color: (currentNote && currentNote.category === modelData) ? (categoryColors[modelData] || "#00f0c2") : "#14ffffff"
-
-                                        Text {
-                                            id: tagText
-                                            anchors.centerIn: parent
-                                            text: parent.modelData
-                                            font.family: root.textFontFamily
-                                            font.pixelSize: 10
-                                            font.bold: currentNote && currentNote.category === parent.modelData
-                                            color: (currentNote && currentNote.category === parent.modelData) ? "#0d0e15" : "#a0a0a0"
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                updateNoteField("category", parent.modelData);
-                                            }
-                                        }
                                     }
                                 }
                             }
