@@ -33,6 +33,7 @@ FocusScope {
     property int selectedIndex: 0
     property string selectedCategoryFilter: "All"
     property string searchText: ""
+    property bool autoSaveEnabled: true
     property string autoSaveStatus: "Saved"
     property string toastMessage: ""
 
@@ -140,6 +141,10 @@ FocusScope {
     }
 
     function triggerAutoSave() {
+        if (!root.autoSaveEnabled) {
+            root.autoSaveStatus = "Auto-save Off";
+            return;
+        }
         root.autoSaveStatus = "Unsaved";
         autoSaveTimer.restart();
     }
@@ -189,11 +194,15 @@ FocusScope {
         showToast(currentNote.pinned ? "Pinned note" : "Unpinned note");
     }
 
-    function copyCurrentNoteContent() {
-        if (!currentNote) return;
-        const fullText = (currentNote.title ? (currentNote.title + "\n\n") : "") + (currentNote.content || "");
-        Quickshell.execDetached(["sh", "-c", "printf '%s' " + JSON.stringify(fullText) + " | wl-copy"]);
-        showToast("Copied to clipboard!");
+    function toggleAutoSave() {
+        root.autoSaveEnabled = !root.autoSaveEnabled;
+        if (root.autoSaveEnabled) {
+            saveNotesToBackend();
+            showToast("Auto-save enabled");
+        } else {
+            root.autoSaveStatus = "Auto-save Off";
+            showToast("Auto-save disabled (Press Ctrl+S to save)");
+        }
     }
 
     function updateNoteField(field, value) {
@@ -382,26 +391,67 @@ FocusScope {
                     }
                 }
 
-                // Copy Button
+                // Auto-Save Toggle Button
                 Rectangle {
-                    Layout.preferredWidth: 28
+                    Layout.preferredWidth: autoSaveRow.implicitWidth + 14
                     Layout.preferredHeight: 28
                     radius: 14
-                    color: "#1effffff"
-                    visible: currentNote !== null
+                    color: root.autoSaveEnabled ? "#2000f0c2" : "#1effffff"
+                    border.color: root.autoSaveEnabled ? "#00f0c2" : "#20ffffff"
+                    border.width: 1
 
-                    Text {
+                    Row {
+                        id: autoSaveRow
                         anchors.centerIn: parent
-                        text: "\uf0c5" // Copy icon
-                        font.family: root.iconFontFamily
-                        font.pixelSize: 12
-                        color: "#e0e0e0"
+                        spacing: 5
+                        Text {
+                            text: root.autoSaveEnabled ? "\uf00c" : "\uf00d"
+                            font.family: root.iconFontFamily
+                            font.pixelSize: 10
+                            color: root.autoSaveEnabled ? "#00f0c2" : "#a0a0a0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: root.autoSaveEnabled ? "Auto-save ON" : "Auto-save OFF"
+                            font.family: root.textFontFamily
+                            font.pixelSize: 11
+                            font.bold: root.autoSaveEnabled
+                            color: root.autoSaveEnabled ? "#00f0c2" : "#a0a0a0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: copyCurrentNoteContent()
+                        onClicked: toggleAutoSave()
+                    }
+                }
+
+                // Manual Save Button (Visible when auto-save is off or when unsaved)
+                Rectangle {
+                    Layout.preferredWidth: 28
+                    Layout.preferredHeight: 28
+                    radius: 14
+                    color: (root.autoSaveStatus === "Unsaved" || !root.autoSaveEnabled) ? "#3000f0c2" : "#1effffff"
+                    border.color: (root.autoSaveStatus === "Unsaved") ? "#00f0c2" : "transparent"
+                    border.width: 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf0c7" // Save disk icon
+                        font.family: root.iconFontFamily
+                        font.pixelSize: 12
+                        color: (root.autoSaveStatus === "Unsaved" || !root.autoSaveEnabled) ? "#00f0c2" : "#e0e0e0"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            saveNotesToBackend();
+                            showToast("Notes saved!");
+                        }
                     }
                 }
 
