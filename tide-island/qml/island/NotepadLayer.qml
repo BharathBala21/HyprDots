@@ -173,7 +173,10 @@ FocusScope {
         const list = root.allNotes.slice();
         list.unshift(newNote);
         root.allNotes = list;
-        root.selectedIndex = 0;
+        
+        const targetIdx = root.filteredNotes.findIndex(n => n.id === newId);
+        root.selectedIndex = targetIdx !== -1 ? targetIdx : 0;
+        
         triggerAutoSave();
         titleInput.forceActiveFocus();
         titleInput.selectAll();
@@ -201,8 +204,12 @@ FocusScope {
             return n;
         });
         root.allNotes = list;
+        const targetIdx = root.filteredNotes.findIndex(n => n.id === targetId);
+        if (targetIdx !== -1) {
+            root.selectedIndex = targetIdx;
+        }
         triggerAutoSave();
-        showToast(currentNote.pinned ? "Pinned note" : "Unpinned note");
+        showToast(currentNote && currentNote.pinned ? "Pinned note" : "Unpinned note");
     }
 
     function togglePreviewMode() {
