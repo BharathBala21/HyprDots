@@ -1518,8 +1518,6 @@ PanelWindow {
         Rectangle {
             id: mainCapsule
             z: 5
-            opacity: (activeUserConfig.islandAutoHideEnabled && islandContainer.islandState === "normal" && !capsuleMouseArea.containsMouse) ? 0.0 : 1.0
-            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
             property int morphDuration: 400
             property real outlineWidth: root.overviewContentVisible ? 1 : 0
             property color outlineColor: root.overviewContentVisible ? root.overviewCapsuleBorderColor : StyleTokens.clearBlack

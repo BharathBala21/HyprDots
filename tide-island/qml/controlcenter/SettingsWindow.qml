@@ -45,7 +45,6 @@ FloatingWindow {
     }
 
     property string clockFormat: cfgData.clockFormat !== undefined ? String(cfgData.clockFormat) : (UserConfig.clockFormat || "24")
-    property bool islandAutoHideEnabled: cfgData.islandAutoHideEnabled !== undefined ? cfgData.islandAutoHideEnabled : (UserConfig.islandAutoHideEnabled || false)
     property bool autoExpandOnTrackChange: cfgData.disableAutoExpandOnTrackChange !== undefined ? !cfgData.disableAutoExpandOnTrackChange : !UserConfig.disableAutoExpandOnTrackChange
     property string primaryAction: cfgData.dynamicIslandPrimaryAction || UserConfig.dynamicIslandPrimaryAction || "toggleExpandedPlayer"
     property string secondaryAction: cfgData.dynamicIslandSecondaryAction || UserConfig.dynamicIslandSecondaryAction || "toggleControlCenter"
@@ -71,7 +70,6 @@ FloatingWindow {
             "python3",
             Quickshell.shellDir + "/bin/update_tide_config.py",
             "--clock-format", clockFormat,
-            "--auto-hide", islandAutoHideEnabled ? "true" : "false",
             "--disable-auto-expand", autoExpandOnTrackChange ? "false" : "true",
             "--primary-action", primaryAction,
             "--secondary-action", secondaryAction
@@ -284,22 +282,6 @@ FloatingWindow {
                                 saveSettings();
                             }
                         }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Auto-Hide Island"
-                subtitle: "Automatically hide the Dynamic Island when inactive"
-
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -24
-                    checked: islandAutoHideEnabled
-                    onToggled: (newValue) => {
-                        islandAutoHideEnabled = newValue;
-                        saveSettings();
                     }
                 }
             }
