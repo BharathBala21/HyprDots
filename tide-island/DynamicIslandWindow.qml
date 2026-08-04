@@ -182,16 +182,6 @@ PanelWindow {
     readonly property string heroFontFamily: userConfig.heroFontFamily
     readonly property string timeFontFamily: userConfig.timeFontFamily
 
-    Connections {
-        target: root.shellRootController
-        function onSettingsWindowOpenChanged() {
-            if (root.shellRootController && root.shellRootController.settingsWindowOpen) {
-                if (islandContainer.islandState === "control_center") {
-                    islandContainer.smartRestoreState();
-                }
-            }
-        }
-    }
     readonly property string defaultSplitIcon: "\ud83c\udfa7"
     readonly property string notificationStatusIcon: "\uf0f3"
     readonly property real overviewWindowCornerRadius: 12

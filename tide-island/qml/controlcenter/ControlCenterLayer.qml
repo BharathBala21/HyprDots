@@ -1433,43 +1433,6 @@ Item {
                         }
                     }
                 }
-
-                Rectangle {
-                    id: settingsButton
-                    width: 24
-                    height: 24
-                    radius: 12
-                    color: settingsButtonMouse.containsMouse ? "#26ffffff" : StyleTokens.transparent
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf013" // Gear icon
-                        color: settingsButtonMouse.containsMouse ? "#ffffff" : StyleTokens.textSecondary
-                        font.pixelSize: 14
-                        font.family: iconFontFamily
-                    }
-
-                    MouseArea {
-                        id: settingsButtonMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: {
-                            if (controlCenter.shellRootController) {
-                                controlCenter.shellRootController.settingsWindowOpen = !controlCenter.shellRootController.settingsWindowOpen;
-                            }
-                        }
-                    }
-                }
-
-
-
-
-
             }
         }
 
