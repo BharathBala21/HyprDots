@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import IslandBackend
@@ -185,9 +186,10 @@ Item {
             id: musicArtBox
             Layout.preferredWidth: 20
             Layout.preferredHeight: 20
-            radius: height / 2
+            radius: 10
             color: "#20ffffff"
             clip: true
+            layer.enabled: true
             Layout.alignment: Qt.AlignVCenter
 
             Image {
@@ -198,6 +200,21 @@ Item {
                 visible: source.toString() !== "" && status !== Image.Error
                 asynchronous: true
                 cache: true
+
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    maskEnabled: true
+                    maskSource: artMask
+                }
+            }
+
+            Rectangle {
+                id: artMask
+                width: 20
+                height: 20
+                radius: 10
+                visible: false
+                layer.enabled: true
             }
 
             Text {
