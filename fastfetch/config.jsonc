@@ -61,11 +61,11 @@
             "key": " ",
             "keyColor": "34", 
         },
-        {
-            "type": "media",
-            "key": "󰝚 ",
-            "keyColor": "34", 
-        },
+        // {
+        //     "type": "media",
+        //     "key": "󰝚 ",
+        //     "keyColor": "34", 
+        // },
         {
             "type": "player",
             "key": " ",
