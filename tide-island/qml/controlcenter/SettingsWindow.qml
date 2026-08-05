@@ -2,14 +2,15 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import QtQuick.Controls.Basic
+import QtQuick.Layouts
 import IslandBackend
 
 FloatingWindow {
     id: root
 
     title: "Tide-Island Settings"
-    implicitWidth: 480
-    implicitHeight: 560
+    implicitWidth: 840
+    implicitHeight: 580
     color: colorBackground
 
     signal settingsClosed()
@@ -44,6 +45,11 @@ FloatingWindow {
         }
     }
 
+    // Active Category State ("bar_island", "notepad", "actions", "clock_date")
+    property string activeCategory: "bar_island"
+    property string searchQuery: ""
+
+    // Settings values loaded from userconfig.json
     property string clockFormat: cfgData.clockFormat !== undefined ? String(cfgData.clockFormat) : (UserConfig.clockFormat || "24")
     property bool autoExpandOnTrackChange: cfgData.disableAutoExpandOnTrackChange !== undefined ? !cfgData.disableAutoExpandOnTrackChange : !UserConfig.disableAutoExpandOnTrackChange
     property bool showBatteryPercentage: cfgData.showBatteryPercentage !== undefined ? cfgData.showBatteryPercentage : true
@@ -94,8 +100,6 @@ FloatingWindow {
         ]);
     }
 
-
-
     // Component: Switch
     component SettingsSwitch: Rectangle {
         id: swRoot
@@ -140,7 +144,7 @@ FloatingWindow {
         property string title: ""
         property string subtitle: ""
 
-        width: parent ? parent.width : 440
+        Layout.fillWidth: true
         implicitHeight: cardCol.height + 24
         radius: 14
         color: colorCardBg
@@ -189,18 +193,185 @@ FloatingWindow {
         }
     }
 
-    ScrollView {
-        id: scrollView
-        anchors.fill: parent
-        anchors.margins: 16
-        clip: true
-        ScrollBar.vertical.policy: ScrollBar.AsNeeded
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+    // Component: Interactive Slider Card
+    component GeometrySliderCard: Rectangle {
+        id: gCard
+        property string title: ""
+        property string subtitle: ""
+        property real value: 0
+        property real from: 0
+        property real to: 100
+        property string unit: "px"
+        signal valueMoved(real newValue)
 
-        Column {
-            id: mainColumn
-            width: scrollView.width - 12
-            spacing: 16
+        Layout.fillWidth: true
+        implicitHeight: 70
+        radius: 14
+        color: colorCardBg
+        border.color: Qt.rgba(colorOutline.r, colorOutline.g, colorOutline.b, 0.25)
+        border.width: 1
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 4
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                ColumnLayout {
+                    spacing: 1
+                    Text {
+                        text: gCard.title
+                        font.pixelSize: 13
+                        font.weight: Font.Medium
+                        color: colorOnSurface
+                    }
+                    Text {
+                        text: gCard.subtitle
+                        font.pixelSize: 11
+                        color: colorOnSurfaceVariant
+                        visible: gCard.subtitle !== ""
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Text {
+                    text: Math.round(gCard.value) + " " + gCard.unit
+                    font.pixelSize: 13
+                    font.bold: true
+                    color: colorPrimary
+                }
+            }
+
+            Slider {
+                Layout.fillWidth: true
+                from: gCard.from
+                to: gCard.to
+                value: gCard.value
+                onMoved: {
+                    gCard.valueMoved(value);
+                }
+            }
+        }
+    }
+
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        // --- LEFT SIDEBAR NAVIGATION (Width: 230) ---
+        Rectangle {
+            Layout.preferredWidth: 230
+            Layout.fillHeight: true
+            color: "#0a0b0e"
+            border.color: "#18ffffff"
+            border.width: 1
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 14
+                spacing: 12
+
+                // Search Input Box
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 36
+                    radius: 10
+                    color: "#16ffffff"
+                    border.color: "#20ffffff"
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        spacing: 6
+
+                        Text {
+                            text: "🔍"
+                            font.pixelSize: 12
+                        }
+
+                        TextField {
+                            id: searchInput
+                            Layout.fillWidth: true
+                            placeholderText: "Search Settings..."
+                            placeholderTextColor: "#606060"
+                            font.family: "Inter Display"
+                            font.pixelSize: 12
+                            color: "#ffffff"
+                            background: null
+                            onTextChanged: root.searchQuery = text
+                        }
+                    }
+                }
+
+                // Category List
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Repeater {
+                        model: [
+                            { id: "bar_island", icon: "🖥️", label: "Bar & Island", desc: "Shape, size, notch style, and custom geometry." },
+                            { id: "notepad", icon: "📝", label: "Notepad Notch", desc: "Default view mode, auto-save settings, and markdown." },
+                            { id: "actions", icon: "⚡", label: "Island Actions", desc: "Primary left-click and secondary right-click actions." },
+                            { id: "clock_date", icon: "🕒", label: "Clock & Behavior", desc: "Time format, auto-expansion, and battery text." }
+                        ]
+
+                        delegate: Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 40
+                            radius: 10
+                            color: root.activeCategory === modelData.id ? colorPrimary : (navMouse.containsMouse ? "#18ffffff" : "transparent")
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                spacing: 10
+
+                                Text {
+                                    text: modelData.icon
+                                    font.pixelSize: 15
+                                }
+
+                                Text {
+                                    text: modelData.label
+                                    font.family: "Inter Display"
+                                    font.pixelSize: 13
+                                    font.weight: root.activeCategory === modelData.id ? Font.Bold : Font.Medium
+                                    color: root.activeCategory === modelData.id ? "#ffffff" : colorOnSurface
+                                    Layout.fillWidth: true
+                                }
+                            }
+
+                            MouseArea {
+                                id: navMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.activeCategory = modelData.id;
+                                    root.searchQuery = "";
+                                    searchInput.text = "";
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Item { Layout.fillHeight: true } // Spacer
+            }
+        }
+
+        // --- RIGHT MAIN SETTINGS PANEL ---
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             focus: true
 
             Keys.onPressed: (event) => {
@@ -210,562 +381,391 @@ FloatingWindow {
                 }
             }
 
-            // Header Title
-            Row {
-                width: parent.width
-                spacing: 10
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 16
 
-                Text {
-                    text: "🏝️"
-                    font.pixelSize: 22
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+                // Section Hero Banner Card
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 80
+                    radius: 16
+                    color: "#16ffffff"
+                    border.color: "#20ffffff"
+                    border.width: 1
 
-                Text {
-                    text: "Tide-Island Settings"
-                    color: colorOnSurface
-                    font.pixelSize: 20
-                    font.family: "Inter Display"
-                    font.weight: Font.Bold
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 14
 
-            // --- SECTION 1: Dynamic Island Behavior ---
-            Text {
-                text: "Island Behavior"
-                color: colorPrimary
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-            }
-
-            SettingsCard {
-                title: "Clock Format"
-                subtitle: "Choose between 12-hour (AM/PM) and 24-hour time format"
-
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 6
-
-                    Rectangle {
-                        width: 70
-                        height: 28
-                        radius: 8
-                        color: clockFormat === "12" ? colorPrimary : colorSecondaryContainer
-                        Text {
-                            anchors.centerIn: parent
-                            text: "12-Hour"
-                            color: clockFormat === "12" ? "#ffffff" : colorOnSurfaceVariant
-                            font.pixelSize: 11
-                            font.family: "Inter Display"
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                clockFormat = "12";
-                                saveSettings();
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 70
-                        height: 28
-                        radius: 8
-                        color: clockFormat === "24" ? colorPrimary : colorSecondaryContainer
-                        Text {
-                            anchors.centerIn: parent
-                            text: "24-Hour"
-                            color: clockFormat === "24" ? "#ffffff" : colorOnSurfaceVariant
-                            font.pixelSize: 11
-                            font.family: "Inter Display"
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                clockFormat = "24";
-                                saveSettings();
-                            }
-                        }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Auto-Expand on Music Change"
-                subtitle: "Automatically expand island briefly when a new song starts playing"
-
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -24
-                    checked: autoExpandOnTrackChange
-                    onToggled: (newValue) => {
-                        autoExpandOnTrackChange = newValue;
-                        saveSettings();
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Show Battery Percentage"
-                subtitle: "Display numerical percentage next to the battery icon"
-
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -24
-                    checked: showBatteryPercentage
-                    onToggled: (newValue) => {
-                        showBatteryPercentage = newValue;
-                        saveSettings();
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Island Visual Style"
-                subtitle: "Choose floating pill style or flush top screen notch style"
-
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 6
-
-                    Rectangle {
-                        width: 85
-                        height: 28
-                        radius: 8
-                        color: islandStyle === "pill" ? colorPrimary : colorSecondaryContainer
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Floating Pill"
-                            color: islandStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant
-                            font.pixelSize: 11
-                            font.family: "Inter Display"
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                islandStyle = "pill";
-                                saveSettings();
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 85
-                        height: 28
-                        radius: 8
-                        color: islandStyle === "notch" ? colorPrimary : colorSecondaryContainer
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Top Notch"
-                            color: islandStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant
-                            font.pixelSize: 11
-                            font.family: "Inter Display"
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                islandStyle = "notch";
-                                saveSettings();
-                            }
-                        }
-                    }
-                }
-            }
-
-            // --- SECTION 2: Geometry & Sizing (Pill / Notch) ---
-            Text {
-                text: "Pill / Notch Geometry & Padding"
-                color: colorPrimary
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-                topPadding: 6
-            }
-
-            SettingsCard {
-                title: "Idle Width (" + islandCompactWidth + "px)"
-                subtitle: "Collapsed island width in pixels (100px - 260px)"
-
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 4
-
-                    Repeater {
-                        model: [120, 140, 160, 180, 200]
                         Rectangle {
-                            required property int modelData
-                            width: 36; height: 24; radius: 6
-                            color: islandCompactWidth === modelData ? colorPrimary : colorSecondaryContainer
-                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandCompactWidth === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactWidth = parent.modelData; saveSettings(); } }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactWidth = Math.max(100, islandCompactWidth - 5); saveSettings(); } }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactWidth = Math.min(260, islandCompactWidth + 5); saveSettings(); } }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Idle Height (" + islandCompactHeight + "px)"
-                subtitle: "Collapsed island height in pixels (24px - 50px)"
-
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 4
-
-                    Repeater {
-                        model: [28, 32, 35, 40, 45]
-                        Rectangle {
-                            required property int modelData
-                            width: 36; height: 24; radius: 6
-                            color: islandCompactHeight === modelData ? colorPrimary : colorSecondaryContainer
-                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandCompactHeight === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactHeight = parent.modelData; saveSettings(); } }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactHeight = Math.max(24, islandCompactHeight - 2); saveSettings(); } }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactHeight = Math.min(50, islandCompactHeight + 2); saveSettings(); } }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Corner Radius (" + islandCornerRadius + "px)"
-                subtitle: "Curvature radius of pill/notch corners (4px - 30px)"
-
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 4
-
-                    Repeater {
-                        model: [8, 12, 19, 24, 30]
-                        Rectangle {
-                            required property int modelData
-                            width: 36; height: 24; radius: 6
-                            color: islandCornerRadius === modelData ? colorPrimary : colorSecondaryContainer
-                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandCornerRadius === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCornerRadius = parent.modelData; saveSettings(); } }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCornerRadius = Math.max(4, islandCornerRadius - 2); saveSettings(); } }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCornerRadius = Math.min(30, islandCornerRadius + 2); saveSettings(); } }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Top Edge Offset (" + islandTopOffset + "px)"
-                subtitle: "Vertical offset from top screen edge (0px - 24px)"
-
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 4
-
-                    Repeater {
-                        model: [0, 4, 8, 12, 16]
-                        Rectangle {
-                            required property int modelData
-                            width: 36; height: 24; radius: 6
-                            color: islandTopOffset === modelData ? colorPrimary : colorSecondaryContainer
-                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandTopOffset === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandTopOffset = parent.modelData; saveSettings(); } }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandTopOffset = Math.max(0, islandTopOffset - 2); saveSettings(); } }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandTopOffset = Math.min(24, islandTopOffset + 2); saveSettings(); } }
-                    }
-                }
-            }
-
-            SettingsCard {
-                title: "Inner Content Padding (" + islandInnerPadding + "px)"
-                subtitle: "Padding inside collapsed pill for clock/icons (2px - 16px)"
-
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 4
-
-                    Repeater {
-                        model: [4, 6, 8, 12, 16]
-                        Rectangle {
-                            required property int modelData
-                            width: 36; height: 24; radius: 6
-                            color: islandInnerPadding === modelData ? colorPrimary : colorSecondaryContainer
-                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandInnerPadding === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
-                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandInnerPadding = parent.modelData; saveSettings(); } }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandInnerPadding = Math.max(2, islandInnerPadding - 1); saveSettings(); } }
-                    }
-
-                    Rectangle {
-                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
-                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandInnerPadding = Math.min(16, islandInnerPadding + 1); saveSettings(); } }
-                    }
-                }
-            }
-
-            // --- SECTION 3: Click Actions ---
-            Text {
-                text: "Island Click Actions"
-                color: colorPrimary
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-                topPadding: 6
-            }
-
-            SettingsCard {
-                title: "Left-Click Action"
-                subtitle: "Action triggered when clicking the Dynamic Island"
-
-                Grid {
-                    columns: 2
-                    spacing: 8
-                    width: parent.width
-                    topPadding: 6
-
-                    readonly property var options: [
-                        { label: "Expanded Player", value: "toggleExpandedPlayer" },
-                        { label: "Control Center", value: "toggleControlCenter" },
-                        { label: "App Launcher", value: "toggleLauncher" },
-                        { label: "Notepad Notch", value: "toggleNotepad" },
-                        { label: "Overview", value: "toggleOverview" }
-                    ]
-
-                    Repeater {
-                        model: parent.options
-                        Rectangle {
-                            width: (mainColumn.width - 32) / 2
-                            height: 32
-                            radius: 8
-                            color: primaryAction === modelData.value ? colorPrimary : colorSecondaryContainer
+                            width: 46
+                            height: 46
+                            radius: 14
+                            color: colorPrimary
 
                             Text {
                                 anchors.centerIn: parent
-                                text: modelData.label
-                                color: primaryAction === modelData.value ? "#ffffff" : colorOnSurfaceVariant
-                                font.pixelSize: 12
-                                font.family: "Inter Display"
-                                font.weight: primaryAction === modelData.value ? Font.Bold : Font.Normal
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    primaryAction = modelData.value;
-                                    saveSettings();
+                                text: {
+                                    switch (root.activeCategory) {
+                                    case "bar_island": return "🖥️";
+                                    case "notepad": return "📝";
+                                    case "actions": return "⚡";
+                                    case "clock_date": return "🕒";
+                                    default: return "🏝️";
+                                    }
                                 }
+                                font.pixelSize: 22
                             }
                         }
-                    }
-                }
-            }
 
-            SettingsCard {
-                title: "Right-Click Action"
-                subtitle: "Secondary action triggered when right-clicking the Dynamic Island"
-
-                Grid {
-                    columns: 2
-                    spacing: 8
-                    width: parent.width
-                    topPadding: 6
-
-                    readonly property var options: [
-                        { label: "Control Center", value: "toggleControlCenter" },
-                        { label: "Notepad Notch", value: "toggleNotepad" },
-                        { label: "Workspace Overview", value: "toggleOverview" },
-                        { label: "Clipboard Manager", value: "toggleClipboard" },
-                        { label: "Emoji Picker", value: "toggleEmojis" }
-                    ]
-
-                    Repeater {
-                        model: parent.options
-                        Rectangle {
-                            width: (mainColumn.width - 32) / 2
-                            height: 32
-                            radius: 8
-                            color: secondaryAction === modelData.value ? colorPrimary : colorSecondaryContainer
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
 
                             Text {
-                                anchors.centerIn: parent
-                                text: modelData.label
-                                color: secondaryAction === modelData.value ? "#ffffff" : colorOnSurfaceVariant
-                                font.pixelSize: 12
+                                text: {
+                                    switch (root.activeCategory) {
+                                    case "bar_island": return "Bar & Island";
+                                    case "notepad": return "Notepad Notch";
+                                    case "actions": return "Island Actions";
+                                    case "clock_date": return "Clock & Behavior";
+                                    default: return "Tide-Island Settings";
+                                    }
+                                }
                                 font.family: "Inter Display"
-                                font.weight: secondaryAction === modelData.value ? Font.Bold : Font.Normal
+                                font.pixelSize: 18
+                                font.bold: true
+                                color: "#ffffff"
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    secondaryAction = modelData.value;
-                                    saveSettings();
+                            Text {
+                                text: {
+                                    switch (root.activeCategory) {
+                                    case "bar_island": return "Customize island visual style (Pill vs Notch), height, width, radius, and padding.";
+                                    case "notepad": return "Configure default view mode (Edit vs Preview) and auto-save behavior for notes.";
+                                    case "actions": return "Set primary left-click and secondary right-click actions for the Dynamic Island.";
+                                    case "clock_date": return "Adjust 12h/24h time format, battery percentage text, and auto-expand options.";
+                                    default: return "System preferences for Tide-Island.";
+                                    }
+                                }
+                                font.family: "Inter Display"
+                                font.pixelSize: 11
+                                color: "#a0a0a0"
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+                        }
+                    }
+                }
+
+                // Scrollable Content Area
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                    ColumnLayout {
+                        width: parent.width - 12
+                        spacing: 12
+
+                        // ==================== CATEGORY 1: BAR & ISLAND ====================
+                        ColumnLayout {
+                            visible: root.activeCategory === "bar_island" || root.searchQuery !== ""
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            SettingsCard {
+                                title: "Island Visual Style"
+                                subtitle: "Choose between floating island pill and flush top screen notch"
+
+                                Row {
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.topMargin: -28
+                                    spacing: 6
+
+                                    Rectangle {
+                                        width: 85; height: 28; radius: 8
+                                        color: islandStyle === "pill" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "Floating Pill"; color: islandStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandStyle = "pill"; saveSettings(); } }
+                                    }
+
+                                    Rectangle {
+                                        width: 85; height: 28; radius: 8
+                                        color: islandStyle === "notch" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "Top Notch"; color: islandStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandStyle = "notch"; saveSettings(); } }
+                                    }
+                                }
+                            }
+
+                            GeometrySliderCard {
+                                title: "Collapsed Width"
+                                subtitle: "Idle capsule width in pixels (100px - 260px)"
+                                value: islandCompactWidth
+                                from: 100; to: 260
+                                onValueMoved: (newVal) => { islandCompactWidth = Math.round(newVal); saveSettings(); }
+                            }
+
+                            GeometrySliderCard {
+                                title: "Collapsed Height"
+                                subtitle: "Idle capsule height in pixels (24px - 50px)"
+                                value: islandCompactHeight
+                                from: 24; to: 50
+                                onValueMoved: (newVal) => { islandCompactHeight = Math.round(newVal); saveSettings(); }
+                            }
+
+                            GeometrySliderCard {
+                                title: "Corner Radius"
+                                subtitle: "Curvature radius of pill/notch corners (4px - 30px)"
+                                value: islandCornerRadius
+                                from: 4; to: 30
+                                onValueMoved: (newVal) => { islandCornerRadius = Math.round(newVal); saveSettings(); }
+                            }
+
+                            GeometrySliderCard {
+                                title: "Top Edge Offset"
+                                subtitle: "Vertical gap/offset from top screen edge (0px - 24px)"
+                                value: islandTopOffset
+                                from: 0; to: 24
+                                onValueMoved: (newVal) => { islandTopOffset = Math.round(newVal); saveSettings(); }
+                            }
+
+                            GeometrySliderCard {
+                                title: "Inner Content Padding"
+                                subtitle: "Padding inside collapsed pill for clock/icons (2px - 16px)"
+                                value: islandInnerPadding
+                                from: 2; to: 16
+                                onValueMoved: (newVal) => { islandInnerPadding = Math.round(newVal); saveSettings(); }
+                            }
+                        }
+
+                        // ==================== CATEGORY 2: NOTEPAD ====================
+                        ColumnLayout {
+                            visible: root.activeCategory === "notepad" || root.searchQuery !== ""
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            SettingsCard {
+                                title: "Default View Mode"
+                                subtitle: "Initial mode when opening the Notepad notch (Edit or Preview)"
+
+                                Row {
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.topMargin: -28
+                                    spacing: 6
+
+                                    Rectangle {
+                                        width: 70; height: 28; radius: 8
+                                        color: notepadDefaultMode === "edit" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "Edit"; color: notepadDefaultMode === "edit" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { notepadDefaultMode = "edit"; saveSettings(); } }
+                                    }
+
+                                    Rectangle {
+                                        width: 70; height: 28; radius: 8
+                                        color: notepadDefaultMode === "preview" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "Preview"; color: notepadDefaultMode === "preview" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { notepadDefaultMode = "preview"; saveSettings(); } }
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Auto-Save Notes"
+                                subtitle: "Automatically save note content while typing"
+
+                                SettingsSwitch {
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.topMargin: -24
+                                    checked: notepadAutoSave
+                                    onToggled: (newValue) => {
+                                        notepadAutoSave = newValue;
+                                        saveSettings();
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-            }
 
-            // --- SECTION 3: Notepad Settings ---
-            Text {
-                text: "Notepad Settings"
-                color: colorPrimary
-                font.pixelSize: 12
-                font.family: "Inter Display"
-                font.weight: Font.Bold
-                topPadding: 6
-            }
+                        // ==================== CATEGORY 3: ISLAND ACTIONS ====================
+                        ColumnLayout {
+                            visible: root.activeCategory === "actions" || root.searchQuery !== ""
+                            Layout.fillWidth: true
+                            spacing: 12
 
-            SettingsCard {
-                title: "Default View Mode"
-                subtitle: "Initial mode when opening the Notepad notch (Edit or Preview)"
+                            SettingsCard {
+                                title: "Left-Click Action"
+                                subtitle: "Action triggered when clicking the Dynamic Island"
 
-                Row {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -28
-                    spacing: 6
+                                Grid {
+                                    columns: 2
+                                    spacing: 8
+                                    width: parent.width
+                                    topPadding: 6
 
-                    Rectangle {
-                        width: 70
-                        height: 28
-                        radius: 8
-                        color: notepadDefaultMode === "edit" ? colorPrimary : colorSecondaryContainer
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Edit"
-                            color: notepadDefaultMode === "edit" ? "#ffffff" : colorOnSurfaceVariant
-                            font.pixelSize: 11
-                            font.family: "Inter Display"
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                notepadDefaultMode = "edit";
-                                saveSettings();
+                                    readonly property var options: [
+                                        { label: "Expanded Player", value: "toggleExpandedPlayer" },
+                                        { label: "Control Center", value: "toggleControlCenter" },
+                                        { label: "App Launcher", value: "toggleLauncher" },
+                                        { label: "Notepad Notch", value: "toggleNotepad" },
+                                        { label: "Overview", value: "toggleOverview" }
+                                    ]
+
+                                    Repeater {
+                                        model: parent.options
+                                        Rectangle {
+                                            width: (parent.width - 8) / 2
+                                            height: 32
+                                            radius: 8
+                                            color: primaryAction === modelData.value ? colorPrimary : colorSecondaryContainer
+
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: modelData.label
+                                                color: primaryAction === modelData.value ? "#ffffff" : colorOnSurfaceVariant
+                                                font.pixelSize: 12
+                                                font.family: "Inter Display"
+                                                font.weight: primaryAction === modelData.value ? Font.Bold : Font.Normal
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    primaryAction = modelData.value;
+                                                    saveSettings();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Right-Click Action"
+                                subtitle: "Secondary action triggered when right-clicking the Dynamic Island"
+
+                                Grid {
+                                    columns: 2
+                                    spacing: 8
+                                    width: parent.width
+                                    topPadding: 6
+
+                                    readonly property var options: [
+                                        { label: "Control Center", value: "toggleControlCenter" },
+                                        { label: "Notepad Notch", value: "toggleNotepad" },
+                                        { label: "Workspace Overview", value: "toggleOverview" },
+                                        { label: "Clipboard Manager", value: "toggleClipboard" },
+                                        { label: "Emoji Picker", value: "toggleEmojis" }
+                                    ]
+
+                                    Repeater {
+                                        model: parent.options
+                                        Rectangle {
+                                            width: (parent.width - 8) / 2
+                                            height: 32
+                                            radius: 8
+                                            color: secondaryAction === modelData.value ? colorPrimary : colorSecondaryContainer
+
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: modelData.label
+                                                color: secondaryAction === modelData.value ? "#ffffff" : colorOnSurfaceVariant
+                                                font.pixelSize: 12
+                                                font.family: "Inter Display"
+                                                font.weight: secondaryAction === modelData.value ? Font.Bold : Font.Normal
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    secondaryAction = modelData.value;
+                                                    saveSettings();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
 
-                    Rectangle {
-                        width: 70
-                        height: 28
-                        radius: 8
-                        color: notepadDefaultMode === "preview" ? colorPrimary : colorSecondaryContainer
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Preview"
-                            color: notepadDefaultMode === "preview" ? "#ffffff" : colorOnSurfaceVariant
-                            font.pixelSize: 11
-                            font.family: "Inter Display"
-                            font.weight: Font.Medium
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                notepadDefaultMode = "preview";
-                                saveSettings();
+                        // ==================== CATEGORY 4: CLOCK & BEHAVIOR ====================
+                        ColumnLayout {
+                            visible: root.activeCategory === "clock_date" || root.searchQuery !== ""
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            SettingsCard {
+                                title: "Clock Format"
+                                subtitle: "Choose between 12-hour (AM/PM) and 24-hour time format"
+
+                                Row {
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.topMargin: -28
+                                    spacing: 6
+
+                                    Rectangle {
+                                        width: 70; height: 28; radius: 8
+                                        color: clockFormat === "12" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "12-Hour"; color: clockFormat === "12" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { clockFormat = "12"; saveSettings(); } }
+                                    }
+
+                                    Rectangle {
+                                        width: 70; height: 28; radius: 8
+                                        color: clockFormat === "24" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "24-Hour"; color: clockFormat === "24" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { clockFormat = "24"; saveSettings(); } }
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Auto-Expand on Music Change"
+                                subtitle: "Automatically expand island briefly when a new song starts playing"
+
+                                SettingsSwitch {
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.topMargin: -24
+                                    checked: autoExpandOnTrackChange
+                                    onToggled: (newValue) => {
+                                        autoExpandOnTrackChange = newValue;
+                                        saveSettings();
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Show Battery Percentage"
+                                subtitle: "Display numerical percentage next to the battery icon"
+
+                                SettingsSwitch {
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.topMargin: -24
+                                    checked: showBatteryPercentage
+                                    onToggled: (newValue) => {
+                                        showBatteryPercentage = newValue;
+                                        saveSettings();
+                                    }
+                                }
                             }
                         }
+
+                        Item { Layout.preferredHeight: 16 }
                     }
                 }
-            }
-
-            SettingsCard {
-                title: "Auto-Save Notes"
-                subtitle: "Automatically save note content while typing"
-
-                SettingsSwitch {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: -24
-                    checked: notepadAutoSave
-                    onToggled: (newValue) => {
-                        notepadAutoSave = newValue;
-                        saveSettings();
-                    }
-                }
-            }
-
-            Item {
-                width: parent.width
-                height: 10
             }
         }
     }
