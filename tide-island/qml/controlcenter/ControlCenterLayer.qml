@@ -1455,76 +1455,118 @@ Item {
             width: parent.width
             spacing: 12
 
+            // Wi-Fi Card
             Rectangle {
                 id: wifiCard
-                width: shortTileWidth
-                height: 64
+                width: (parent.width - 12) / 2
+                height: 76
                 radius: 20
-                color: wifiEnabled ? cardAccent : moduleColor
+                color: "#1c1c1e"
 
-                Behavior on color {
-                    ColorAnimation { duration: 150 }
-                }
+                Behavior on color { ColorAnimation { duration: 150 } }
 
-                Rectangle {
-                    id: wifiIconCircle
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: wifiEnabled ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: wifiGlyph
-                        color: wifiEnabled ? "#121418" : cardAccent
-                        font.pixelSize: 16
-                        font.family: iconFontFamily
-                    }
-                }
-
-                Column {
-                    anchors.left: wifiIconCircle.right
-                    anchors.leftMargin: 10
-                    anchors.right: wifiChevronArea.left
-                    anchors.rightMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        text: "Wi-Fi"
-                        color: wifiEnabled ? "#121418" : cardAccent
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: wifiStatusText
-                        color: wifiEnabled ? "#2c3e35" : "#a5aab5"
-                        font.pixelSize: 10
-                        font.family: textFontFamily
-                        font.weight: Font.Medium
-                        elide: Text.ElideRight
-                    }
-                }
-
+                // Top Row: Icon + iOS Toggle Switch
                 Item {
-                    id: wifiChevronArea
+                    id: wifiTopRow
+                    anchors.top: parent.top
+                    anchors.topMargin: 12
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
                     anchors.right: parent.right
-                    width: 36
-                    height: parent.height
-                    visible: wifiSupported && wifiAvailable
+                    anchors.rightMargin: 14
+                    height: 24
+
+                    // Icon
+                    Rectangle {
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: wifiEnabled ? "#0a84ff" : "#2c2c2e"
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: wifiGlyph
+                            color: "#ffffff"
+                            font.pixelSize: 13
+                            font.family: iconFontFamily
+                        }
+                    }
+
+                    // iOS Green Toggle Switch
+                    Rectangle {
+                        width: 38
+                        height: 22
+                        radius: 11
+                        color: wifiEnabled ? "#34c759" : "#3a3a3c"
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Behavior on color { ColorAnimation { duration: 180 } }
+
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: "#ffffff"
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: wifiEnabled ? (parent.width - width - 2) : 2
+
+                            Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutQuint } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenter.toggleWifiEnabled()
+                        }
+                    }
+                }
+
+                // Bottom Row: Title + Status + Chevron
+                Item {
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 10
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    height: 30
+
+                    Column {
+                        anchors.left: parent.left
+                        anchors.right: wifiChevronText.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+
+                        Text {
+                            width: parent.width
+                            text: "Wi-Fi"
+                            color: "#ffffff"
+                            font.pixelSize: 13
+                            font.family: textFontFamily
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: wifiStatusText
+                            color: "#8e8e93"
+                            font.pixelSize: 10
+                            font.family: textFontFamily
+                            font.weight: Font.Medium
+                            elide: Text.ElideRight
+                        }
+                    }
 
                     Text {
-                        anchors.centerIn: parent
+                        id: wifiChevronText
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
                         text: "›"
-                        color: wifiEnabled ? "#121418" : "#a5aab5"
+                        color: "#8e8e93"
                         font.pixelSize: 18
                         font.family: textFontFamily
                         font.weight: Font.Bold
@@ -1532,6 +1574,7 @@ Item {
 
                     MouseArea {
                         anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             if (wifiEnabled) {
                                 controlCenter.toggleConnectivityOverlay("wifi");
@@ -1541,130 +1584,135 @@ Item {
                         }
                     }
                 }
-
-                MouseArea {
-                    anchors.left: parent.left
-                    anchors.right: wifiChevronArea.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    enabled: wifiSupported && wifiAvailable && !wifiBusy
-                    onClicked: {
-                        controlCenter.toggleWifiEnabled();
-                    }
-                }
             }
 
+            // Bluetooth Card
             Rectangle {
-                id: audioCard
-                width: parent.width - wifiCard.width - 12
-                height: 64
+                id: bluetoothCard
+                width: (parent.width - 12) / 2
+                height: 76
                 radius: 20
-                color: (!isMuted && displayedVolume > 0) ? cardAccent : moduleColor
+                color: "#1c1c1e"
 
-                Behavior on color {
-                    ColorAnimation { duration: 150 }
+                Behavior on color { ColorAnimation { duration: 150 } }
+
+                // Top Row: Icon + iOS Toggle Switch
+                Item {
+                    id: btTopRow
+                    anchors.top: parent.top
+                    anchors.topMargin: 12
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    height: 24
+
+                    // Icon
+                    Rectangle {
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: bluetoothEnabled ? "#0a84ff" : "#2c2c2e"
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: bluetoothGlyph
+                            color: "#ffffff"
+                            font.pixelSize: 13
+                            font.family: iconFontFamily
+                        }
+                    }
+
+                    // iOS Green Toggle Switch
+                    Rectangle {
+                        width: 38
+                        height: 22
+                        radius: 11
+                        color: bluetoothEnabled ? "#34c759" : "#3a3a3c"
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Behavior on color { ColorAnimation { duration: 180 } }
+
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: "#ffffff"
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: bluetoothEnabled ? (parent.width - width - 2) : 2
+
+                            Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutQuint } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenter.toggleBluetoothEnabled()
+                        }
+                    }
                 }
 
-                Rectangle {
-                    id: audioIconCircle
+                // Bottom Row: Title + Status + Chevron
+                Item {
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 10
                     anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: (!isMuted && displayedVolume > 0) ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
+                    anchors.leftMargin: 14
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    height: 30
 
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
+                    Column {
+                        anchors.left: parent.left
+                        anchors.right: btChevronText.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+
+                        Text {
+                            width: parent.width
+                            text: "Bluetooth"
+                            color: "#ffffff"
+                            font.pixelSize: 13
+                            font.family: textFontFamily
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: bluetoothStatusText
+                            color: "#8e8e93"
+                            font.pixelSize: 10
+                            font.family: textFontFamily
+                            font.weight: Font.Medium
+                            elide: Text.ElideRight
+                        }
                     }
 
                     Text {
-                        anchors.centerIn: parent
-                        text: controlCenter.volumeIconGlyph
-                        color: (!isMuted && displayedVolume > 0) ? "#121418" : cardAccent
-                        font.pixelSize: 16
-                        font.family: iconFontFamily
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
+                        id: btChevronText
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "›"
+                        color: "#8e8e93"
+                        font.pixelSize: 18
+                        font.family: textFontFamily
+                        font.weight: Font.Bold
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            controlCenter.toggleAudioMute();
+                            if (bluetoothEnabled) {
+                                controlCenter.toggleConnectivityOverlay("bluetooth");
+                            } else {
+                                controlCenter.toggleBluetoothEnabled();
+                            }
                         }
-                    }
-                }
-
-
-                Column {
-                    anchors.left: audioIconCircle.right
-                    anchors.leftMargin: 10
-                    anchors.right: audioChevronArea.left
-                    anchors.rightMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        text: "Audio"
-                        color: (!isMuted && displayedVolume > 0) ? "#121418" : "#ffffff"
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: controlCenter.activeSinkDescription
-                        color: (!isMuted && displayedVolume > 0) ? "#2c3e35" : "#a5aab5"
-                        font.pixelSize: 10
-                        font.family: textFontFamily
-                        font.weight: Font.Medium
-                        elide: Text.ElideRight
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-                }
-
-                Item {
-                    id: audioChevronArea
-                    anchors.right: parent.right
-                    width: 36
-                    height: parent.height
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "›"
-                        color: (!isMuted && displayedVolume > 0) ? "#121418" : "#a5aab5"
-                        font.pixelSize: 18
-                        font.family: textFontFamily
-                        font.weight: Font.Bold
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-                }
-
-                MouseArea {
-                    anchors.left: audioIconCircle.right
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    onClicked: {
-                        controlCenter.toggleConnectivityOverlay("audio");
                     }
                 }
             }
@@ -1675,365 +1723,194 @@ Item {
             width: parent.width
             spacing: 12
 
+            // Battery Profile Card
             Rectangle {
-                id: bluetoothCard
-                width: shortTileWidth
-                height: 64
+                id: powerModeCard
+                width: (parent.width - 12) / 2
+                height: 76
                 radius: 20
-                color: bluetoothEnabled ? cardAccent : moduleColor
+                color: "#1c1c1e"
 
-                Behavior on color {
-                    ColorAnimation { duration: 150 }
-                }
+                Behavior on color { ColorAnimation { duration: 150 } }
 
-                Rectangle {
-                    id: bluetoothIconCircle
+                Item {
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
                     anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: bluetoothEnabled ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
+                    anchors.leftMargin: 14
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    height: 20
 
                     Text {
-                        anchors.centerIn: parent
-                        text: bluetoothGlyph
-                        color: bluetoothEnabled ? "#121418" : cardAccent
-                        font.pixelSize: 16
-                        font.family: iconFontFamily
-                    }
-                }
-
-                Column {
-                    anchors.left: bluetoothIconCircle.right
-                    anchors.leftMargin: 10
-                    anchors.right: bluetoothChevronArea.left
-                    anchors.rightMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        text: "Bluetooth"
-                        color: bluetoothEnabled ? "#121418" : "#ffffff"
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Battery"
+                        color: "#ffffff"
                         font.pixelSize: 13
                         font.family: textFontFamily
                         font.weight: Font.DemiBold
-                        elide: Text.ElideRight
                     }
 
                     Text {
-                        width: parent.width
-                        text: bluetoothStatusText
-                        color: bluetoothEnabled ? "#2c3e35" : "#a5aab5"
-                        font.pixelSize: 10
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: controlCenter.batteryModeStatusText
+                        color: "#8e8e93"
+                        font.pixelSize: 11
                         font.family: textFontFamily
                         font.weight: Font.Medium
-                        elide: Text.ElideRight
                     }
                 }
 
-                Item {
-                    id: bluetoothChevronArea
+                // Profile Selector Pills
+                Row {
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 10
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
                     anchors.right: parent.right
-                    width: 36
-                    height: parent.height
-                    visible: bluetoothAvailable
+                    anchors.rightMargin: 12
+                    height: 28
+                    spacing: 6
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "›"
-                        color: bluetoothEnabled ? "#121418" : "#a5aab5"
-                        font.pixelSize: 18
-                        font.family: textFontFamily
-                        font.weight: Font.Bold
-                    }
+                    Repeater {
+                        model: ["\uf06c", "\uf242", "\uf0e7"]
+                        delegate: Rectangle {
+                            required property string modelData
+                            required property int index
+                            width: (parent.width - 12) / 3
+                            height: 28
+                            radius: 14
+                            color: controlCenter.batteryModeIndex === index ? "#ffffff" : "#2c2c2e"
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            if (bluetoothEnabled) {
-                                controlCenter.toggleConnectivityOverlay("bluetooth");
-                            } else {
-                                controlCenter.toggleBluetoothEnabled();
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData
+                                color: index === controlCenter.batteryModeIndex ? "#121418" : "#8e8e93"
+                                font.pixelSize: 13
+                                font.family: iconFontFamily
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: controlCenter.applyBatteryModeIndex(index)
                             }
                         }
                     }
                 }
-
-                MouseArea {
-                    anchors.left: parent.left
-                    anchors.right: bluetoothChevronArea.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    enabled: bluetoothAvailable && !bluetoothBusy
-                    onClicked: {
-                        controlCenter.toggleBluetoothEnabled();
-                    }
-                }
             }
 
+            // Quick Toggles Card (Silent & Night mode)
             Rectangle {
-                id: caffeineCard
-                width: shortTileWidth
-                height: 64
+                id: quickTogglesCard
+                width: (parent.width - 12) / 2
+                height: 76
                 radius: 20
-                color: caffeineMode ? cardAccent : moduleColor
+                color: "#1c1c1e"
 
-                Behavior on color {
-                    ColorAnimation { duration: 150 }
-                }
-
-                Rectangle {
-                    id: caffeineIconCircle
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: caffeineMode ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf0f4"
-                        color: caffeineMode ? "#121418" : cardAccent
-                        font.pixelSize: 16
-                        font.family: iconFontFamily
-                    }
-                }
-
-                Column {
-                    anchors.left: caffeineIconCircle.right
-                    anchors.leftMargin: 10
-                    anchors.right: parent.right
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        text: "Caffeine"
-                        color: caffeineMode ? "#121418" : "#ffffff"
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: caffeineMode ? "Active" : "Off"
-                        color: caffeineMode ? "#2c3e35" : "#a5aab5"
-                        font.pixelSize: 10
-                        font.family: textFontFamily
-                        font.weight: Font.Medium
-                        elide: Text.ElideRight
-                    }
-                }
-
-                MouseArea {
+                Row {
                     anchors.fill: parent
-                    onClicked: {
-                        controlCenter.toggleCaffeineMode();
-                    }
-                }
-            }
 
-            Rectangle {
-                id: darkModeCard
-                width: shortTileWidth
-                height: 64
-                radius: 20
-                color: darkMode ? cardAccent : moduleColor
+                    // Silent / DND Column
+                    Item {
+                        width: parent.width / 2
+                        height: parent.height
 
-                Behavior on color {
-                    ColorAnimation { duration: 150 }
-                }
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 4
 
-                Rectangle {
-                    id: darkModeIconCircle
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: darkMode ? (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881") : (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f")
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: dndActive ? "\uf1f6" : "\uf0f3"
+                                color: dndActive ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 18
+                                font.family: iconFontFamily
+                            }
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: darkMode ? "\uf186" : "\uf185"
-                        color: darkMode ? "#121418" : cardAccent
-                        font.pixelSize: 16
-                        font.family: iconFontFamily
-                    }
-                }
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "Silent"
+                                color: dndActive ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 11
+                                font.family: textFontFamily
+                                font.weight: Font.Medium
+                            }
+                        }
 
-                Column {
-                    anchors.left: darkModeIconCircle.right
-                    anchors.leftMargin: 10
-                    anchors.right: parent.right
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        text: "Dark Mode"
-                        color: darkMode ? "#121418" : "#ffffff"
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenter.dndToggleRequested()
+                        }
                     }
 
-                    Text {
-                        width: parent.width
-                        text: darkMode ? "On" : "Off"
-                        color: darkMode ? "#2c3e35" : "#a5aab5"
-                        font.pixelSize: 10
-                        font.family: textFontFamily
-                        font.weight: Font.Medium
-                        elide: Text.ElideRight
+                    // Divider
+                    Rectangle {
+                        width: 1
+                        height: parent.height - 24
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "#2c2c2e"
                     }
-                }
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (controlCenter.shellRootController) {
-                            controlCenter.shellRootController.toggleDarkMode();
+                    // Night Mode Column
+                    Item {
+                        width: parent.width / 2
+                        height: parent.height
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 4
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "\uf186"
+                                color: (controlCenter.displayedTemp > 0) ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 18
+                                font.family: iconFontFamily
+                            }
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "Night mode"
+                                color: (controlCenter.displayedTemp > 0) ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 11
+                                font.family: textFontFamily
+                                font.weight: Font.Medium
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                const nextVal = (controlCenter.displayedTemp > 0) ? 0 : 0.6;
+                                controlCenter.queueTemp(nextVal);
+                                controlCenter.flushTemp(true);
+                            }
                         }
                     }
                 }
             }
         }
 
-        Row {
-            id: tilesRow3
-            width: parent.width
-            spacing: 12
-
-            Rectangle {
-                id: powerModeCard
-                width: parent.width
-                height: 64
-                radius: 20
-                color: {
-                    if (batteryModeIndex === 0) return cardAccent;
-                    if (batteryModeIndex === 2) return "#ff9f0a";
-                    return moduleColor;
-                }
-
-                Behavior on color {
-                    ColorAnimation { duration: 150 }
-                }
-
-                Rectangle {
-                    id: powerIconCircle
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 36
-                    height: 36
-                    radius: 18
-                    color: {
-                        if (batteryModeIndex === 0) return (themeColors ? Qt.darker(themeColors.primary, 1.15) : "#2aa881");
-                        if (batteryModeIndex === 2) return "#cc7f08";
-                        return (themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : "#2d323f");
-                    }
-
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: controlCenter.batteryModeGlyphs[controlCenter.batteryModeIndex]
-                        color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : cardAccent
-                        font.pixelSize: 16
-                        font.family: iconFontFamily
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-                }
-
-                Column {
-                    anchors.left: powerIconCircle.right
-                    anchors.leftMargin: 10
-                    anchors.right: powerChevronArea.left
-                    anchors.rightMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        text: "Power Profile"
-                        color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : "#ffffff"
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: controlCenter.batteryModeStatusText
-                        color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#2c3e35" : "#a5aab5"
-                        font.pixelSize: 10
-                        font.family: textFontFamily
-                        font.weight: Font.Medium
-                        elide: Text.ElideRight
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-                }
-
-                Item {
-                    id: powerChevronArea
-                    anchors.right: parent.right
-                    width: 36
-                    height: parent.height
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "›"
-                        color: (batteryModeIndex === 0 || batteryModeIndex === 2) ? "#121418" : "#a5aab5"
-                        font.pixelSize: 18
-                        font.family: textFontFamily
-                        font.weight: Font.Bold
-
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        controlCenter.toggleConnectivityOverlay("battery");
-                    }
-                }
-            }
+        // Center Drag Handle Pill
+        Rectangle {
+            width: 36
+            height: 4
+            radius: 2
+            color: "#3a3a3c"
+            anchors.horizontalCenter: parent.horizontalCenter
         }
 
         ControlSliderCard {
             id: brightnessCard
             width: parent.width
-            height: 44
+            height: 68
             title: "Display"
             iconText: controlCenter.brightnessIconGlyph
             iconFontFamily: controlCenter.iconFontFamily
@@ -2070,7 +1947,7 @@ Item {
         ControlSliderCard {
             id: volumeCard
             width: parent.width
-            height: 44
+            height: 68
             title: "Sound"
             iconText: controlCenter.volumeIconGlyph
             iconFontFamily: controlCenter.iconFontFamily
@@ -2107,7 +1984,7 @@ Item {
         ControlSliderCard {
             id: tempCard
             width: parent.width
-            height: 44
+            height: 68
             title: "Temperature"
             iconText: "\uf186"
             iconFontFamily: controlCenter.iconFontFamily

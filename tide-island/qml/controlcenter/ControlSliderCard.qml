@@ -15,85 +15,79 @@ Rectangle {
     property string textFontFamily: ""
     property real value: 0
     property real knobSize: 24
-    property color moduleColor: StyleTokens.module
-    property color moduleHover: StyleTokens.moduleHover
-    property color trackColor: StyleTokens.track
-    property color textPrimary: StyleTokens.textPrimary
-    property color textSecondary: StyleTokens.textSecondary
-    property color activeColor: "#3bc99d"
-    property color activeHover: "#45e0af"
+    property color moduleColor: "#1c1c1e"
+    property color moduleHover: "#242426"
+    property color trackColor: "#2c2c2e"
+    property color textPrimary: "#ffffff"
+    property color textSecondary: "#8e8e93"
+    property color activeColor: "#ffffff"
+    property color activeHover: "#ffffff"
     readonly property bool pressed: sliderArea.pressed
 
     function clamp01(nextValue) {
         return Math.max(0, Math.min(1, nextValue));
     }
 
-    radius: height / 2
-    color: root.trackColor
+    radius: 20
+    color: "#1c1c1e"
     clip: true
 
-    // Fill Rectangle
-    Item {
-        id: clipContainer
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        width: parent.width * root.value
-        clip: true
+    Column {
+        anchors.fill: parent
+        anchors.margins: 12
+        spacing: 6
 
+        // Label
+        Text {
+            text: root.title
+            color: "#ffffff"
+            font.pixelSize: 13
+            font.family: root.textFontFamily
+            font.weight: Font.DemiBold
+        }
+
+        // Capsule Slider Track
         Rectangle {
-            id: fillRect
-            x: 0
-            y: 0
-            width: root.width
-            height: root.height
-            radius: root.radius
-            color: sliderArea.containsMouse ? root.activeHover : root.activeColor
+            id: sliderTrack
+            width: parent.width
+            height: Math.max(22, parent.height - 24)
+            radius: height / 2
+            color: "#2c2c2e"
+            clip: true
 
-            Behavior on color {
-                ColorAnimation { duration: 100 }
+            Item {
+                width: parent.width * root.value
+                height: parent.height
+                clip: true
+
+                Rectangle {
+                    width: sliderTrack.width
+                    height: sliderTrack.height
+                    radius: sliderTrack.radius
+                    color: "#ffffff"
+                }
+            }
+
+            MouseArea {
+                id: sliderArea
+                anchors.fill: parent
+                hoverEnabled: true
+
+                function update(mouseX) {
+                    if (width <= 0) return;
+                    root.valueMoved(root.clamp01(mouseX / width));
+                }
+
+                onPressed: function(mouse) {
+                    root.interactionStarted();
+                    update(mouse.x);
+                }
+                onPositionChanged: function(mouse) {
+                    if (pressed) update(mouse.x);
+                }
+                onReleased: root.commitRequested()
+                onCanceled: root.cancelRequested()
             }
         }
-    }
-
-    // Icon Text
-    Text {
-        id: iconTextItem
-        anchors.left: parent.left
-        anchors.leftMargin: 16
-        anchors.verticalCenter: parent.verticalCenter
-        text: root.iconText
-        color: (parent.width * root.value > 45) ? "#121418" : cardAccent
-        font.pixelSize: 15
-        font.family: root.iconFontFamily
-
-        Behavior on color {
-            ColorAnimation { duration: 100 }
-        }
-    }
-
-    Behavior on color { ColorAnimation { duration: 100 } }
-
-    MouseArea {
-        id: sliderArea
-        anchors.fill: parent
-        hoverEnabled: true
-
-        function update(mouseX) {
-            // Guard against zero/negative width or hidden panel calculation glitching
-            if (width <= 0 || !controlCenter.showCondition) return;
-            root.valueMoved(root.clamp01(mouseX / width));
-        }
-
-        onPressed: function(mouse) {
-            root.interactionStarted();
-            update(mouse.x);
-        }
-        onPositionChanged: function(mouse) {
-            if (pressed)
-                update(mouse.x);
-        }
-        onReleased: root.commitRequested()
-        onCanceled: root.cancelRequested()
     }
 }

@@ -1713,7 +1713,7 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 350 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                    return 480 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
                 case "launcher":
                 case "clipboard":
                 case "emojis":
