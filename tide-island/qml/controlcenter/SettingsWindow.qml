@@ -49,6 +49,8 @@ FloatingWindow {
     property bool showBatteryPercentage: cfgData.showBatteryPercentage !== undefined ? cfgData.showBatteryPercentage : true
     property string primaryAction: cfgData.dynamicIslandPrimaryAction || UserConfig.dynamicIslandPrimaryAction || "toggleExpandedPlayer"
     property string secondaryAction: cfgData.dynamicIslandSecondaryAction || UserConfig.dynamicIslandSecondaryAction || "toggleControlCenter"
+    property string notepadDefaultMode: cfgData.notepadDefaultMode !== undefined ? String(cfgData.notepadDefaultMode) : "edit"
+    property bool notepadAutoSave: cfgData.notepadAutoSave !== undefined ? cfgData.notepadAutoSave : true
 
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
@@ -74,7 +76,9 @@ FloatingWindow {
             "--disable-auto-expand", autoExpandOnTrackChange ? "false" : "true",
             "--show-battery-percentage", showBatteryPercentage ? "true" : "false",
             "--primary-action", primaryAction,
-            "--secondary-action", secondaryAction
+            "--secondary-action", secondaryAction,
+            "--notepad-default-mode", notepadDefaultMode,
+            "--notepad-auto-save", notepadAutoSave ? "true" : "false"
         ]);
     }
 
@@ -344,6 +348,7 @@ FloatingWindow {
                         { label: "Expanded Player", value: "toggleExpandedPlayer" },
                         { label: "Control Center", value: "toggleControlCenter" },
                         { label: "App Launcher", value: "toggleLauncher" },
+                        { label: "Notepad Notch", value: "toggleNotepad" },
                         { label: "Overview", value: "toggleOverview" }
                     ]
 
@@ -389,6 +394,7 @@ FloatingWindow {
 
                     readonly property var options: [
                         { label: "Control Center", value: "toggleControlCenter" },
+                        { label: "Notepad Notch", value: "toggleNotepad" },
                         { label: "Workspace Overview", value: "toggleOverview" },
                         { label: "Clipboard Manager", value: "toggleClipboard" },
                         { label: "Emoji Picker", value: "toggleEmojis" }
@@ -420,6 +426,90 @@ FloatingWindow {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // --- SECTION 3: Notepad Settings ---
+            Text {
+                text: "Notepad Settings"
+                color: colorPrimary
+                font.pixelSize: 12
+                font.family: "Inter Display"
+                font.weight: Font.Bold
+                topPadding: 6
+            }
+
+            SettingsCard {
+                title: "Default View Mode"
+                subtitle: "Initial mode when opening the Notepad notch (Edit or Preview)"
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -28
+                    spacing: 6
+
+                    Rectangle {
+                        width: 70
+                        height: 28
+                        radius: 8
+                        color: notepadDefaultMode === "edit" ? colorPrimary : colorSecondaryContainer
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Edit"
+                            color: notepadDefaultMode === "edit" ? "#ffffff" : colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Medium
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                notepadDefaultMode = "edit";
+                                saveSettings();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 70
+                        height: 28
+                        radius: 8
+                        color: notepadDefaultMode === "preview" ? colorPrimary : colorSecondaryContainer
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Preview"
+                            color: notepadDefaultMode === "preview" ? "#ffffff" : colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Medium
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                notepadDefaultMode = "preview";
+                                saveSettings();
+                            }
+                        }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Auto-Save Notes"
+                subtitle: "Automatically save note content while typing"
+
+                SettingsSwitch {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -24
+                    checked: notepadAutoSave
+                    onToggled: (newValue) => {
+                        notepadAutoSave = newValue;
+                        saveSettings();
                     }
                 }
             }

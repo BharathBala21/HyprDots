@@ -11,6 +11,8 @@ def main():
     parser.add_argument("--show-battery-percentage", choices=["true", "false"], help="Show/hide battery percentage text")
     parser.add_argument("--primary-action", help="Primary click action")
     parser.add_argument("--secondary-action", help="Secondary click action")
+    parser.add_argument("--notepad-default-mode", choices=["edit", "preview"], help="Default notepad mode (edit or preview)")
+    parser.add_argument("--notepad-auto-save", choices=["true", "false"], help="Default notepad auto-save state")
 
     args = parser.parse_args()
     config_path = os.path.expanduser("~/.config/tide-island/userconfig.json")
@@ -33,6 +35,10 @@ def main():
         config['dynamicIslandPrimaryAction'] = args.primary_action
     if args.secondary_action is not None:
         config['dynamicIslandSecondaryAction'] = args.secondary_action
+    if args.notepad_default_mode is not None:
+        config['notepadDefaultMode'] = args.notepad_default_mode
+    if args.notepad_auto_save is not None:
+        config['notepadAutoSave'] = (args.notepad_auto_save.lower() == "true")
 
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
     with open(config_path, 'w') as f:

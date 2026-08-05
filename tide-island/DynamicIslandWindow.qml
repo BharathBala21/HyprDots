@@ -62,6 +62,7 @@ PanelWindow {
     readonly property bool wallpapersLayerVisible: islandContainer.islandState === "wallpapers"
     readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
     readonly property bool controlCenterLayerVisible: islandContainer.islandState === "control_center"
+    readonly property bool notepadLayerVisible: islandContainer.islandState === "notepad"
     readonly property var userConfig: UserConfig
 
     FileView {
@@ -203,18 +204,18 @@ PanelWindow {
     implicitHeight: 680
     exclusiveZone: 38
     aboveWindows: true
-    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer")
+    focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad")
     WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer")
-        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
+    WlrLayershell.keyboardFocus: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad")
+        ? ((islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad") ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand)
         : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
         id: launcherGrab
-        active: root.monitorFocused && (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer")
+        active: root.monitorFocused && (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad")
         windows: [ root ]
         onCleared: {
-            if (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer") {
+            if (islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad") {
                 islandContainer.smartRestoreState();
             }
         }
@@ -516,6 +517,10 @@ PanelWindow {
         islandContainer.toggleTimer();
     }
 
+    function toggleNotepad() {
+        islandContainer.toggleNotepad();
+    }
+
     onOverviewVisibleChanged: {
         if (overviewVisible && monitorFocused) overviewFocusTimer.restart();
     }
@@ -549,6 +554,10 @@ PanelWindow {
         if (utilitiesLayerVisible && monitorFocused)
             utilitiesFocusTimer.restart();
     }
+    onNotepadLayerVisibleChanged: {
+        if (notepadLayerVisible && monitorFocused)
+            notepadFocusTimer.restart();
+    }
     onControlCenterLayerVisibleChanged: {
         if (controlCenterLayerVisible && monitorFocused)
             controlCenterFocusTimer.restart();
@@ -565,6 +574,16 @@ PanelWindow {
         if (emojiPickerLayerVisible && monitorFocused) emojisFocusTimer.restart();
         if (wallpapersLayerVisible && monitorFocused) wallpapersFocusTimer.restart();
         if (utilitiesLayerVisible && monitorFocused) utilitiesFocusTimer.restart();
+        if (notepadLayerVisible && monitorFocused) notepadFocusTimer.restart();
+    }
+
+    Timer {
+        id: notepadFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: {
+            if (notepadLoader.item) notepadLoader.item.forceActiveFocus();
+        }
     }
 
     Timer {
@@ -743,6 +762,7 @@ PanelWindow {
             || islandState === "wallpapers"
             || islandState === "utilities"
             || islandState === "timer"
+            || islandState === "notepad"
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
@@ -1474,6 +1494,22 @@ PanelWindow {
                 showUtilities();
         }
 
+        function showNotepad() {
+            cancelSideSwipeSettle();
+            abortSideTransientMode();
+            clearTransientCapsule();
+            islandState = "notepad";
+            mainCapsule.displayedWidth = mainCapsule.baseTargetWidth;
+            stopAutoHideTimer();
+        }
+
+        function toggleNotepad() {
+            if (islandState === "notepad")
+                smartRestoreState();
+            else
+                showNotepad();
+        }
+
         function showCustomCapsule() {
             if (!hasCustomLeftItems) {
                 showTimeCapsule();
@@ -1624,6 +1660,8 @@ PanelWindow {
                 case "emojis":
                 case "wallpapers":
                     return 680;
+                case "notepad":
+                    return 780;
                 case "expanded":
                 case "bluetooth_expanded":
                     return 400;
@@ -1658,6 +1696,8 @@ PanelWindow {
                 case "emojis":
                 case "wallpapers":
                     return 420;
+                case "notepad":
+                    return 500;
                 case "expanded":
                 case "bluetooth_expanded":
                     return 165;
@@ -2403,6 +2443,28 @@ PanelWindow {
                         heroFontFamily: root.heroFontFamily
                         showCondition: islandContainer.islandState === "wallpapers"
                         shellRootController: root.shellRootController
+                        onCloseRequested: {
+                            islandContainer.islandState = "normal";
+                        }
+                    }
+                }
+            }
+
+            Loader {
+                id: notepadLoader
+                anchors.fill: parent
+                active: true
+                asynchronous: false
+                visible: islandContainer.islandState === "notepad"
+                focus: islandContainer.islandState === "notepad"
+
+                sourceComponent: Component {
+                    NotepadLayer {
+                        focus: true
+                        iconFontFamily: root.iconFontFamily
+                        textFontFamily: root.textFontFamily
+                        heroFontFamily: root.heroFontFamily
+                        showCondition: islandContainer.islandState === "notepad"
                         onCloseRequested: {
                             islandContainer.islandState = "normal";
                         }
