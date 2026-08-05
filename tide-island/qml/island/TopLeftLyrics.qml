@@ -31,6 +31,12 @@ Item {
         if (url.indexOf("spotify:image:") === 0) {
             url = "https://i.scdn.co/image/" + url.substring(14);
         }
+        if (url.indexOf("i.ytimg.com") !== -1) {
+            url = url.replace("/vi_webp/", "/vi/");
+            url = url.replace("maxresdefault.jpg", "hqdefault.jpg")
+                     .replace("maxresdefault.webp", "hqdefault.jpg")
+                     .replace("hqdefault.webp", "hqdefault.jpg");
+        }
         if (url.indexOf("/") === 0 && url.indexOf("file://") !== 0) {
             url = "file://" + url;
         }
