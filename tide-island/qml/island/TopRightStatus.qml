@@ -59,6 +59,10 @@ Item {
     width: implicitWidth
     height: implicitHeight
 
+    Behavior on width {
+        NumberAnimation { duration: 380; easing.type: Easing.OutQuint }
+    }
+
     MouseArea {
         id: scrollArea
         anchors.fill: parent
@@ -96,6 +100,13 @@ Item {
         height: Math.min(16, bgRect.height / 2)
         color: bgRect.color
         z: -1
+
+        Behavior on height {
+            NumberAnimation { duration: 380; easing.type: Easing.OutQuint }
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: 220; easing.type: Easing.InOutQuad }
+        }
     }
 
     Row {

@@ -80,6 +80,13 @@ Item {
         height: Math.min(16, trayBgRect.height / 2)
         color: trayBgRect.color
         z: -1
+
+        Behavior on height {
+            NumberAnimation { duration: 380; easing.type: Easing.OutQuint }
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: 220; easing.type: Easing.InOutQuad }
+        }
     }
 
     Row {

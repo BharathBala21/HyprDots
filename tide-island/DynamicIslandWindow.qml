@@ -2690,6 +2690,10 @@ PanelWindow {
             currentVolume: islandContainer.currentVolume
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
+
+            Behavior on anchors.topMargin {
+                NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
+            }
         }
 
         TopLeftLyrics {
@@ -2705,6 +2709,10 @@ PanelWindow {
             iconFontFamily: root.iconFontFamily
             maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32
             islandState: islandContainer.islandState
+
+            Behavior on anchors.topMargin {
+                NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
+            }
         }
 
         TopRightTray {
@@ -2717,6 +2725,10 @@ PanelWindow {
             window: root
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
+
+            Behavior on anchors.topMargin {
+                NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
+            }
         }
     }
 

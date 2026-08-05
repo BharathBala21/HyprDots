@@ -95,6 +95,13 @@ Item {
         height: Math.min(16, lyricsBgRect.height / 2)
         color: lyricsBgRect.color
         z: -1
+
+        Behavior on height {
+            NumberAnimation { duration: 380; easing.type: Easing.OutQuint }
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: 220; easing.type: Easing.InOutQuad }
+        }
     }
 
     // Text metrics for computing the layout width dynamically
