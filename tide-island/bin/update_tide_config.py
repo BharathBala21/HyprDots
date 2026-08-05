@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--island-corner-radius", type=int, help="Island corner radius in px")
     parser.add_argument("--island-top-offset", type=int, help="Island top offset from screen edge in px")
     parser.add_argument("--island-inner-padding", type=int, help="Inner content padding in px")
+    parser.add_argument("--reserved-top-space", type=int, help="Reserved top exclusive space for quickshell in px")
     parser.add_argument("--show-top-left-pill", choices=["true", "false"], help="Show/hide top-left status/lyrics pill")
     parser.add_argument("--show-top-right-cava", choices=["true", "false"], help="Show/hide top-right cava visualizer pill")
     parser.add_argument("--show-top-right-battery", choices=["true", "false"], help="Show/hide top-right battery status pill")
@@ -72,6 +73,8 @@ def main():
         config['islandTopOffset'] = args.island_top_offset
     if args.island_inner_padding is not None:
         config['islandInnerPadding'] = args.island_inner_padding
+    if args.reserved_top_space is not None:
+        config['reservedTopSpace'] = args.reserved_top_space
     if args.show_top_left_pill is not None:
         config['showTopLeftPill'] = (args.show_top_left_pill.lower() == "true")
     if args.show_top_right_cava is not None:

@@ -65,6 +65,7 @@ FloatingWindow {
     property int islandCornerRadius: cfgData.islandCornerRadius !== undefined ? Number(cfgData.islandCornerRadius) : 19
     property int islandTopOffset: cfgData.islandTopOffset !== undefined ? Number(cfgData.islandTopOffset) : 4
     property int islandInnerPadding: cfgData.islandInnerPadding !== undefined ? Number(cfgData.islandInnerPadding) : 8
+    property int reservedTopSpace: cfgData.reservedTopSpace !== undefined ? Number(cfgData.reservedTopSpace) : 38
     property bool showTopLeftPill: cfgData.showTopLeftPill !== undefined ? cfgData.showTopLeftPill : true
     property bool showTopRightCava: cfgData.showTopRightCava !== undefined ? cfgData.showTopRightCava : true
     property bool showTopRightBattery: cfgData.showTopRightBattery !== undefined ? cfgData.showTopRightBattery : (cfgData.showTopRightPill !== undefined ? cfgData.showTopRightPill : true)
@@ -110,6 +111,7 @@ FloatingWindow {
             "--island-corner-radius", String(islandCornerRadius),
             "--island-top-offset", String(islandTopOffset),
             "--island-inner-padding", String(islandInnerPadding),
+            "--reserved-top-space", String(reservedTopSpace),
             "--show-top-left-pill", showTopLeftPill ? "true" : "false",
             "--show-top-right-cava", showTopRightCava ? "true" : "false",
             "--show-top-right-battery", showTopRightBattery ? "true" : "false",
@@ -358,10 +360,10 @@ FloatingWindow {
 
                     Repeater {
                         model: [
-                            { id: "bar_island", icon: "🖥️", label: "Bar & Island", desc: "Shape, size, notch style, and custom geometry." },
-                            { id: "notepad", icon: "📝", label: "Notepad Notch", desc: "Default view mode, auto-save settings, and markdown." },
-                            { id: "actions", icon: "⚡", label: "Island Actions", desc: "Primary left-click and secondary right-click actions." },
-                            { id: "clock_date", icon: "🕒", label: "Clock & Behavior", desc: "Time format, auto-expansion, and battery text." }
+                            { id: "bar_island", icon: "\uf108", label: "Bar & Island", desc: "Shape, size, notch style, and custom geometry." },
+                            { id: "notepad", icon: "\uf044", label: "Notepad Notch", desc: "Default view mode, auto-save settings, and markdown." },
+                            { id: "actions", icon: "\uf0e7", label: "Island Actions", desc: "Primary left-click and secondary right-click actions." },
+                            { id: "clock_date", icon: "\uf017", label: "Clock & Behavior", desc: "Time format, auto-expansion, and battery text." }
                         ]
 
                         delegate: Rectangle {
@@ -379,7 +381,9 @@ FloatingWindow {
 
                                 Text {
                                     text: modelData.icon
+                                    font.family: root.iconFontFamily
                                     font.pixelSize: 15
+                                    color: root.activeCategory === modelData.id ? "#ffffff" : colorOnSurfaceVariant
                                 }
 
                                 Text {
@@ -453,14 +457,16 @@ FloatingWindow {
                                 anchors.centerIn: parent
                                 text: {
                                     switch (root.activeCategory) {
-                                    case "bar_island": return "🖥️";
-                                    case "notepad": return "📝";
-                                    case "actions": return "⚡";
-                                    case "clock_date": return "🕒";
-                                    default: return "🏝️";
+                                    case "bar_island": return "\uf108";
+                                    case "notepad": return "\uf044";
+                                    case "actions": return "\uf0e7";
+                                    case "clock_date": return "\uf017";
+                                    default: return "\uf108";
                                     }
                                 }
-                                font.pixelSize: 22
+                                font.family: root.iconFontFamily
+                                font.pixelSize: 20
+                                color: "#ffffff"
                             }
                         }
 
@@ -716,6 +722,14 @@ FloatingWindow {
                                 value: islandInnerPadding
                                 from: 2; to: 16
                                 onValueMoved: (newVal) => { islandInnerPadding = Math.round(newVal); saveSettings(); }
+                            }
+
+                            GeometrySliderCard {
+                                title: "Reserved Top Space (Hyprland)"
+                                subtitle: "Reserved top screen exclusive space for window layout margin (0px - 100px)"
+                                value: reservedTopSpace
+                                from: 0; to: 100
+                                onValueMoved: (newVal) => { reservedTopSpace = Math.round(newVal); saveSettings(); }
                             }
 
                             Text {

@@ -97,6 +97,7 @@ PanelWindow {
     readonly property real islandCornerRadius: activeUserConfig.islandCornerRadius !== undefined ? Number(activeUserConfig.islandCornerRadius) : 19
     readonly property real islandTopOffset: activeUserConfig.islandTopOffset !== undefined ? Number(activeUserConfig.islandTopOffset) : (root.isNotchStyle ? 0 : 4)
     readonly property real islandInnerPadding: activeUserConfig.islandInnerPadding !== undefined ? Number(activeUserConfig.islandInnerPadding) : 8
+    readonly property real reservedTopSpace: activeUserConfig.reservedTopSpace !== undefined ? Number(activeUserConfig.reservedTopSpace) : 38
     readonly property bool showTopLeftPill: activeUserConfig.showTopLeftPill !== undefined ? activeUserConfig.showTopLeftPill : true
     readonly property bool showTopRightCava: activeUserConfig.showTopRightCava !== undefined ? activeUserConfig.showTopRightCava : true
     readonly property bool showTopRightBattery: activeUserConfig.showTopRightBattery !== undefined ? activeUserConfig.showTopRightBattery : (activeUserConfig.showTopRightPill !== undefined ? activeUserConfig.showTopRightPill : true)
@@ -224,7 +225,7 @@ PanelWindow {
         }
     }
     implicitHeight: 680
-    exclusiveZone: 38
+    exclusiveZone: root.reservedTopSpace
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad")
     WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
