@@ -59,7 +59,8 @@ Item {
         }
     }
 
-    readonly property bool isNotchStyle: trayCfgData.islandStyle === "notch"
+    readonly property string styleChoice: trayCfgData.topRightTrayStyle || trayCfgData.islandStyle || "pill"
+    readonly property bool isNotchStyle: styleChoice === "notch"
 
     Rectangle {
         id: trayBgRect

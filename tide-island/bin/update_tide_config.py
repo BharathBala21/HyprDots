@@ -11,7 +11,11 @@ def main():
     parser.add_argument("--show-battery-percentage", choices=["true", "false"], help="Show/hide battery percentage text")
     parser.add_argument("--primary-action", help="Primary click action")
     parser.add_argument("--secondary-action", help="Secondary click action")
-    parser.add_argument("--island-style", choices=["pill", "notch"], help="Island visual style (pill or notch)")
+    parser.add_argument("--island-style", choices=["pill", "notch", "custom"], help="Island visual style (pill, notch, or custom)")
+    parser.add_argument("--center-pill-style", choices=["pill", "notch"], help="Center island pill style")
+    parser.add_argument("--top-left-pill-style", choices=["pill", "notch"], help="Top-left status/lyrics pill style")
+    parser.add_argument("--top-right-pill-style", choices=["pill", "notch"], help="Top-right status pill style")
+    parser.add_argument("--top-right-tray-style", choices=["pill", "notch"], help="Top-right tray pill style")
     parser.add_argument("--island-compact-width", type=int, help="Compact island width in px")
     parser.add_argument("--island-compact-height", type=int, help="Compact island height in px")
     parser.add_argument("--island-corner-radius", type=int, help="Island corner radius in px")
@@ -47,6 +51,14 @@ def main():
         config['dynamicIslandSecondaryAction'] = args.secondary_action
     if args.island_style is not None:
         config['islandStyle'] = args.island_style
+    if args.center_pill_style is not None:
+        config['centerPillStyle'] = args.center_pill_style
+    if args.top_left_pill_style is not None:
+        config['topLeftPillStyle'] = args.top_left_pill_style
+    if args.top_right_pill_style is not None:
+        config['topRightPillStyle'] = args.top_right_pill_style
+    if args.top_right_tray_style is not None:
+        config['topRightTrayStyle'] = args.top_right_tray_style
     if args.island_compact_width is not None:
         config['islandCompactWidth'] = args.island_compact_width
     if args.island_compact_height is not None:

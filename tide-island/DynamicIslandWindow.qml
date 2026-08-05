@@ -82,7 +82,16 @@ PanelWindow {
     }
 
     readonly property string islandStyle: activeUserConfig.islandStyle || "pill"
-    readonly property bool isNotchStyle: islandStyle === "notch"
+    readonly property string centerPillStyle: activeUserConfig.centerPillStyle || (islandStyle === "notch" ? "notch" : "pill")
+    readonly property string topLeftPillStyle: activeUserConfig.topLeftPillStyle || (islandStyle === "notch" ? "notch" : "pill")
+    readonly property string topRightPillStyle: activeUserConfig.topRightPillStyle || (islandStyle === "notch" ? "notch" : "pill")
+    readonly property string topRightTrayStyle: activeUserConfig.topRightTrayStyle || (islandStyle === "notch" ? "notch" : "pill")
+
+    readonly property bool isCenterNotch: centerPillStyle === "notch"
+    readonly property bool isTopLeftNotch: topLeftPillStyle === "notch"
+    readonly property bool isTopRightNotch: topRightPillStyle === "notch"
+    readonly property bool isTopRightTrayNotch: topRightTrayStyle === "notch"
+    readonly property bool isNotchStyle: islandStyle === "notch" || isCenterNotch
     readonly property real islandCompactWidth: activeUserConfig.islandCompactWidth !== undefined ? Number(activeUserConfig.islandCompactWidth) : 140
     readonly property real islandCompactHeight: activeUserConfig.islandCompactHeight !== undefined ? Number(activeUserConfig.islandCompactHeight) : 35
     readonly property real islandCornerRadius: activeUserConfig.islandCornerRadius !== undefined ? Number(activeUserConfig.islandCornerRadius) : 19
@@ -1768,7 +1777,7 @@ PanelWindow {
                 islandContainer.swipeTransitionProgress
             )
             color: root.overviewContentVisible ? root.overviewCapsuleColor : StyleTokens.black
-            y: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
+            y: (root.isCenterNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             anchors.horizontalCenter: parent.horizontalCenter
             clip: true
             width: displayedWidth
@@ -1781,7 +1790,7 @@ PanelWindow {
 
             // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode across all states)
             Rectangle {
-                visible: root.isNotchStyle && !root.overviewVisible
+                visible: root.isCenterNotch && !root.overviewVisible
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -2671,7 +2680,7 @@ PanelWindow {
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
+            anchors.topMargin: (root.isTopRightNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             cavaLevels: islandContainer.cavaLevels
             batteryCapacity: islandContainer.batteryCapacity
             isCharging: islandContainer.isCharging
@@ -2687,7 +2696,7 @@ PanelWindow {
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
+            anchors.topMargin: (root.isTopLeftNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             lyricText: islandContainer.lyricsDisplayText
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
             textFontFamily: root.textFontFamily
@@ -2702,7 +2711,7 @@ PanelWindow {
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top
-            anchors.topMargin: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
+            anchors.topMargin: (root.isTopRightTrayNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             window: root
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily

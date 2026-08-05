@@ -74,7 +74,8 @@ Item {
         }
     }
 
-    readonly property bool isNotchStyle: lyricsCfgData.islandStyle === "notch"
+    readonly property string styleChoice: lyricsCfgData.topLeftPillStyle || lyricsCfgData.islandStyle || "pill"
+    readonly property bool isNotchStyle: styleChoice === "notch"
 
     Rectangle {
         id: lyricsBgRect

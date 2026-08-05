@@ -54,7 +54,8 @@ Item {
         }
     }
 
-    readonly property bool isNotchStyle: statusCfgData.islandStyle === "notch"
+    readonly property string styleChoice: statusCfgData.topRightPillStyle || statusCfgData.islandStyle || "pill"
+    readonly property bool isNotchStyle: styleChoice === "notch"
 
     Rectangle {
         id: bgRect

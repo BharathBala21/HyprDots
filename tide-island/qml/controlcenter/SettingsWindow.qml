@@ -56,6 +56,10 @@ FloatingWindow {
     property string primaryAction: cfgData.dynamicIslandPrimaryAction || UserConfig.dynamicIslandPrimaryAction || "toggleExpandedPlayer"
     property string secondaryAction: cfgData.dynamicIslandSecondaryAction || UserConfig.dynamicIslandSecondaryAction || "toggleControlCenter"
     property string islandStyle: cfgData.islandStyle !== undefined ? String(cfgData.islandStyle) : "pill"
+    property string centerPillStyle: cfgData.centerPillStyle !== undefined ? String(cfgData.centerPillStyle) : (islandStyle === "notch" ? "notch" : "pill")
+    property string topLeftPillStyle: cfgData.topLeftPillStyle !== undefined ? String(cfgData.topLeftPillStyle) : (islandStyle === "notch" ? "notch" : "pill")
+    property string topRightPillStyle: cfgData.topRightPillStyle !== undefined ? String(cfgData.topRightPillStyle) : (islandStyle === "notch" ? "notch" : "pill")
+    property string topRightTrayStyle: cfgData.topRightTrayStyle !== undefined ? String(cfgData.topRightTrayStyle) : (islandStyle === "notch" ? "notch" : "pill")
     property int islandCompactWidth: cfgData.islandCompactWidth !== undefined ? Number(cfgData.islandCompactWidth) : 140
     property int islandCompactHeight: cfgData.islandCompactHeight !== undefined ? Number(cfgData.islandCompactHeight) : 35
     property int islandCornerRadius: cfgData.islandCornerRadius !== undefined ? Number(cfgData.islandCornerRadius) : 19
@@ -94,6 +98,10 @@ FloatingWindow {
             "--primary-action", primaryAction,
             "--secondary-action", secondaryAction,
             "--island-style", islandStyle,
+            "--center-pill-style", centerPillStyle,
+            "--top-left-pill-style", topLeftPillStyle,
+            "--top-right-pill-style", topRightPillStyle,
+            "--top-right-tray-style", topRightTrayStyle,
             "--island-compact-width", String(islandCompactWidth),
             "--island-compact-height", String(islandCompactHeight),
             "--island-corner-radius", String(islandCornerRadius),
@@ -513,22 +521,154 @@ FloatingWindow {
 
                             SettingsCard {
                                 title: "Island Visual Style"
-                                subtitle: "Choose between floating island pill and flush top screen notch"
+                                subtitle: "Choose preset style (Floating Pill or Top Notch) or Custom per-pill styling"
 
                                 control: Row {
-                                    spacing: 8
+                                    spacing: 6
                                     Rectangle {
-                                        width: 95; height: 32; radius: 8
+                                        width: 85; height: 32; radius: 8
                                         color: islandStyle === "pill" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "Floating Pill"; color: islandStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
-                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandStyle = "pill"; saveSettings(); } }
+                                        MouseArea {
+                                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                islandStyle = "pill";
+                                                centerPillStyle = "pill";
+                                                topLeftPillStyle = "pill";
+                                                topRightPillStyle = "pill";
+                                                topRightTrayStyle = "pill";
+                                                saveSettings();
+                                            }
+                                        }
                                     }
 
                                     Rectangle {
-                                        width: 95; height: 32; radius: 8
+                                        width: 85; height: 32; radius: 8
                                         color: islandStyle === "notch" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "Top Notch"; color: islandStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
-                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandStyle = "notch"; saveSettings(); } }
+                                        MouseArea {
+                                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                islandStyle = "notch";
+                                                centerPillStyle = "notch";
+                                                topLeftPillStyle = "notch";
+                                                topRightPillStyle = "notch";
+                                                topRightTrayStyle = "notch";
+                                                saveSettings();
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        width: 85; height: 32; radius: 8
+                                        color: islandStyle === "custom" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "Custom"; color: islandStyle === "custom" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea {
+                                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                islandStyle = "custom";
+                                                saveSettings();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            ColumnLayout {
+                                visible: islandStyle === "custom"
+                                Layout.fillWidth: true
+                                spacing: 10
+
+                                Text {
+                                    text: "Per-Pill Custom Styles"
+                                    color: colorPrimary
+                                    font.pixelSize: 12
+                                    font.family: "Inter Display"
+                                    font.weight: Font.Bold
+                                    topPadding: 4
+                                }
+
+                                SettingsCard {
+                                    title: "Center Island Pill"
+                                    subtitle: "Style for main center clock/island capsule"
+
+                                    control: Row {
+                                        spacing: 6
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: centerPillStyle === "pill" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Pill"; color: centerPillStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { centerPillStyle = "pill"; saveSettings(); } }
+                                        }
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: centerPillStyle === "notch" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Notch"; color: centerPillStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { centerPillStyle = "notch"; saveSettings(); } }
+                                        }
+                                    }
+                                }
+
+                                SettingsCard {
+                                    title: "Left Lyrics / Status Pill"
+                                    subtitle: "Style for left lyrics and music status pill"
+
+                                    control: Row {
+                                        spacing: 6
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: topLeftPillStyle === "pill" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Pill"; color: topLeftPillStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { topLeftPillStyle = "pill"; saveSettings(); } }
+                                        }
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: topLeftPillStyle === "notch" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Notch"; color: topLeftPillStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { topLeftPillStyle = "notch"; saveSettings(); } }
+                                        }
+                                    }
+                                }
+
+                                SettingsCard {
+                                    title: "Right Status Pill (Battery & Volume)"
+                                    subtitle: "Style for right battery and volume status pill"
+
+                                    control: Row {
+                                        spacing: 6
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: topRightPillStyle === "pill" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Pill"; color: topRightPillStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { topRightPillStyle = "pill"; saveSettings(); } }
+                                        }
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: topRightPillStyle === "notch" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Notch"; color: topRightPillStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { topRightPillStyle = "notch"; saveSettings(); } }
+                                        }
+                                    }
+                                }
+
+                                SettingsCard {
+                                    title: "Right System Tray Pill"
+                                    subtitle: "Style for system tray icons pill"
+
+                                    control: Row {
+                                        spacing: 6
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: topRightTrayStyle === "pill" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Pill"; color: topRightTrayStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { topRightTrayStyle = "pill"; saveSettings(); } }
+                                        }
+                                        Rectangle {
+                                            width: 75; height: 28; radius: 8
+                                            color: topRightTrayStyle === "notch" ? colorPrimary : colorSecondaryContainer
+                                            Text { anchors.centerIn: parent; text: "Notch"; color: topRightTrayStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { topRightTrayStyle = "notch"; saveSettings(); } }
+                                        }
                                     }
                                 }
                             }
