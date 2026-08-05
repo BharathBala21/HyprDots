@@ -45,6 +45,8 @@ FloatingWindow {
         }
     }
 
+    readonly property string iconFontFamily: UserConfig.iconFontFamily || ""
+
     // Active Category State ("bar_island", "notepad", "actions", "clock_date")
     property string activeCategory: "bar_island"
     property string searchQuery: ""

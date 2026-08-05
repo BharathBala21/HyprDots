@@ -2706,6 +2706,7 @@ PanelWindow {
             anchors.topMargin: (root.isTopLeftNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             lyricText: islandContainer.lyricsDisplayText
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
+            cavaLevels: islandContainer.cavaLevels
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
             maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32

@@ -32,13 +32,9 @@ Item {
     }
 
     readonly property bool showBatteryPercentage: statusCfgData.showBatteryPercentage !== undefined ? statusCfgData.showBatteryPercentage : true
-    readonly property bool showCava: statusCfgData.showTopRightCava !== undefined ? statusCfgData.showTopRightCava : true
     readonly property bool showBattery: statusCfgData.showTopRightBattery !== undefined ? statusCfgData.showTopRightBattery : (statusCfgData.showTopRightPill !== undefined ? statusCfgData.showTopRightPill : true)
 
-    readonly property bool hasCavaContent: root.showCava && root.musicPlaying
-    readonly property bool hasBatteryContent: root.showBattery
-
-    opacity: (hasCavaContent || hasBatteryContent) ? 1.0 : 0.0
+    opacity: root.showBattery ? 1.0 : 0.0
     visible: opacity > 0.0
 
     Behavior on opacity {
@@ -48,13 +44,7 @@ Item {
         }
     }
 
-    implicitWidth: {
-        var cavaW = (root.showCava && root.musicPlaying) ? visualizer.implicitWidth : 0;
-        var battW = root.showBattery ? batteryRow.implicitWidth : 0;
-        var sepW = (cavaW > 0 && battW > 0) ? 25 : 0;
-        if (cavaW === 0 && battW === 0) return 0;
-        return cavaW + battW + sepW + 24;
-    }
+    implicitWidth: root.showBattery ? (batteryRow.implicitWidth + 24) : 0
     implicitHeight: 32
     width: implicitWidth
     height: implicitHeight
@@ -113,60 +103,6 @@ Item {
         id: contentRow
         anchors.centerIn: parent
         spacing: 0
-
-        SwipeCavaBars {
-            id: visualizer
-            levels: root.cavaLevels
-            anchors.verticalCenter: parent.verticalCenter
-            visible: root.showCava && root.musicPlaying && width > 0
-            opacity: (root.showCava && root.musicPlaying) ? 1 : 0
-            clip: true
-
-            width: (root.showCava && root.musicPlaying) ? implicitWidth : 0
-            Behavior on width {
-                NumberAnimation {
-                    duration: 350
-                    easing.type: Easing.OutQuint
-                }
-            }
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: 250
-                    easing.type: Easing.InOutQuad
-                }
-            }
-        }
-
-        // Separator between visualizer and battery (visible only when both music playing & battery shown)
-        Item {
-            id: separatorContainer
-            width: (root.showCava && root.musicPlaying && root.showBattery) ? 25 : 0 // 1px separator + 12px spacing on each side = 25px total
-            height: 14
-            anchors.verticalCenter: parent.verticalCenter
-            clip: true
-            visible: width > 0
-
-            Behavior on width {
-                NumberAnimation {
-                    duration: 350
-                    easing.type: Easing.OutQuint
-                }
-            }
-
-            Rectangle {
-                width: 1
-                height: parent.height
-                color: "#44ffffff"
-                anchors.centerIn: parent
-                opacity: (root.showCava && root.musicPlaying && root.showBattery) ? 1 : 0
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: 250
-                        easing.type: Easing.InOutQuad
-                    }
-                }
-            }
-        }
 
         Row {
             id: batteryRow

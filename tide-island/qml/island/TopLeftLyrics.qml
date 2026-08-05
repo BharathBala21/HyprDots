@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import IslandBackend
@@ -9,11 +10,14 @@ Item {
 
     property string lyricText: ""
     property bool musicPlaying: false
+    property var cavaLevels: [0, 0, 0, 0, 0, 0, 0, 0]
     property string textFontFamily: ""
     property string iconFontFamily: ""
-    property real maxAllowedWidth: 300
+    property real maxAllowedWidth: 350
     property string islandState: "normal"
     property bool transitionActive: false
+
+    readonly property bool showCava: lyricsCfgData.showTopRightCava !== undefined ? lyricsCfgData.showTopRightCava : true
 
     onIslandStateChanged: {
         transitionActive = true;
@@ -45,8 +49,8 @@ Item {
     // Determine the width based on the current text length and bounds
     implicitWidth: {
         if (!root.musicPlaying || root.lyricText === "" || root.lyricText === "No music playing" || root.lyricText === "no lyrics") return 0;
-        // Icon (musicIcon.implicitWidth) + spacing (8px) + text width + padding (24px)
-        const contentWidth = musicIcon.implicitWidth + 8 + lyricMetrics.advanceWidth + 24;
+        const cavaW = (root.showCava && root.musicPlaying) ? visualizer.implicitWidth + 8 : 0;
+        const contentWidth = musicIcon.implicitWidth + 8 + lyricMetrics.advanceWidth + cavaW + 24;
         return Math.max(80, Math.min(root.maxAllowedWidth, contentWidth));
     }
     width: implicitWidth
@@ -152,7 +156,7 @@ Item {
         }
     }
 
-    Row {
+    RowLayout {
         id: contentRow
         anchors.fill: parent
         anchors.leftMargin: 12
@@ -162,19 +166,19 @@ Item {
         // Music icon
         Text {
             id: musicIcon
-            text: "🎧" // 🎧 headphones
+            text: "🎧"
             font.pixelSize: 13
             color: "#a0a0a0"
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.alignment: Qt.AlignVCenter
         }
 
         // Clip container for lyrics text sliding animation
         Item {
             id: textContainer
-            height: parent.height
-            width: Math.max(0, parent.width - musicIcon.width - parent.spacing)
+            Layout.fillWidth: true
+            Layout.preferredHeight: parent.height
             clip: true
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.alignment: Qt.AlignVCenter
 
             Text {
                 visible: root.previousLyricText !== ""
@@ -206,6 +210,33 @@ Item {
                 font.letterSpacing: -0.15
                 elide: Text.ElideRight
                 wrapMode: Text.NoWrap
+            }
+        }
+
+        // Compact Cava audio visualizer on far right of left pill
+        SwipeCavaBars {
+            id: visualizer
+            levels: root.cavaLevels
+            barCount: 5
+            barWidth: 3
+            barSpacing: 2
+            Layout.alignment: Qt.AlignVCenter
+            visible: root.showCava && root.musicPlaying && width > 0
+            opacity: (root.showCava && root.musicPlaying) ? 1 : 0
+            clip: true
+
+            width: (root.showCava && root.musicPlaying) ? implicitWidth : 0
+            Behavior on width {
+                NumberAnimation {
+                    duration: 350
+                    easing.type: Easing.OutQuint
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 250
+                    easing.type: Easing.InOutQuad
+                }
             }
         }
     }
