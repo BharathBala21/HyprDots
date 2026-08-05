@@ -66,6 +66,8 @@ FloatingWindow {
     property int islandTopOffset: cfgData.islandTopOffset !== undefined ? Number(cfgData.islandTopOffset) : 4
     property int islandInnerPadding: cfgData.islandInnerPadding !== undefined ? Number(cfgData.islandInnerPadding) : 8
     property bool showTopLeftPill: cfgData.showTopLeftPill !== undefined ? cfgData.showTopLeftPill : true
+    property bool showTopRightCava: cfgData.showTopRightCava !== undefined ? cfgData.showTopRightCava : true
+    property bool showTopRightBattery: cfgData.showTopRightBattery !== undefined ? cfgData.showTopRightBattery : (cfgData.showTopRightPill !== undefined ? cfgData.showTopRightPill : true)
     property bool showTopRightPill: cfgData.showTopRightPill !== undefined ? cfgData.showTopRightPill : true
     property bool showTopRightTray: cfgData.showTopRightTray !== undefined ? cfgData.showTopRightTray : true
     property bool islandAutoHideEnabled: cfgData.islandAutoHideEnabled !== undefined ? cfgData.islandAutoHideEnabled : false
@@ -108,7 +110,8 @@ FloatingWindow {
             "--island-top-offset", String(islandTopOffset),
             "--island-inner-padding", String(islandInnerPadding),
             "--show-top-left-pill", showTopLeftPill ? "true" : "false",
-            "--show-top-right-pill", showTopRightPill ? "true" : "false",
+            "--show-top-right-cava", showTopRightCava ? "true" : "false",
+            "--show-top-right-battery", showTopRightBattery ? "true" : "false",
             "--show-top-right-tray", showTopRightTray ? "true" : "false",
             "--island-auto-hide", islandAutoHideEnabled ? "true" : "false",
             "--notepad-default-mode", notepadDefaultMode,
@@ -736,13 +739,26 @@ FloatingWindow {
                             }
 
                             SettingsCard {
-                                title: "Right Status Pill (Battery & Volume)"
-                                subtitle: "Show/hide the right status pill for battery and volume status"
+                                title: "Right Cava Audio Visualizer Pill"
+                                subtitle: "Show/hide the audio spectrum visualizer pill when music is playing"
 
                                 control: SettingsSwitch {
-                                    checked: showTopRightPill
+                                    checked: showTopRightCava
                                     onToggled: (newValue) => {
-                                        showTopRightPill = newValue;
+                                        showTopRightCava = newValue;
+                                        saveSettings();
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Right Battery & Volume Status Pill"
+                                subtitle: "Show/hide the right status pill for battery level and volume status"
+
+                                control: SettingsSwitch {
+                                    checked: showTopRightBattery
+                                    onToggled: (newValue) => {
+                                        showTopRightBattery = newValue;
                                         saveSettings();
                                     }
                                 }

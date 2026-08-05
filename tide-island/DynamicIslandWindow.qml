@@ -98,7 +98,9 @@ PanelWindow {
     readonly property real islandTopOffset: activeUserConfig.islandTopOffset !== undefined ? Number(activeUserConfig.islandTopOffset) : (root.isNotchStyle ? 0 : 4)
     readonly property real islandInnerPadding: activeUserConfig.islandInnerPadding !== undefined ? Number(activeUserConfig.islandInnerPadding) : 8
     readonly property bool showTopLeftPill: activeUserConfig.showTopLeftPill !== undefined ? activeUserConfig.showTopLeftPill : true
-    readonly property bool showTopRightPill: activeUserConfig.showTopRightPill !== undefined ? activeUserConfig.showTopRightPill : true
+    readonly property bool showTopRightCava: activeUserConfig.showTopRightCava !== undefined ? activeUserConfig.showTopRightCava : true
+    readonly property bool showTopRightBattery: activeUserConfig.showTopRightBattery !== undefined ? activeUserConfig.showTopRightBattery : (activeUserConfig.showTopRightPill !== undefined ? activeUserConfig.showTopRightPill : true)
+    readonly property bool showTopRightPill: showTopRightCava || showTopRightBattery
     readonly property bool showTopRightTray: activeUserConfig.showTopRightTray !== undefined ? activeUserConfig.showTopRightTray : true
 
     property int timerTotalSeconds: 300

@@ -22,6 +22,8 @@ def main():
     parser.add_argument("--island-top-offset", type=int, help="Island top offset from screen edge in px")
     parser.add_argument("--island-inner-padding", type=int, help="Inner content padding in px")
     parser.add_argument("--show-top-left-pill", choices=["true", "false"], help="Show/hide top-left status/lyrics pill")
+    parser.add_argument("--show-top-right-cava", choices=["true", "false"], help="Show/hide top-right cava visualizer pill")
+    parser.add_argument("--show-top-right-battery", choices=["true", "false"], help="Show/hide top-right battery status pill")
     parser.add_argument("--show-top-right-pill", choices=["true", "false"], help="Show/hide top-right status pill")
     parser.add_argument("--show-top-right-tray", choices=["true", "false"], help="Show/hide top-right tray pill")
     parser.add_argument("--island-auto-hide", choices=["true", "false"], help="Auto-hide idle center island")
@@ -71,6 +73,10 @@ def main():
         config['islandInnerPadding'] = args.island_inner_padding
     if args.show_top_left_pill is not None:
         config['showTopLeftPill'] = (args.show_top_left_pill.lower() == "true")
+    if args.show_top_right_cava is not None:
+        config['showTopRightCava'] = (args.show_top_right_cava.lower() == "true")
+    if args.show_top_right_battery is not None:
+        config['showTopRightBattery'] = (args.show_top_right_battery.lower() == "true")
     if args.show_top_right_pill is not None:
         config['showTopRightPill'] = (args.show_top_right_pill.lower() == "true")
     if args.show_top_right_tray is not None:
