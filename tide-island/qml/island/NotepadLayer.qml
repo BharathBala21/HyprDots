@@ -177,7 +177,7 @@ FocusScope {
         const targetIdx = root.filteredNotes.findIndex(n => n.id === newId);
         root.selectedIndex = targetIdx !== -1 ? targetIdx : 0;
         
-        triggerAutoSave();
+        saveNotesToBackend();
         titleInput.forceActiveFocus();
         titleInput.selectAll();
         showToast("Created new note");
@@ -190,7 +190,7 @@ FocusScope {
         if (root.selectedIndex >= root.filteredNotes.length) {
             root.selectedIndex = Math.max(0, root.filteredNotes.length - 1);
         }
-        triggerAutoSave();
+        saveNotesToBackend();
         showToast("Note deleted");
     }
 
@@ -208,7 +208,7 @@ FocusScope {
         if (targetIdx !== -1) {
             root.selectedIndex = targetIdx;
         }
-        triggerAutoSave();
+        saveNotesToBackend();
         showToast(currentNote && currentNote.pinned ? "Pinned note" : "Unpinned note");
     }
 
