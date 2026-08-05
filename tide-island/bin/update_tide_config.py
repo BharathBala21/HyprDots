@@ -11,12 +11,22 @@ def main():
     parser.add_argument("--show-battery-percentage", choices=["true", "false"], help="Show/hide battery percentage text")
     parser.add_argument("--primary-action", help="Primary click action")
     parser.add_argument("--secondary-action", help="Secondary click action")
-    parser.add_argument("--island-style", choices=["pill", "notch"], help="Island visual style (pill or notch)")
+    parser.add_argument("--island-style", choices=["pill", "notch", "custom"], help="Island visual style (pill, notch, or custom)")
+    parser.add_argument("--center-pill-style", choices=["pill", "notch"], help="Center island pill style")
+    parser.add_argument("--top-left-pill-style", choices=["pill", "notch"], help="Top-left status/lyrics pill style")
+    parser.add_argument("--top-right-pill-style", choices=["pill", "notch"], help="Top-right status pill style")
+    parser.add_argument("--top-right-tray-style", choices=["pill", "notch"], help="Top-right tray pill style")
     parser.add_argument("--island-compact-width", type=int, help="Compact island width in px")
     parser.add_argument("--island-compact-height", type=int, help="Compact island height in px")
     parser.add_argument("--island-corner-radius", type=int, help="Island corner radius in px")
     parser.add_argument("--island-top-offset", type=int, help="Island top offset from screen edge in px")
     parser.add_argument("--island-inner-padding", type=int, help="Inner content padding in px")
+    parser.add_argument("--show-top-left-pill", choices=["true", "false"], help="Show/hide top-left status/lyrics pill")
+    parser.add_argument("--show-top-right-cava", choices=["true", "false"], help="Show/hide top-right cava visualizer pill")
+    parser.add_argument("--show-top-right-battery", choices=["true", "false"], help="Show/hide top-right battery status pill")
+    parser.add_argument("--show-top-right-pill", choices=["true", "false"], help="Show/hide top-right status pill")
+    parser.add_argument("--show-top-right-tray", choices=["true", "false"], help="Show/hide top-right tray pill")
+    parser.add_argument("--island-auto-hide", choices=["true", "false"], help="Auto-hide idle center island")
     parser.add_argument("--notepad-default-mode", choices=["edit", "preview"], help="Default notepad mode (edit or preview)")
     parser.add_argument("--notepad-auto-save", choices=["true", "false"], help="Default notepad auto-save state")
 
@@ -43,6 +53,14 @@ def main():
         config['dynamicIslandSecondaryAction'] = args.secondary_action
     if args.island_style is not None:
         config['islandStyle'] = args.island_style
+    if args.center_pill_style is not None:
+        config['centerPillStyle'] = args.center_pill_style
+    if args.top_left_pill_style is not None:
+        config['topLeftPillStyle'] = args.top_left_pill_style
+    if args.top_right_pill_style is not None:
+        config['topRightPillStyle'] = args.top_right_pill_style
+    if args.top_right_tray_style is not None:
+        config['topRightTrayStyle'] = args.top_right_tray_style
     if args.island_compact_width is not None:
         config['islandCompactWidth'] = args.island_compact_width
     if args.island_compact_height is not None:
@@ -53,6 +71,18 @@ def main():
         config['islandTopOffset'] = args.island_top_offset
     if args.island_inner_padding is not None:
         config['islandInnerPadding'] = args.island_inner_padding
+    if args.show_top_left_pill is not None:
+        config['showTopLeftPill'] = (args.show_top_left_pill.lower() == "true")
+    if args.show_top_right_cava is not None:
+        config['showTopRightCava'] = (args.show_top_right_cava.lower() == "true")
+    if args.show_top_right_battery is not None:
+        config['showTopRightBattery'] = (args.show_top_right_battery.lower() == "true")
+    if args.show_top_right_pill is not None:
+        config['showTopRightPill'] = (args.show_top_right_pill.lower() == "true")
+    if args.show_top_right_tray is not None:
+        config['showTopRightTray'] = (args.show_top_right_tray.lower() == "true")
+    if args.island_auto_hide is not None:
+        config['islandAutoHideEnabled'] = (args.island_auto_hide.lower() == "true")
     if args.notepad_default_mode is not None:
         config['notepadDefaultMode'] = args.notepad_default_mode
     if args.notepad_auto_save is not None:

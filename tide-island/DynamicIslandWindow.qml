@@ -82,12 +82,26 @@ PanelWindow {
     }
 
     readonly property string islandStyle: activeUserConfig.islandStyle || "pill"
-    readonly property bool isNotchStyle: islandStyle === "notch"
+    readonly property string centerPillStyle: activeUserConfig.centerPillStyle || (islandStyle === "notch" ? "notch" : "pill")
+    readonly property string topLeftPillStyle: activeUserConfig.topLeftPillStyle || (islandStyle === "notch" ? "notch" : "pill")
+    readonly property string topRightPillStyle: activeUserConfig.topRightPillStyle || (islandStyle === "notch" ? "notch" : "pill")
+    readonly property string topRightTrayStyle: activeUserConfig.topRightTrayStyle || (islandStyle === "notch" ? "notch" : "pill")
+
+    readonly property bool isCenterNotch: centerPillStyle === "notch"
+    readonly property bool isTopLeftNotch: topLeftPillStyle === "notch"
+    readonly property bool isTopRightNotch: topRightPillStyle === "notch"
+    readonly property bool isTopRightTrayNotch: topRightTrayStyle === "notch"
+    readonly property bool isNotchStyle: islandStyle === "notch" || isCenterNotch
     readonly property real islandCompactWidth: activeUserConfig.islandCompactWidth !== undefined ? Number(activeUserConfig.islandCompactWidth) : 140
     readonly property real islandCompactHeight: activeUserConfig.islandCompactHeight !== undefined ? Number(activeUserConfig.islandCompactHeight) : 35
     readonly property real islandCornerRadius: activeUserConfig.islandCornerRadius !== undefined ? Number(activeUserConfig.islandCornerRadius) : 19
     readonly property real islandTopOffset: activeUserConfig.islandTopOffset !== undefined ? Number(activeUserConfig.islandTopOffset) : (root.isNotchStyle ? 0 : 4)
     readonly property real islandInnerPadding: activeUserConfig.islandInnerPadding !== undefined ? Number(activeUserConfig.islandInnerPadding) : 8
+    readonly property bool showTopLeftPill: activeUserConfig.showTopLeftPill !== undefined ? activeUserConfig.showTopLeftPill : true
+    readonly property bool showTopRightCava: activeUserConfig.showTopRightCava !== undefined ? activeUserConfig.showTopRightCava : true
+    readonly property bool showTopRightBattery: activeUserConfig.showTopRightBattery !== undefined ? activeUserConfig.showTopRightBattery : (activeUserConfig.showTopRightPill !== undefined ? activeUserConfig.showTopRightPill : true)
+    readonly property bool showTopRightPill: showTopRightCava || showTopRightBattery
+    readonly property bool showTopRightTray: activeUserConfig.showTopRightTray !== undefined ? activeUserConfig.showTopRightTray : true
 
     property int timerTotalSeconds: 300
     property int timerRemainingSeconds: 300
@@ -1765,7 +1779,7 @@ PanelWindow {
                 islandContainer.swipeTransitionProgress
             )
             color: root.overviewContentVisible ? root.overviewCapsuleColor : StyleTokens.black
-            y: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
+            y: (root.isCenterNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             anchors.horizontalCenter: parent.horizontalCenter
             clip: true
             width: displayedWidth
@@ -1776,13 +1790,13 @@ PanelWindow {
                 NumberAnimation { duration: mainCapsule.morphDuration; easing.type: Easing.OutQuint }
             }
 
-            // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode)
+            // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode across all states)
             Rectangle {
-                visible: root.isNotchStyle && !root.overviewVisible
+                visible: root.isCenterNotch && !root.overviewVisible
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                height: Math.min(18, parent.radius)
+                height: Math.min(parent.height / 2, parent.radius)
                 color: parent.color
                 z: -2
             }
@@ -2664,11 +2678,11 @@ PanelWindow {
 
         TopRightStatus {
             id: topRightComponent
-            visible: !root.isWorkspaceFullscreen
+            visible: !root.isWorkspaceFullscreen && root.showTopRightPill
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: 4
+            anchors.topMargin: (root.isTopRightNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             cavaLevels: islandContainer.cavaLevels
             batteryCapacity: islandContainer.batteryCapacity
             isCharging: islandContainer.isCharging
@@ -2676,33 +2690,45 @@ PanelWindow {
             currentVolume: islandContainer.currentVolume
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
+
+            Behavior on anchors.topMargin {
+                NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
+            }
         }
 
         TopLeftLyrics {
             id: topLeftComponent
-            visible: !root.isWorkspaceFullscreen
+            visible: !root.isWorkspaceFullscreen && root.showTopLeftPill
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: 4
+            anchors.topMargin: (root.isTopLeftNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             lyricText: islandContainer.lyricsDisplayText
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
             maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32
             islandState: islandContainer.islandState
+
+            Behavior on anchors.topMargin {
+                NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
+            }
         }
 
         TopRightTray {
             id: topRightTray
-            visible: !root.isWorkspaceFullscreen
+            visible: !root.isWorkspaceFullscreen && root.showTopRightTray
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top
-            anchors.topMargin: 4
+            anchors.topMargin: (root.isTopRightTrayNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
             window: root
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
+
+            Behavior on anchors.topMargin {
+                NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
+            }
         }
     }
 

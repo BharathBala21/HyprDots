@@ -32,16 +32,41 @@ Item {
     }
 
     readonly property bool showBatteryPercentage: statusCfgData.showBatteryPercentage !== undefined ? statusCfgData.showBatteryPercentage : true
+    readonly property bool showCava: statusCfgData.showTopRightCava !== undefined ? statusCfgData.showTopRightCava : true
+    readonly property bool showBattery: statusCfgData.showTopRightBattery !== undefined ? statusCfgData.showTopRightBattery : (statusCfgData.showTopRightPill !== undefined ? statusCfgData.showTopRightPill : true)
 
-    implicitWidth: contentRow.width + 24
+    readonly property bool hasCavaContent: root.showCava && root.musicPlaying
+    readonly property bool hasBatteryContent: root.showBattery
+
+    opacity: (hasCavaContent || hasBatteryContent) ? 1.0 : 0.0
+    visible: opacity > 0.0
+
+    Behavior on opacity {
+        NumberAnimation {
+            duration: 250
+            easing.type: Easing.InOutQuad
+        }
+    }
+
+    implicitWidth: {
+        var cavaW = (root.showCava && root.musicPlaying) ? visualizer.implicitWidth : 0;
+        var battW = root.showBattery ? batteryRow.implicitWidth : 0;
+        var sepW = (cavaW > 0 && battW > 0) ? 25 : 0;
+        if (cavaW === 0 && battW === 0) return 0;
+        return cavaW + battW + sepW + 24;
+    }
     implicitHeight: 32
     width: implicitWidth
     height: implicitHeight
 
+    Behavior on width {
+        NumberAnimation { duration: 380; easing.type: Easing.OutQuint }
+    }
+
     MouseArea {
         id: scrollArea
         anchors.fill: parent
-        enabled: root.musicPlaying
+        enabled: root.musicPlaying && root.showBattery
         acceptedButtons: Qt.NoButton
 
         onWheel: (wheel) => {
@@ -54,12 +79,34 @@ Item {
         }
     }
 
+    readonly property string styleChoice: statusCfgData.topRightPillStyle || statusCfgData.islandStyle || "pill"
+    readonly property bool isNotchStyle: styleChoice === "notch"
+
     Rectangle {
+        id: bgRect
         anchors.fill: parent
         color: StyleTokens.black
         radius: height / 2
         border.width: 1
         border.color: StyleTokens.overviewInnerBorder
+    }
+
+    // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode)
+    Rectangle {
+        visible: root.isNotchStyle
+        anchors.top: bgRect.top
+        anchors.left: bgRect.left
+        anchors.right: bgRect.right
+        height: Math.min(16, bgRect.height / 2)
+        color: bgRect.color
+        z: -1
+
+        Behavior on height {
+            NumberAnimation { duration: 380; easing.type: Easing.OutQuint }
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: 220; easing.type: Easing.InOutQuad }
+        }
     }
 
     Row {
@@ -71,11 +118,11 @@ Item {
             id: visualizer
             levels: root.cavaLevels
             anchors.verticalCenter: parent.verticalCenter
-            visible: width > 0
-            opacity: root.musicPlaying ? 1 : 0
+            visible: root.showCava && root.musicPlaying && width > 0
+            opacity: (root.showCava && root.musicPlaying) ? 1 : 0
             clip: true
 
-            width: root.musicPlaying ? implicitWidth : 0
+            width: (root.showCava && root.musicPlaying) ? implicitWidth : 0
             Behavior on width {
                 NumberAnimation {
                     duration: 350
@@ -90,10 +137,10 @@ Item {
             }
         }
 
-        // Separator between visualizer and battery (visible only when music playing)
+        // Separator between visualizer and battery (visible only when both music playing & battery shown)
         Item {
             id: separatorContainer
-            width: root.musicPlaying ? 25 : 0 // 1px separator + 12px spacing on each side = 25px total
+            width: (root.showCava && root.musicPlaying && root.showBattery) ? 25 : 0 // 1px separator + 12px spacing on each side = 25px total
             height: 14
             anchors.verticalCenter: parent.verticalCenter
             clip: true
@@ -111,7 +158,7 @@ Item {
                 height: parent.height
                 color: "#44ffffff"
                 anchors.centerIn: parent
-                opacity: root.musicPlaying ? 1 : 0
+                opacity: (root.showCava && root.musicPlaying && root.showBattery) ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation {
                         duration: 250
@@ -122,8 +169,10 @@ Item {
         }
 
         Row {
+            id: batteryRow
             spacing: 6
             anchors.verticalCenter: parent.verticalCenter
+            visible: root.showBattery
 
             Text {
                 text: "\uf0e7" // chargingIconGlyph
