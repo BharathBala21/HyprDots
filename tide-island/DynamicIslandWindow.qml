@@ -2001,6 +2001,21 @@ PanelWindow {
                         islandContainer.handleConfiguredClickAction(secAction);
                     }
                 }
+
+                property real lastScrollTime: 0
+
+                onWheel: (wheel) => {
+                    const now = Date.now();
+                    if (now - lastScrollTime < 150) return;
+                    lastScrollTime = now;
+
+                    if (wheel.angleDelta.y > 0) {
+                        hyprDispatch.focusWorkspace("r-1");
+                    } else if (wheel.angleDelta.y < 0) {
+                        hyprDispatch.focusWorkspace("r+1");
+                    }
+                    wheel.accepted = true;
+                }
             }
 
             MultiPointTouchArea {
