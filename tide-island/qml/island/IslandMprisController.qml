@@ -83,17 +83,40 @@ Item {
         return url;
     }
 
+    function updateActivePlayer() {
+        const resolved = resolveActivePlayer();
+        if (root.activePlayer !== resolved) {
+            root.activePlayer = resolved;
+        }
+    }
+
+    Timer {
+        id: autoPlayerRefreshTimer
+        interval: 1000
+        repeat: true
+        running: true
+        onTriggered: root.updateActivePlayer()
+    }
+
+    Connections {
+        target: Mpris.players
+        ignoreUnknownSignals: true
+        function onValuesChanged() { root.updateActivePlayer(); }
+        function onCountChanged() { root.updateActivePlayer(); }
+    }
+
     Connections {
         target: root.activePlayer
         ignoreUnknownSignals: true
         function onMetadataChanged() {
             root.activePlayerChanged();
+            root.updateActivePlayer();
         }
         function onTrackArtUrlChanged() {
             root.activePlayerChanged();
         }
         function onPlaybackStateChanged() {
-            root.activePlayer = root.resolveActivePlayer();
+            root.updateActivePlayer();
         }
     }
     readonly property string inlineLyricsRaw: {
@@ -222,17 +245,35 @@ Item {
         const entry = (player.entry || "").toLowerCase();
         const fullName = identity + " " + dbusName + " " + entry;
 
-        // Exclude generic web browsers unless it's explicitly YouTube Music (music.youtube.com)
-        const isGenericBrowser = dbusName.indexOf("firefox") !== -1 ||
-                                 dbusName.indexOf("chrome") !== -1 ||
-                                 dbusName.indexOf("chromium") !== -1 ||
-                                 dbusName.indexOf("brave") !== -1 ||
-                                 dbusName.indexOf("vivaldi") !== -1 ||
-                                 dbusName.indexOf("edge") !== -1;
+        let webUrl = "";
+        if (player.metadata) {
+            webUrl = String(player.metadata["xesam:url"] || "").toLowerCase();
+        }
+        if (!webUrl && player.url) webUrl = String(player.url).toLowerCase();
 
-        if (isGenericBrowser) {
-            const webUrl = (player.metadata ? (player.metadata["xesam:url"] || "") : "").toLowerCase();
-            return webUrl.indexOf("music.youtube.com") !== -1 || fullName.indexOf("music.youtube.com") !== -1;
+        // Browser instances (Zen, Firefox, Chrome, Chromium, Brave, Vivaldi, Edge)
+        const isBrowser = dbusName.indexOf("firefox") !== -1 ||
+                          dbusName.indexOf("chrome") !== -1 ||
+                          dbusName.indexOf("chromium") !== -1 ||
+                          dbusName.indexOf("brave") !== -1 ||
+                          dbusName.indexOf("vivaldi") !== -1 ||
+                          dbusName.indexOf("edge") !== -1 ||
+                          identity.indexOf("zen") !== -1 ||
+                          identity.indexOf("firefox") !== -1 ||
+                          identity.indexOf("chrome") !== -1;
+
+        if (isBrowser) {
+            // Allow YouTube Music, YouTube, Spotify Web, Soundcloud, or any browser media with valid track info
+            if (webUrl.indexOf("youtube.com") !== -1 ||
+                webUrl.indexOf("youtu.be") !== -1 ||
+                webUrl.indexOf("spotify.com") !== -1 ||
+                webUrl.indexOf("soundcloud.com") !== -1 ||
+                webUrl.indexOf("music") !== -1) {
+                return true;
+            }
+            const title = (player.trackTitle || (player.metadata ? player.metadata["xesam:title"] : "") || "").toString().toLowerCase();
+            if (title !== "") return true;
+            return playerHasTrackInfo(player);
         }
 
         return fullName.indexOf("spotify") !== -1 ||
@@ -248,39 +289,51 @@ Item {
                fullName.indexOf("sayonara") !== -1 ||
                fullName.indexOf("tidal") !== -1 ||
                fullName.indexOf("apple") !== -1 ||
-               fullName.indexOf("vlc") !== -1;
+               fullName.indexOf("vlc") !== -1 ||
+               fullName.indexOf("mpv") !== -1 ||
+               playerHasTrackInfo(player);
     }
 
     function resolveActivePlayer() {
         if (!playersList || playersList.length === 0) return null;
 
-        // 1. Music Player Apps currently PLAYING (Spotify, YouTube Music, Rhythmbox, etc.)
+        // 1. Music / Media Player Apps currently PLAYING (state === Playing, 1, or isPlaying)
         for (let index = 0; index < playersList.length; index++) {
             let p = playersList[index];
-            if (p.playbackState === MprisPlaybackState.Playing && isMusicPlayerApp(p))
+            let isPlaying = p.playbackState === MprisPlaybackState.Playing || p.playbackState === 1 || p.isPlaying;
+            if (isPlaying && isMusicPlayerApp(p))
                 return p;
         }
 
-        // 2. Remembered last active music player
+        // 2. Any other player currently PLAYING with track info
+        for (let index = 0; index < playersList.length; index++) {
+            let p = playersList[index];
+            let isPlaying = p.playbackState === MprisPlaybackState.Playing || p.playbackState === 1 || p.isPlaying;
+            if (isPlaying && playerHasTrackInfo(p))
+                return p;
+        }
+
+        // 3. Remembered last active music player
         const rememberedPlayer = findPlayerByDbusName(lastActivePlayerDbusName);
-        if (rememberedPlayer && isMusicPlayerApp(rememberedPlayer) && (playerHasTrackInfo(rememberedPlayer) || rememberedPlayer.canControl))
+        if (rememberedPlayer && (playerHasTrackInfo(rememberedPlayer) || rememberedPlayer.canControl))
             return rememberedPlayer;
 
-        // 3. Music Player Apps currently PAUSED
+        // 4. Music / Media Player Apps currently PAUSED
         for (let index = 0; index < playersList.length; index++) {
             let p = playersList[index];
-            if (p.playbackState === MprisPlaybackState.Paused && isMusicPlayerApp(p) && playerHasTrackInfo(p))
+            let isPaused = p.playbackState === MprisPlaybackState.Paused || p.playbackState === 2;
+            if (isPaused && isMusicPlayerApp(p) && playerHasTrackInfo(p))
                 return p;
         }
 
-        // 4. Any controllable Music Player App
+        // 5. Any controllable Player App
         for (let index = 0; index < playersList.length; index++) {
             let p = playersList[index];
-            if (p.canControl && isMusicPlayerApp(p))
+            if (p.canControl)
                 return p;
         }
 
-        return null;
+        return playersList[0];
     }
 
     QtObject {
