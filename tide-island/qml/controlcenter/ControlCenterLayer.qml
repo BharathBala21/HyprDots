@@ -1797,7 +1797,7 @@ Item {
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: controlCenter.applyBatteryModeIndex(index)
+                                onClicked: controlCenter.selectBatteryMode(index)
                             }
                         }
                     }
