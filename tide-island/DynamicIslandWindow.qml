@@ -1782,7 +1782,7 @@ PanelWindow {
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                height: Math.max(28, parent.radius + 10)
+                height: Math.min(parent.height / 2, parent.radius)
                 color: parent.color
                 z: -2
             }
