@@ -490,14 +490,14 @@ PanelWindow {
 
     function showNotification(appName, summary, body) {
         let displayAppName = appName === "TideBatteryAlert" ? "Battery" : appName;
-        notificationHistory.append({
+        notificationHistory.insert(0, {
             "appName": displayAppName,
             "summary": summary,
             "body": body,
             "timestamp": new Date().toLocaleTimeString(Qt.locale(), "hh:mm")
         });
         if (notificationHistory.count > 50) {
-            notificationHistory.remove(0);
+            notificationHistory.remove(notificationHistory.count - 1);
         }
         if (!root.dndActive) {
             root.playNotificationSound();
