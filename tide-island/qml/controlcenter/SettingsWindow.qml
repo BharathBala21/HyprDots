@@ -9,8 +9,8 @@ FloatingWindow {
     id: root
 
     title: "Tide-Island Settings"
-    implicitWidth: 840
-    implicitHeight: 580
+    implicitWidth: 880
+    implicitHeight: 620
     color: colorBackground
 
     signal settingsClosed()
@@ -61,6 +61,10 @@ FloatingWindow {
     property int islandCornerRadius: cfgData.islandCornerRadius !== undefined ? Number(cfgData.islandCornerRadius) : 19
     property int islandTopOffset: cfgData.islandTopOffset !== undefined ? Number(cfgData.islandTopOffset) : 4
     property int islandInnerPadding: cfgData.islandInnerPadding !== undefined ? Number(cfgData.islandInnerPadding) : 8
+    property bool showTopLeftPill: cfgData.showTopLeftPill !== undefined ? cfgData.showTopLeftPill : true
+    property bool showTopRightPill: cfgData.showTopRightPill !== undefined ? cfgData.showTopRightPill : true
+    property bool showTopRightTray: cfgData.showTopRightTray !== undefined ? cfgData.showTopRightTray : true
+    property bool islandAutoHideEnabled: cfgData.islandAutoHideEnabled !== undefined ? cfgData.islandAutoHideEnabled : false
     property string notepadDefaultMode: cfgData.notepadDefaultMode !== undefined ? String(cfgData.notepadDefaultMode) : "edit"
     property bool notepadAutoSave: cfgData.notepadAutoSave !== undefined ? cfgData.notepadAutoSave : true
 
@@ -95,6 +99,10 @@ FloatingWindow {
             "--island-corner-radius", String(islandCornerRadius),
             "--island-top-offset", String(islandTopOffset),
             "--island-inner-padding", String(islandInnerPadding),
+            "--show-top-left-pill", showTopLeftPill ? "true" : "false",
+            "--show-top-right-pill", showTopRightPill ? "true" : "false",
+            "--show-top-right-tray", showTopRightTray ? "true" : "false",
+            "--island-auto-hide", islandAutoHideEnabled ? "true" : "false",
             "--notepad-default-mode", notepadDefaultMode,
             "--notepad-auto-save", notepadAutoSave ? "true" : "false"
         ]);
@@ -140,55 +148,68 @@ FloatingWindow {
 
     // Component: Card layout container
     component SettingsCard: Rectangle {
-        default property alias content: cardContent.data
+        id: cardRoot
         property string title: ""
         property string subtitle: ""
+        property alias control: cardControlSlot.data
+        default property alias extraContent: extraSlot.data
 
         Layout.fillWidth: true
-        implicitHeight: cardCol.height + 24
+        implicitHeight: cardLayout.implicitHeight + 28
         radius: 14
         color: colorCardBg
         border.color: Qt.rgba(colorOutline.r, colorOutline.g, colorOutline.b, 0.25)
         border.width: 1
 
-        Column {
-            id: cardCol
-            width: parent.width - 24
-            anchors.centerIn: parent
-            spacing: 10
+        ColumnLayout {
+            id: cardLayout
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 14
+            spacing: 12
 
-            Row {
-                width: parent.width
-                visible: title !== ""
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 16
 
-                Column {
-                    width: parent.width - 100
-                    spacing: 2
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 3
 
                     Text {
-                        text: title
+                        text: cardRoot.title
                         color: colorOnSurface
-                        font.pixelSize: 14
+                        font.pixelSize: 13
                         font.family: "Inter Display"
-                        font.weight: Font.Medium
+                        font.weight: Font.DemiBold
+                        Layout.fillWidth: true
                     }
 
                     Text {
-                        text: subtitle
+                        text: cardRoot.subtitle
                         color: colorOnSurfaceVariant
                         font.pixelSize: 11
                         font.family: "Inter Display"
-                        visible: subtitle !== ""
+                        visible: cardRoot.subtitle !== ""
                         wrapMode: Text.WordWrap
-                        width: parent.width
+                        Layout.fillWidth: true
                     }
+                }
+
+                Item {
+                    id: cardControlSlot
+                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    implicitWidth: childrenRect.width
+                    implicitHeight: childrenRect.height
                 }
             }
 
             Item {
-                id: cardContent
-                width: parent.width
+                id: extraSlot
+                Layout.fillWidth: true
                 implicitHeight: childrenRect.height
+                visible: children.length > 0
             }
         }
     }
@@ -205,43 +226,51 @@ FloatingWindow {
         signal valueMoved(real newValue)
 
         Layout.fillWidth: true
-        implicitHeight: 70
+        implicitHeight: gLayout.implicitHeight + 28
         radius: 14
         color: colorCardBg
         border.color: Qt.rgba(colorOutline.r, colorOutline.g, colorOutline.b, 0.25)
         border.width: 1
 
         ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 12
-            spacing: 4
+            id: gLayout
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 14
+            spacing: 8
 
             RowLayout {
                 Layout.fillWidth: true
 
                 ColumnLayout {
-                    spacing: 1
+                    Layout.fillWidth: true
+                    spacing: 2
+
                     Text {
                         text: gCard.title
                         font.pixelSize: 13
-                        font.weight: Font.Medium
+                        font.family: "Inter Display"
+                        font.weight: Font.DemiBold
                         color: colorOnSurface
                     }
                     Text {
                         text: gCard.subtitle
                         font.pixelSize: 11
+                        font.family: "Inter Display"
                         color: colorOnSurfaceVariant
                         visible: gCard.subtitle !== ""
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
                     }
                 }
-
-                Item { Layout.fillWidth: true }
 
                 Text {
                     text: Math.round(gCard.value) + " " + gCard.unit
                     font.pixelSize: 13
                     font.bold: true
                     color: colorPrimary
+                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                 }
             }
 
@@ -264,6 +293,7 @@ FloatingWindow {
         // --- LEFT SIDEBAR NAVIGATION (Width: 230) ---
         Rectangle {
             Layout.preferredWidth: 230
+            Layout.minimumWidth: 220
             Layout.fillHeight: true
             color: "#0a0b0e"
             border.color: "#18ffffff"
@@ -297,7 +327,7 @@ FloatingWindow {
                         TextField {
                             id: searchInput
                             Layout.fillWidth: true
-                            placeholderText: "Search Settings..."
+                            placeholderText: "Search..."
                             placeholderTextColor: "#606060"
                             font.family: "Inter Display"
                             font.pixelSize: 12
@@ -324,7 +354,7 @@ FloatingWindow {
                         delegate: Rectangle {
                             required property var modelData
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 40
+                            Layout.preferredHeight: 42
                             radius: 10
                             color: root.activeCategory === modelData.id ? colorPrimary : (navMouse.containsMouse ? "#18ffffff" : "transparent")
 
@@ -463,41 +493,39 @@ FloatingWindow {
 
                 // Scrollable Content Area
                 ScrollView {
+                    id: mainScrollView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
+                    contentWidth: availableWidth
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                     ColumnLayout {
-                        width: parent.width - 12
-                        spacing: 12
+                        width: mainScrollView.availableWidth - 12
+                        spacing: 14
 
                         // ==================== CATEGORY 1: BAR & ISLAND ====================
                         ColumnLayout {
                             visible: root.activeCategory === "bar_island" || root.searchQuery !== ""
                             Layout.fillWidth: true
-                            spacing: 12
+                            spacing: 14
 
                             SettingsCard {
                                 title: "Island Visual Style"
                                 subtitle: "Choose between floating island pill and flush top screen notch"
 
-                                Row {
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.topMargin: -28
-                                    spacing: 6
-
+                                control: Row {
+                                    spacing: 8
                                     Rectangle {
-                                        width: 85; height: 28; radius: 8
+                                        width: 95; height: 32; radius: 8
                                         color: islandStyle === "pill" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "Floating Pill"; color: islandStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
                                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandStyle = "pill"; saveSettings(); } }
                                     }
 
                                     Rectangle {
-                                        width: 85; height: 28; radius: 8
+                                        width: 95; height: 32; radius: 8
                                         color: islandStyle === "notch" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "Top Notch"; color: islandStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
                                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandStyle = "notch"; saveSettings(); } }
@@ -544,33 +572,90 @@ FloatingWindow {
                                 from: 2; to: 16
                                 onValueMoved: (newVal) => { islandInnerPadding = Math.round(newVal); saveSettings(); }
                             }
+
+                            Text {
+                                text: "Pill & Bar Visibility"
+                                color: colorPrimary
+                                font.pixelSize: 13
+                                font.family: "Inter Display"
+                                font.weight: Font.Bold
+                                topPadding: 8
+                            }
+
+                            SettingsCard {
+                                title: "Left Lyrics / Status Pill"
+                                subtitle: "Show/hide the left status pill for music lyrics and app status"
+
+                                control: SettingsSwitch {
+                                    checked: showTopLeftPill
+                                    onToggled: (newValue) => {
+                                        showTopLeftPill = newValue;
+                                        saveSettings();
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Right Status Pill (Battery & Volume)"
+                                subtitle: "Show/hide the right status pill for battery and volume status"
+
+                                control: SettingsSwitch {
+                                    checked: showTopRightPill
+                                    onToggled: (newValue) => {
+                                        showTopRightPill = newValue;
+                                        saveSettings();
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Right System Tray Pill"
+                                subtitle: "Show/hide the system tray icons pill"
+
+                                control: SettingsSwitch {
+                                    checked: showTopRightTray
+                                    onToggled: (newValue) => {
+                                        showTopRightTray = newValue;
+                                        saveSettings();
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Auto-Hide Idle Center Island"
+                                subtitle: "Automatically hide the center island pill when idle"
+
+                                control: SettingsSwitch {
+                                    checked: islandAutoHideEnabled
+                                    onToggled: (newValue) => {
+                                        islandAutoHideEnabled = newValue;
+                                        saveSettings();
+                                    }
+                                }
+                            }
                         }
 
                         // ==================== CATEGORY 2: NOTEPAD ====================
                         ColumnLayout {
                             visible: root.activeCategory === "notepad" || root.searchQuery !== ""
                             Layout.fillWidth: true
-                            spacing: 12
+                            spacing: 14
 
                             SettingsCard {
                                 title: "Default View Mode"
                                 subtitle: "Initial mode when opening the Notepad notch (Edit or Preview)"
 
-                                Row {
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.topMargin: -28
-                                    spacing: 6
-
+                                control: Row {
+                                    spacing: 8
                                     Rectangle {
-                                        width: 70; height: 28; radius: 8
+                                        width: 80; height: 32; radius: 8
                                         color: notepadDefaultMode === "edit" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "Edit"; color: notepadDefaultMode === "edit" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
                                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { notepadDefaultMode = "edit"; saveSettings(); } }
                                     }
 
                                     Rectangle {
-                                        width: 70; height: 28; radius: 8
+                                        width: 80; height: 32; radius: 8
                                         color: notepadDefaultMode === "preview" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "Preview"; color: notepadDefaultMode === "preview" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
                                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { notepadDefaultMode = "preview"; saveSettings(); } }
@@ -582,10 +667,7 @@ FloatingWindow {
                                 title: "Auto-Save Notes"
                                 subtitle: "Automatically save note content while typing"
 
-                                SettingsSwitch {
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.topMargin: -24
+                                control: SettingsSwitch {
                                     checked: notepadAutoSave
                                     onToggled: (newValue) => {
                                         notepadAutoSave = newValue;
@@ -599,7 +681,7 @@ FloatingWindow {
                         ColumnLayout {
                             visible: root.activeCategory === "actions" || root.searchQuery !== ""
                             Layout.fillWidth: true
-                            spacing: 12
+                            spacing: 14
 
                             SettingsCard {
                                 title: "Left-Click Action"
@@ -609,7 +691,7 @@ FloatingWindow {
                                     columns: 2
                                     spacing: 8
                                     width: parent.width
-                                    topPadding: 6
+                                    topPadding: 4
 
                                     readonly property var options: [
                                         { label: "Expanded Player", value: "toggleExpandedPlayer" },
@@ -623,7 +705,7 @@ FloatingWindow {
                                         model: parent.options
                                         Rectangle {
                                             width: (parent.width - 8) / 2
-                                            height: 32
+                                            height: 34
                                             radius: 8
                                             color: primaryAction === modelData.value ? colorPrimary : colorSecondaryContainer
 
@@ -657,7 +739,7 @@ FloatingWindow {
                                     columns: 2
                                     spacing: 8
                                     width: parent.width
-                                    topPadding: 6
+                                    topPadding: 4
 
                                     readonly property var options: [
                                         { label: "Control Center", value: "toggleControlCenter" },
@@ -671,7 +753,7 @@ FloatingWindow {
                                         model: parent.options
                                         Rectangle {
                                             width: (parent.width - 8) / 2
-                                            height: 32
+                                            height: 34
                                             radius: 8
                                             color: secondaryAction === modelData.value ? colorPrimary : colorSecondaryContainer
 
@@ -702,27 +784,23 @@ FloatingWindow {
                         ColumnLayout {
                             visible: root.activeCategory === "clock_date" || root.searchQuery !== ""
                             Layout.fillWidth: true
-                            spacing: 12
+                            spacing: 14
 
                             SettingsCard {
                                 title: "Clock Format"
                                 subtitle: "Choose between 12-hour (AM/PM) and 24-hour time format"
 
-                                Row {
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.topMargin: -28
-                                    spacing: 6
-
+                                control: Row {
+                                    spacing: 8
                                     Rectangle {
-                                        width: 70; height: 28; radius: 8
+                                        width: 80; height: 32; radius: 8
                                         color: clockFormat === "12" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "12-Hour"; color: clockFormat === "12" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
                                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { clockFormat = "12"; saveSettings(); } }
                                     }
 
                                     Rectangle {
-                                        width: 70; height: 28; radius: 8
+                                        width: 80; height: 32; radius: 8
                                         color: clockFormat === "24" ? colorPrimary : colorSecondaryContainer
                                         Text { anchors.centerIn: parent; text: "24-Hour"; color: clockFormat === "24" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
                                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { clockFormat = "24"; saveSettings(); } }
@@ -734,10 +812,7 @@ FloatingWindow {
                                 title: "Auto-Expand on Music Change"
                                 subtitle: "Automatically expand island briefly when a new song starts playing"
 
-                                SettingsSwitch {
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.topMargin: -24
+                                control: SettingsSwitch {
                                     checked: autoExpandOnTrackChange
                                     onToggled: (newValue) => {
                                         autoExpandOnTrackChange = newValue;
@@ -750,10 +825,7 @@ FloatingWindow {
                                 title: "Show Battery Percentage"
                                 subtitle: "Display numerical percentage next to the battery icon"
 
-                                SettingsSwitch {
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.topMargin: -24
+                                control: SettingsSwitch {
                                     checked: showBatteryPercentage
                                     onToggled: (newValue) => {
                                         showBatteryPercentage = newValue;

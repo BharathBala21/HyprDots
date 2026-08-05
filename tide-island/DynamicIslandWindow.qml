@@ -88,6 +88,9 @@ PanelWindow {
     readonly property real islandCornerRadius: activeUserConfig.islandCornerRadius !== undefined ? Number(activeUserConfig.islandCornerRadius) : 19
     readonly property real islandTopOffset: activeUserConfig.islandTopOffset !== undefined ? Number(activeUserConfig.islandTopOffset) : (root.isNotchStyle ? 0 : 4)
     readonly property real islandInnerPadding: activeUserConfig.islandInnerPadding !== undefined ? Number(activeUserConfig.islandInnerPadding) : 8
+    readonly property bool showTopLeftPill: activeUserConfig.showTopLeftPill !== undefined ? activeUserConfig.showTopLeftPill : true
+    readonly property bool showTopRightPill: activeUserConfig.showTopRightPill !== undefined ? activeUserConfig.showTopRightPill : true
+    readonly property bool showTopRightTray: activeUserConfig.showTopRightTray !== undefined ? activeUserConfig.showTopRightTray : true
 
     property int timerTotalSeconds: 300
     property int timerRemainingSeconds: 300
@@ -2664,7 +2667,7 @@ PanelWindow {
 
         TopRightStatus {
             id: topRightComponent
-            visible: !root.isWorkspaceFullscreen
+            visible: !root.isWorkspaceFullscreen && root.showTopRightPill
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
@@ -2680,7 +2683,7 @@ PanelWindow {
 
         TopLeftLyrics {
             id: topLeftComponent
-            visible: !root.isWorkspaceFullscreen
+            visible: !root.isWorkspaceFullscreen && root.showTopLeftPill
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
@@ -2695,7 +2698,7 @@ PanelWindow {
 
         TopRightTray {
             id: topRightTray
-            visible: !root.isWorkspaceFullscreen
+            visible: !root.isWorkspaceFullscreen && root.showTopRightTray
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top

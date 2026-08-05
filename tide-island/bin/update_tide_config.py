@@ -17,6 +17,10 @@ def main():
     parser.add_argument("--island-corner-radius", type=int, help="Island corner radius in px")
     parser.add_argument("--island-top-offset", type=int, help="Island top offset from screen edge in px")
     parser.add_argument("--island-inner-padding", type=int, help="Inner content padding in px")
+    parser.add_argument("--show-top-left-pill", choices=["true", "false"], help="Show/hide top-left status/lyrics pill")
+    parser.add_argument("--show-top-right-pill", choices=["true", "false"], help="Show/hide top-right status pill")
+    parser.add_argument("--show-top-right-tray", choices=["true", "false"], help="Show/hide top-right tray pill")
+    parser.add_argument("--island-auto-hide", choices=["true", "false"], help="Auto-hide idle center island")
     parser.add_argument("--notepad-default-mode", choices=["edit", "preview"], help="Default notepad mode (edit or preview)")
     parser.add_argument("--notepad-auto-save", choices=["true", "false"], help="Default notepad auto-save state")
 
@@ -53,6 +57,14 @@ def main():
         config['islandTopOffset'] = args.island_top_offset
     if args.island_inner_padding is not None:
         config['islandInnerPadding'] = args.island_inner_padding
+    if args.show_top_left_pill is not None:
+        config['showTopLeftPill'] = (args.show_top_left_pill.lower() == "true")
+    if args.show_top_right_pill is not None:
+        config['showTopRightPill'] = (args.show_top_right_pill.lower() == "true")
+    if args.show_top_right_tray is not None:
+        config['showTopRightTray'] = (args.show_top_right_tray.lower() == "true")
+    if args.island_auto_hide is not None:
+        config['islandAutoHideEnabled'] = (args.island_auto_hide.lower() == "true")
     if args.notepad_default_mode is not None:
         config['notepadDefaultMode'] = args.notepad_default_mode
     if args.notepad_auto_save is not None:
