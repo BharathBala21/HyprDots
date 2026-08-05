@@ -20,6 +20,22 @@ Item {
 
     readonly property bool showCava: lyricsCfgData.showTopRightCava !== undefined ? lyricsCfgData.showTopRightCava : true
 
+    function formatArtUrl(rawUrl) {
+        if (!rawUrl) return "";
+        let url = String(rawUrl).trim();
+        if (url === "") return "";
+        if (url.indexOf("open.spotify.com/image/") !== -1) {
+            url = url.replace("open.spotify.com/image/", "i.scdn.co/image/");
+        }
+        if (url.indexOf("spotify:image:") === 0) {
+            url = "https://i.scdn.co/image/" + url.substring(14);
+        }
+        if (url.indexOf("/") === 0 && url.indexOf("file://") !== 0) {
+            url = "file://" + url;
+        }
+        return url;
+    }
+
     onIslandStateChanged: {
         transitionActive = true;
         transitionTimer.restart();
@@ -167,8 +183,8 @@ Item {
         // Media Album Art Thumbnail / Fallback Icon
         Rectangle {
             id: musicArtBox
-            width: 20
-            height: 20
+            Layout.preferredWidth: 20
+            Layout.preferredHeight: 20
             radius: 5
             color: "#20ffffff"
             clip: true

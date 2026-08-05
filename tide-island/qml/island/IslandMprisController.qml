@@ -31,7 +31,25 @@ Item {
         if (lyricsLookupArtist !== "") return lyricsLookupArtist;
         return "Unknown";
     }
-    readonly property string currentArtUrl: activePlayer ? (activePlayer.trackArtUrl || activePlayer.artUrl || "") : ""
+    readonly property string currentArtUrl: {
+        if (!activePlayer) return "";
+        let url = activePlayer.trackArtUrl || activePlayer.artUrl || "";
+        if (!url && activePlayer.metadata) {
+            url = activePlayer.metadata["mpris:artUrl"] || activePlayer.metadata["xesam:userIcon"] || "";
+        }
+        if (!url) return "";
+        url = String(url).trim();
+        if (url.indexOf("open.spotify.com/image/") !== -1) {
+            url = url.replace("open.spotify.com/image/", "i.scdn.co/image/");
+        }
+        if (url.indexOf("spotify:image:") === 0) {
+            url = "https://i.scdn.co/image/" + url.substring(14);
+        }
+        if (url.indexOf("/") === 0 && url.indexOf("file://") !== 0) {
+            url = "file://" + url;
+        }
+        return url;
+    }
     readonly property string inlineLyricsRaw: {
         if (!activePlayer || !activePlayer.metadata) return "";
         let inlineLyrics = activePlayer.metadata["xesam:asText"];

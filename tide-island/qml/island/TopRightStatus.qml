@@ -62,8 +62,8 @@ Item {
         onWheel: (wheel) => {
             if (root.currentVolume < 0)
                 return;
-            var step = 0.02;
-            var nextVal = root.currentVolume + (wheel.angleDelta.y > 0 ? step : -step);
+            const step = 0.02;
+            const nextVal = root.currentVolume + (wheel.angleDelta.y > 0 ? step : -step);
             SystemServices.setVolume(Math.max(0.0, Math.min(1.0, nextVal)));
             wheel.accepted = true;
         }
