@@ -83,6 +83,11 @@ PanelWindow {
 
     readonly property string islandStyle: activeUserConfig.islandStyle || "pill"
     readonly property bool isNotchStyle: islandStyle === "notch"
+    readonly property real islandCompactWidth: activeUserConfig.islandCompactWidth !== undefined ? Number(activeUserConfig.islandCompactWidth) : 140
+    readonly property real islandCompactHeight: activeUserConfig.islandCompactHeight !== undefined ? Number(activeUserConfig.islandCompactHeight) : 35
+    readonly property real islandCornerRadius: activeUserConfig.islandCornerRadius !== undefined ? Number(activeUserConfig.islandCornerRadius) : 19
+    readonly property real islandTopOffset: activeUserConfig.islandTopOffset !== undefined ? Number(activeUserConfig.islandTopOffset) : (root.isNotchStyle ? 0 : 4)
+    readonly property real islandInnerPadding: activeUserConfig.islandInnerPadding !== undefined ? Number(activeUserConfig.islandInnerPadding) : 8
 
     property int timerTotalSeconds: 300
     property int timerRemainingSeconds: 300
@@ -1677,7 +1682,7 @@ PanelWindow {
                         Math.min(notificationLoader.item.maximumWidth, notificationLoader.item.preferredWidth)
                     );
                 default:
-                    return 140;
+                    return root.islandCompactWidth;
                 }
             }
             readonly property real targetHeight: {
@@ -1685,10 +1690,10 @@ PanelWindow {
 
                 // Dynamic height scaling during swiping/settling towards utilities
                 if (capsuleMouseArea.sideSwipeInteractive && islandContainer.swipeTransitionProgress > 0) {
-                    return 35 + (84 - 35) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                    return root.islandCompactHeight + (84 - root.islandCompactHeight) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
                 }
                 if (islandContainer.sideSwipeSettling && islandContainer.swipeTransitionProgress > 0) {
-                    return 35 + (84 - 35) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                    return root.islandCompactHeight + (84 - root.islandCompactHeight) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
                 }
 
                 switch (islandContainer.islandState) {
@@ -1713,7 +1718,7 @@ PanelWindow {
                 case "utilities":
                     return 84;
                 default:
-                    return 35;
+                    return root.islandCompactHeight;
                 }
             }
             readonly property real targetRadius: {
@@ -1721,10 +1726,10 @@ PanelWindow {
 
                 // Dynamic radius scaling during swiping/settling towards utilities
                 if (capsuleMouseArea.sideSwipeInteractive && islandContainer.swipeTransitionProgress > 0) {
-                    return 19 + (24 - 19) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                    return root.islandCornerRadius + (24 - root.islandCornerRadius) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
                 }
                 if (islandContainer.sideSwipeSettling && islandContainer.swipeTransitionProgress > 0) {
-                    return 19 + (24 - 19) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
+                    return root.islandCornerRadius + (24 - root.islandCornerRadius) * islandContainer.clamp01(islandContainer.swipeTransitionProgress);
                 }
 
                 switch (islandContainer.islandState) {
@@ -1744,23 +1749,23 @@ PanelWindow {
                 case "utilities":
                     return 24;
                 default:
-                    return 19;
+                    return root.islandCornerRadius;
                 }
             }
             function sideSwipeWidthForProgress(progressValue) {
                 if (progressValue < 0)
-                    return 140 + (islandContainer.customCapsuleWidth - 140)
+                    return root.islandCompactWidth + (islandContainer.customCapsuleWidth - root.islandCompactWidth)
                         * islandContainer.clamp01(-progressValue);
                 if (progressValue > 0)
-                    return 140 + (islandContainer.utilitiesCapsuleWidth - 140)
+                    return root.islandCompactWidth + (islandContainer.utilitiesCapsuleWidth - root.islandCompactWidth)
                         * islandContainer.clamp01(progressValue);
-                return 140;
+                return root.islandCompactWidth;
             }
             readonly property real sideSwipePreviewWidth: mainCapsule.sideSwipeWidthForProgress(
                 islandContainer.swipeTransitionProgress
             )
             color: root.overviewContentVisible ? root.overviewCapsuleColor : StyleTokens.black
-            y: (root.isNotchStyle && !root.overviewVisible) ? 0 : 4
+            y: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
             anchors.horizontalCenter: parent.horizontalCenter
             clip: true
             width: displayedWidth

@@ -12,6 +12,11 @@ def main():
     parser.add_argument("--primary-action", help="Primary click action")
     parser.add_argument("--secondary-action", help="Secondary click action")
     parser.add_argument("--island-style", choices=["pill", "notch"], help="Island visual style (pill or notch)")
+    parser.add_argument("--island-compact-width", type=int, help="Compact island width in px")
+    parser.add_argument("--island-compact-height", type=int, help="Compact island height in px")
+    parser.add_argument("--island-corner-radius", type=int, help="Island corner radius in px")
+    parser.add_argument("--island-top-offset", type=int, help="Island top offset from screen edge in px")
+    parser.add_argument("--island-inner-padding", type=int, help="Inner content padding in px")
     parser.add_argument("--notepad-default-mode", choices=["edit", "preview"], help="Default notepad mode (edit or preview)")
     parser.add_argument("--notepad-auto-save", choices=["true", "false"], help="Default notepad auto-save state")
 
@@ -38,6 +43,16 @@ def main():
         config['dynamicIslandSecondaryAction'] = args.secondary_action
     if args.island_style is not None:
         config['islandStyle'] = args.island_style
+    if args.island_compact_width is not None:
+        config['islandCompactWidth'] = args.island_compact_width
+    if args.island_compact_height is not None:
+        config['islandCompactHeight'] = args.island_compact_height
+    if args.island_corner_radius is not None:
+        config['islandCornerRadius'] = args.island_corner_radius
+    if args.island_top_offset is not None:
+        config['islandTopOffset'] = args.island_top_offset
+    if args.island_inner_padding is not None:
+        config['islandInnerPadding'] = args.island_inner_padding
     if args.notepad_default_mode is not None:
         config['notepadDefaultMode'] = args.notepad_default_mode
     if args.notepad_auto_save is not None:

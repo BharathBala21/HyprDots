@@ -50,6 +50,11 @@ FloatingWindow {
     property string primaryAction: cfgData.dynamicIslandPrimaryAction || UserConfig.dynamicIslandPrimaryAction || "toggleExpandedPlayer"
     property string secondaryAction: cfgData.dynamicIslandSecondaryAction || UserConfig.dynamicIslandSecondaryAction || "toggleControlCenter"
     property string islandStyle: cfgData.islandStyle !== undefined ? String(cfgData.islandStyle) : "pill"
+    property int islandCompactWidth: cfgData.islandCompactWidth !== undefined ? Number(cfgData.islandCompactWidth) : 140
+    property int islandCompactHeight: cfgData.islandCompactHeight !== undefined ? Number(cfgData.islandCompactHeight) : 35
+    property int islandCornerRadius: cfgData.islandCornerRadius !== undefined ? Number(cfgData.islandCornerRadius) : 19
+    property int islandTopOffset: cfgData.islandTopOffset !== undefined ? Number(cfgData.islandTopOffset) : 4
+    property int islandInnerPadding: cfgData.islandInnerPadding !== undefined ? Number(cfgData.islandInnerPadding) : 8
     property string notepadDefaultMode: cfgData.notepadDefaultMode !== undefined ? String(cfgData.notepadDefaultMode) : "edit"
     property bool notepadAutoSave: cfgData.notepadAutoSave !== undefined ? cfgData.notepadAutoSave : true
 
@@ -79,6 +84,11 @@ FloatingWindow {
             "--primary-action", primaryAction,
             "--secondary-action", secondaryAction,
             "--island-style", islandStyle,
+            "--island-compact-width", String(islandCompactWidth),
+            "--island-compact-height", String(islandCompactHeight),
+            "--island-corner-radius", String(islandCornerRadius),
+            "--island-top-offset", String(islandTopOffset),
+            "--island-inner-padding", String(islandInnerPadding),
             "--notepad-default-mode", notepadDefaultMode,
             "--notepad-auto-save", notepadAutoSave ? "true" : "false"
         ]);
@@ -378,7 +388,192 @@ FloatingWindow {
                 }
             }
 
-            // --- SECTION 2: Click Actions ---
+            // --- SECTION 2: Geometry & Sizing (Pill / Notch) ---
+            Text {
+                text: "Pill / Notch Geometry & Padding"
+                color: colorPrimary
+                font.pixelSize: 12
+                font.family: "Inter Display"
+                font.weight: Font.Bold
+                topPadding: 6
+            }
+
+            SettingsCard {
+                title: "Idle Width (" + islandCompactWidth + "px)"
+                subtitle: "Collapsed island width in pixels (100px - 260px)"
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -28
+                    spacing: 4
+
+                    Repeater {
+                        model: [120, 140, 160, 180, 200]
+                        Rectangle {
+                            required property int modelData
+                            width: 36; height: 24; radius: 6
+                            color: islandCompactWidth === modelData ? colorPrimary : colorSecondaryContainer
+                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandCompactWidth === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactWidth = parent.modelData; saveSettings(); } }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactWidth = Math.max(100, islandCompactWidth - 5); saveSettings(); } }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactWidth = Math.min(260, islandCompactWidth + 5); saveSettings(); } }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Idle Height (" + islandCompactHeight + "px)"
+                subtitle: "Collapsed island height in pixels (24px - 50px)"
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -28
+                    spacing: 4
+
+                    Repeater {
+                        model: [28, 32, 35, 40, 45]
+                        Rectangle {
+                            required property int modelData
+                            width: 36; height: 24; radius: 6
+                            color: islandCompactHeight === modelData ? colorPrimary : colorSecondaryContainer
+                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandCompactHeight === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactHeight = parent.modelData; saveSettings(); } }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactHeight = Math.max(24, islandCompactHeight - 2); saveSettings(); } }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCompactHeight = Math.min(50, islandCompactHeight + 2); saveSettings(); } }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Corner Radius (" + islandCornerRadius + "px)"
+                subtitle: "Curvature radius of pill/notch corners (4px - 30px)"
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -28
+                    spacing: 4
+
+                    Repeater {
+                        model: [8, 12, 19, 24, 30]
+                        Rectangle {
+                            required property int modelData
+                            width: 36; height: 24; radius: 6
+                            color: islandCornerRadius === modelData ? colorPrimary : colorSecondaryContainer
+                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandCornerRadius === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCornerRadius = parent.modelData; saveSettings(); } }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCornerRadius = Math.max(4, islandCornerRadius - 2); saveSettings(); } }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandCornerRadius = Math.min(30, islandCornerRadius + 2); saveSettings(); } }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Top Edge Offset (" + islandTopOffset + "px)"
+                subtitle: "Vertical offset from top screen edge (0px - 24px)"
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -28
+                    spacing: 4
+
+                    Repeater {
+                        model: [0, 4, 8, 12, 16]
+                        Rectangle {
+                            required property int modelData
+                            width: 36; height: 24; radius: 6
+                            color: islandTopOffset === modelData ? colorPrimary : colorSecondaryContainer
+                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandTopOffset === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandTopOffset = parent.modelData; saveSettings(); } }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandTopOffset = Math.max(0, islandTopOffset - 2); saveSettings(); } }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandTopOffset = Math.min(24, islandTopOffset + 2); saveSettings(); } }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Inner Content Padding (" + islandInnerPadding + "px)"
+                subtitle: "Padding inside collapsed pill for clock/icons (2px - 16px)"
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -28
+                    spacing: 4
+
+                    Repeater {
+                        model: [4, 6, 8, 12, 16]
+                        Rectangle {
+                            required property int modelData
+                            width: 36; height: 24; radius: 6
+                            color: islandInnerPadding === modelData ? colorPrimary : colorSecondaryContainer
+                            Text { anchors.centerIn: parent; text: parent.modelData; font.pixelSize: 10; color: islandInnerPadding === parent.modelData ? "#ffffff" : colorOnSurfaceVariant }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandInnerPadding = parent.modelData; saveSettings(); } }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "-"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandInnerPadding = Math.max(2, islandInnerPadding - 1); saveSettings(); } }
+                    }
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 6; color: colorSecondaryContainer
+                        Text { anchors.centerIn: parent; text: "+"; font.bold: true; color: colorOnSurfaceVariant }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { islandInnerPadding = Math.min(16, islandInnerPadding + 1); saveSettings(); } }
+                    }
+                }
+            }
+
+            // --- SECTION 3: Click Actions ---
             Text {
                 text: "Island Click Actions"
                 color: colorPrimary
