@@ -31,8 +31,19 @@ Item {
         if (lyricsLookupArtist !== "") return lyricsLookupArtist;
         return "Unknown";
     }
+    function extractYoutubeThumbnail(urlOrTitle) {
+        if (!urlOrTitle) return "";
+        const str = String(urlOrTitle);
+        const match = str.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        if (match && match[1]) {
+            return "https://i.ytimg.com/vi/" + match[1] + "/hqdefault.jpg";
+        }
+        return "";
+    }
+
     readonly property string currentArtUrl: {
         if (!activePlayer) return "";
+
         let url = activePlayer.trackArtUrl || activePlayer.artUrl || "";
         if (!url && activePlayer.metadata) {
             url = activePlayer.metadata["mpris:artUrl"]
@@ -40,8 +51,20 @@ Item {
                || activePlayer.metadata["xesam:userIcon"]
                || "";
         }
+
+        // Check if browser sent YouTube URL in metadata xesam:url or track url
+        let webUrl = activePlayer.metadata ? (activePlayer.metadata["xesam:url"] || "") : "";
+        if (!webUrl && activePlayer.url) webUrl = activePlayer.url;
+
+        let ytThumb = extractYoutubeThumbnail(webUrl);
+        if (ytThumb !== "") return ytThumb;
+
         if (!url) return "";
         url = String(url).trim();
+
+        ytThumb = extractYoutubeThumbnail(url);
+        if (ytThumb !== "") return ytThumb;
+
         if (url.indexOf("open.spotify.com/image/") !== -1) {
             url = url.replace("open.spotify.com/image/", "i.scdn.co/image/");
         }
@@ -58,6 +81,20 @@ Item {
             url = "file://" + url;
         }
         return url;
+    }
+
+    Connections {
+        target: root.activePlayer
+        ignoreUnknownSignals: true
+        function onMetadataChanged() {
+            root.activePlayerChanged();
+        }
+        function onTrackArtUrlChanged() {
+            root.activePlayerChanged();
+        }
+        function onPlaybackStateChanged() {
+            root.activePlayer = root.resolveActivePlayer();
+        }
     }
     readonly property string inlineLyricsRaw: {
         if (!activePlayer || !activePlayer.metadata) return "";
@@ -180,65 +217,70 @@ Item {
 
     function isMusicPlayerApp(player) {
         if (!player) return false;
-        const name = ((player.identity || "") + " " + (player.dbusName || "") + " " + (player.entry || "")).toLowerCase();
-        return name.indexOf("spotify") !== -1 ||
-               name.indexOf("music") !== -1 ||
-               name.indexOf("rhythmbox") !== -1 ||
-               name.indexOf("amberol") !== -1 ||
-               name.indexOf("audacious") !== -1 ||
-               name.indexOf("clementine") !== -1 ||
-               name.indexOf("lollypop") !== -1 ||
-               name.indexOf("feishin") !== -1 ||
-               name.indexOf("cmus") !== -1 ||
-               name.indexOf("mpd") !== -1 ||
-               name.indexOf("sayonara") !== -1 ||
-               name.indexOf("tidal") !== -1 ||
-               name.indexOf("apple") !== -1;
+        const identity = (player.identity || "").toLowerCase();
+        const dbusName = (player.dbusName || "").toLowerCase();
+        const entry = (player.entry || "").toLowerCase();
+        const fullName = identity + " " + dbusName + " " + entry;
+
+        // Exclude generic web browsers unless it's explicitly YouTube Music (music.youtube.com)
+        const isGenericBrowser = dbusName.indexOf("firefox") !== -1 ||
+                                 dbusName.indexOf("chrome") !== -1 ||
+                                 dbusName.indexOf("chromium") !== -1 ||
+                                 dbusName.indexOf("brave") !== -1 ||
+                                 dbusName.indexOf("vivaldi") !== -1 ||
+                                 dbusName.indexOf("edge") !== -1;
+
+        if (isGenericBrowser) {
+            const webUrl = (player.metadata ? (player.metadata["xesam:url"] || "") : "").toLowerCase();
+            return webUrl.indexOf("music.youtube.com") !== -1 || fullName.indexOf("music.youtube.com") !== -1;
+        }
+
+        return fullName.indexOf("spotify") !== -1 ||
+               fullName.indexOf("music") !== -1 ||
+               fullName.indexOf("rhythmbox") !== -1 ||
+               fullName.indexOf("amberol") !== -1 ||
+               fullName.indexOf("audacious") !== -1 ||
+               fullName.indexOf("clementine") !== -1 ||
+               fullName.indexOf("lollypop") !== -1 ||
+               fullName.indexOf("feishin") !== -1 ||
+               fullName.indexOf("cmus") !== -1 ||
+               fullName.indexOf("mpd") !== -1 ||
+               fullName.indexOf("sayonara") !== -1 ||
+               fullName.indexOf("tidal") !== -1 ||
+               fullName.indexOf("apple") !== -1 ||
+               fullName.indexOf("vlc") !== -1;
     }
 
     function resolveActivePlayer() {
         if (!playersList || playersList.length === 0) return null;
 
-        // 1. Dedicated Music Player Apps (Spotify, Amberol, Rhythmbox, etc.) currently PLAYING
+        // 1. Music Player Apps currently PLAYING (Spotify, YouTube Music, Rhythmbox, etc.)
         for (let index = 0; index < playersList.length; index++) {
             let p = playersList[index];
             if (p.playbackState === MprisPlaybackState.Playing && isMusicPlayerApp(p))
                 return p;
         }
 
-        // 2. Any other media player currently PLAYING
-        for (let index = 0; index < playersList.length; index++) {
-            let p = playersList[index];
-            if (p.playbackState === MprisPlaybackState.Playing)
-                return p;
-        }
-
-        // 3. Remembered last active player
+        // 2. Remembered last active music player
         const rememberedPlayer = findPlayerByDbusName(lastActivePlayerDbusName);
-        if (rememberedPlayer && (playerHasTrackInfo(rememberedPlayer) || rememberedPlayer.canControl))
+        if (rememberedPlayer && isMusicPlayerApp(rememberedPlayer) && (playerHasTrackInfo(rememberedPlayer) || rememberedPlayer.canControl))
             return rememberedPlayer;
 
-        // 4. Dedicated Music Player Apps currently PAUSED
+        // 3. Music Player Apps currently PAUSED
         for (let index = 0; index < playersList.length; index++) {
             let p = playersList[index];
             if (p.playbackState === MprisPlaybackState.Paused && isMusicPlayerApp(p) && playerHasTrackInfo(p))
                 return p;
         }
 
-        // 5. Any other PAUSED player with track info
+        // 4. Any controllable Music Player App
         for (let index = 0; index < playersList.length; index++) {
             let p = playersList[index];
-            if (p.playbackState === MprisPlaybackState.Paused && playerHasTrackInfo(p))
+            if (p.canControl && isMusicPlayerApp(p))
                 return p;
         }
 
-        // 6. Any controllable player
-        for (let index = 0; index < playersList.length; index++) {
-            if (playersList[index].canControl)
-                return playersList[index];
-        }
-
-        return playersList[0];
+        return null;
     }
 
     QtObject {

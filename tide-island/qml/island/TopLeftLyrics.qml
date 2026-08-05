@@ -21,10 +21,23 @@ Item {
 
     readonly property bool showCava: lyricsCfgData.showTopRightCava !== undefined ? lyricsCfgData.showTopRightCava : true
 
+    function extractYoutubeThumbnail(str) {
+        if (!str) return "";
+        const match = String(str).match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        if (match && match[1]) {
+            return "https://i.ytimg.com/vi/" + match[1] + "/hqdefault.jpg";
+        }
+        return "";
+    }
+
     function formatArtUrl(rawUrl) {
         if (!rawUrl) return "";
         let url = String(rawUrl).trim();
         if (url === "") return "";
+
+        const yt = extractYoutubeThumbnail(url);
+        if (yt !== "") return yt;
+
         if (url.indexOf("open.spotify.com/image/") !== -1) {
             url = url.replace("open.spotify.com/image/", "i.scdn.co/image/");
         }
