@@ -151,23 +151,61 @@ Item {
         return null;
     }
 
+    function isMusicPlayerApp(player) {
+        if (!player) return false;
+        const name = ((player.identity || "") + " " + (player.dbusName || "") + " " + (player.entry || "")).toLowerCase();
+        return name.indexOf("spotify") !== -1 ||
+               name.indexOf("music") !== -1 ||
+               name.indexOf("rhythmbox") !== -1 ||
+               name.indexOf("amberol") !== -1 ||
+               name.indexOf("audacious") !== -1 ||
+               name.indexOf("clementine") !== -1 ||
+               name.indexOf("lollypop") !== -1 ||
+               name.indexOf("feishin") !== -1 ||
+               name.indexOf("cmus") !== -1 ||
+               name.indexOf("mpd") !== -1 ||
+               name.indexOf("sayonara") !== -1 ||
+               name.indexOf("tidal") !== -1 ||
+               name.indexOf("apple") !== -1;
+    }
+
     function resolveActivePlayer() {
         if (!playersList || playersList.length === 0) return null;
 
+        // 1. Dedicated Music Player Apps (Spotify, Amberol, Rhythmbox, etc.) currently PLAYING
         for (let index = 0; index < playersList.length; index++) {
-            if (playersList[index].playbackState === MprisPlaybackState.Playing)
-                return playersList[index];
+            let p = playersList[index];
+            if (p.playbackState === MprisPlaybackState.Playing && isMusicPlayerApp(p))
+                return p;
         }
 
+        // 2. Any other media player currently PLAYING
+        for (let index = 0; index < playersList.length; index++) {
+            let p = playersList[index];
+            if (p.playbackState === MprisPlaybackState.Playing)
+                return p;
+        }
+
+        // 3. Remembered last active player
         const rememberedPlayer = findPlayerByDbusName(lastActivePlayerDbusName);
         if (rememberedPlayer && (playerHasTrackInfo(rememberedPlayer) || rememberedPlayer.canControl))
             return rememberedPlayer;
 
+        // 4. Dedicated Music Player Apps currently PAUSED
         for (let index = 0; index < playersList.length; index++) {
-            if (playersList[index].playbackState === MprisPlaybackState.Paused && playerHasTrackInfo(playersList[index]))
-                return playersList[index];
+            let p = playersList[index];
+            if (p.playbackState === MprisPlaybackState.Paused && isMusicPlayerApp(p) && playerHasTrackInfo(p))
+                return p;
         }
 
+        // 5. Any other PAUSED player with track info
+        for (let index = 0; index < playersList.length; index++) {
+            let p = playersList[index];
+            if (p.playbackState === MprisPlaybackState.Paused && playerHasTrackInfo(p))
+                return p;
+        }
+
+        // 6. Any controllable player
         for (let index = 0; index < playersList.length; index++) {
             if (playersList[index].canControl)
                 return playersList[index];
