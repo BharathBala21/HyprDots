@@ -10,6 +10,7 @@ Item {
 
     property string lyricText: ""
     property bool musicPlaying: false
+    property string artUrl: ""
     property var cavaLevels: [0, 0, 0, 0, 0, 0, 0, 0]
     property string textFontFamily: ""
     property string iconFontFamily: ""
@@ -50,8 +51,8 @@ Item {
     implicitWidth: {
         if (!root.musicPlaying || root.lyricText === "" || root.lyricText === "No music playing" || root.lyricText === "no lyrics") return 0;
         const cavaW = (root.showCava && root.musicPlaying) ? visualizer.implicitWidth + 8 : 0;
-        const contentWidth = musicIcon.implicitWidth + 8 + lyricMetrics.advanceWidth + cavaW + 24;
-        return Math.max(80, Math.min(root.maxAllowedWidth, contentWidth));
+        const contentWidth = 20 + 8 + lyricMetrics.advanceWidth + cavaW + 28;
+        return Math.max(90, Math.min(root.maxAllowedWidth, contentWidth));
     }
     width: implicitWidth
     Behavior on width {
@@ -163,13 +164,33 @@ Item {
         anchors.rightMargin: 12
         spacing: 8
 
-        // Music icon
-        Text {
-            id: musicIcon
-            text: "🎧"
-            font.pixelSize: 13
-            color: "#a0a0a0"
+        // Media Album Art Thumbnail / Fallback Icon
+        Rectangle {
+            id: musicArtBox
+            width: 20
+            height: 20
+            radius: 5
+            color: "#20ffffff"
+            clip: true
             Layout.alignment: Qt.AlignVCenter
+
+            Image {
+                id: albumArtImg
+                anchors.fill: parent
+                source: root.artUrl
+                fillMode: Image.PreserveAspectCrop
+                visible: source.toString() !== "" && status === Image.Ready
+                sourceSize: Qt.size(40, 40)
+                asynchronous: true
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "🎧"
+                font.pixelSize: 11
+                color: "#a0a0a0"
+                visible: !albumArtImg.visible
+            }
         }
 
         // Clip container for lyrics text sliding animation
