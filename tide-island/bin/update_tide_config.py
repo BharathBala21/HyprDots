@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--island-auto-hide", choices=["true", "false"], help="Auto-hide idle center island")
     parser.add_argument("--notepad-default-mode", choices=["edit", "preview"], help="Default notepad mode (edit or preview)")
     parser.add_argument("--notepad-auto-save", choices=["true", "false"], help="Default notepad auto-save state")
+    parser.add_argument("--tlp-permission-mode", choices=["password", "polkit", "sudoers", "skip"], help="Power mode permission mode")
 
     args = parser.parse_args()
     config_path = os.path.expanduser("~/.config/tide-island/userconfig.json")
@@ -87,6 +88,8 @@ def main():
         config['notepadDefaultMode'] = args.notepad_default_mode
     if args.notepad_auto_save is not None:
         config['notepadAutoSave'] = (args.notepad_auto_save.lower() == "true")
+    if args.tlp_permission_mode is not None:
+        config['tlpPermissionMode'] = args.tlp_permission_mode
 
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
     with open(config_path, 'w') as f:

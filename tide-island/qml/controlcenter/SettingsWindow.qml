@@ -73,6 +73,7 @@ FloatingWindow {
     property bool islandAutoHideEnabled: cfgData.islandAutoHideEnabled !== undefined ? cfgData.islandAutoHideEnabled : false
     property string notepadDefaultMode: cfgData.notepadDefaultMode !== undefined ? String(cfgData.notepadDefaultMode) : "edit"
     property bool notepadAutoSave: cfgData.notepadAutoSave !== undefined ? cfgData.notepadAutoSave : true
+    property string tlpPermissionMode: cfgData.tlpPermissionMode !== undefined ? String(cfgData.tlpPermissionMode) : "password"
 
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
@@ -115,7 +116,8 @@ FloatingWindow {
             "--show-top-right-tray", showTopRightTray ? "true" : "false",
             "--island-auto-hide", islandAutoHideEnabled ? "true" : "false",
             "--notepad-default-mode", notepadDefaultMode,
-            "--notepad-auto-save", notepadAutoSave ? "true" : "false"
+            "--notepad-auto-save", notepadAutoSave ? "true" : "false",
+            "--tlp-permission-mode", tlpPermissionMode
         ]);
     }
 
@@ -766,13 +768,47 @@ FloatingWindow {
 
                             SettingsCard {
                                 title: "Right System Tray Pill"
-                                subtitle: "Show/hide the system tray icons pill"
+                                subtitle: "Show/hide the right system tray icons pill"
 
                                 control: SettingsSwitch {
                                     checked: showTopRightTray
                                     onToggled: (newValue) => {
                                         showTopRightTray = newValue;
                                         saveSettings();
+                                    }
+                                }
+                            }
+
+                            SettingsCard {
+                                title: "Power Mode Profile Switcher"
+                                subtitle: "Enable or disable power-profiles-daemon switching in Control Center"
+
+                                control: Row {
+                                    spacing: 6
+                                    Rectangle {
+                                        width: 85; height: 32; radius: 8
+                                        color: tlpPermissionMode !== "skip" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "Enabled"; color: tlpPermissionMode !== "skip" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea {
+                                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                tlpPermissionMode = "password";
+                                                saveSettings();
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        width: 85; height: 32; radius: 8
+                                        color: tlpPermissionMode === "skip" ? colorPrimary : colorSecondaryContainer
+                                        Text { anchors.centerIn: parent; text: "Disabled"; color: tlpPermissionMode === "skip" ? "#ffffff" : colorOnSurfaceVariant; font.pixelSize: 11; font.family: "Inter Display"; font.weight: Font.Medium }
+                                        MouseArea {
+                                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                tlpPermissionMode = "skip";
+                                                saveSettings();
+                                            }
+                                        }
                                     }
                                 }
                             }

@@ -12,6 +12,24 @@ Item {
 
     readonly property var userConfig: UserConfig
 
+    FileView {
+        id: ccCfgWatcher
+        path: (Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "user")) + "/.config/tide-island/userconfig.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: ccCfgWatcher.reload()
+    }
+
+    readonly property var ccCfgData: {
+        try {
+            return ccCfgWatcher.text() ? JSON.parse(ccCfgWatcher.text()) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    readonly property string tlpPermissionMode: ccCfgData.tlpPermissionMode !== undefined ? String(ccCfgData.tlpPermissionMode) : "password"
+
     property bool showCondition: false
     property string iconFontFamily: userConfig.iconFontFamily
     property string textFontFamily: userConfig.textFontFamily
@@ -322,7 +340,7 @@ Item {
 
     function buildBatteryModeStatusText() {
         if (batteryModeBusy) return "Applying " + batteryModeLabel(batteryModePendingIndex);
-        if (trimString(userConfig.tlpPermissionMode) === "skip") return "Power modes disabled";
+        if (trimString(controlCenter.tlpPermissionMode) === "skip") return "Power modes disabled";
         if (!batteryTlpChecked) return "Checking power profiles...";
         if (!batteryTlpAvailable) return "power-profiles-daemon is not installed";
         return batteryModeLabel(batteryModeIndex);
@@ -360,7 +378,7 @@ Item {
 
         const nextIndex = Math.max(0, Math.min(2, index));
 
-        if (trimString(userConfig.tlpPermissionMode) === "skip") {
+        if (trimString(controlCenter.tlpPermissionMode) === "skip") {
             rollbackBatteryMode("Power mode switching is disabled in userconfig.json.");
             return;
         }
