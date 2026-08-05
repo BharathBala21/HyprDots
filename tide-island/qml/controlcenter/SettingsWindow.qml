@@ -49,6 +49,7 @@ FloatingWindow {
     property bool showBatteryPercentage: cfgData.showBatteryPercentage !== undefined ? cfgData.showBatteryPercentage : true
     property string primaryAction: cfgData.dynamicIslandPrimaryAction || UserConfig.dynamicIslandPrimaryAction || "toggleExpandedPlayer"
     property string secondaryAction: cfgData.dynamicIslandSecondaryAction || UserConfig.dynamicIslandSecondaryAction || "toggleControlCenter"
+    property string islandStyle: cfgData.islandStyle !== undefined ? String(cfgData.islandStyle) : "pill"
     property string notepadDefaultMode: cfgData.notepadDefaultMode !== undefined ? String(cfgData.notepadDefaultMode) : "edit"
     property bool notepadAutoSave: cfgData.notepadAutoSave !== undefined ? cfgData.notepadAutoSave : true
 
@@ -77,26 +78,13 @@ FloatingWindow {
             "--show-battery-percentage", showBatteryPercentage ? "true" : "false",
             "--primary-action", primaryAction,
             "--secondary-action", secondaryAction,
+            "--island-style", islandStyle,
             "--notepad-default-mode", notepadDefaultMode,
             "--notepad-auto-save", notepadAutoSave ? "true" : "false"
         ]);
     }
 
-    // Escape key press to close
-    Timer {
-        id: focusTimer
-        interval: 10
-        running: true
-        repeat: false
-        onTriggered: root.forceActiveFocus()
-    }
 
-    Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape) {
-            root.close();
-            event.accepted = true;
-        }
-    }
 
     // Component: Switch
     component SettingsSwitch: Rectangle {
@@ -203,6 +191,14 @@ FloatingWindow {
             id: mainColumn
             width: scrollView.width - 12
             spacing: 16
+            focus: true
+
+            Keys.onPressed: (event) => {
+                if (event.key === Qt.Key_Escape) {
+                    root.close();
+                    event.accepted = true;
+                }
+            }
 
             // Header Title
             Row {
@@ -320,6 +316,64 @@ FloatingWindow {
                     onToggled: (newValue) => {
                         showBatteryPercentage = newValue;
                         saveSettings();
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Island Visual Style"
+                subtitle: "Choose floating pill style or flush top screen notch style"
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.topMargin: -28
+                    spacing: 6
+
+                    Rectangle {
+                        width: 85
+                        height: 28
+                        radius: 8
+                        color: islandStyle === "pill" ? colorPrimary : colorSecondaryContainer
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Floating Pill"
+                            color: islandStyle === "pill" ? "#ffffff" : colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Medium
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                islandStyle = "pill";
+                                saveSettings();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 85
+                        height: 28
+                        radius: 8
+                        color: islandStyle === "notch" ? colorPrimary : colorSecondaryContainer
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Top Notch"
+                            color: islandStyle === "notch" ? "#ffffff" : colorOnSurfaceVariant
+                            font.pixelSize: 11
+                            font.family: "Inter Display"
+                            font.weight: Font.Medium
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                islandStyle = "notch";
+                                saveSettings();
+                            }
+                        }
                     }
                 }
             }

@@ -11,6 +11,7 @@ def main():
     parser.add_argument("--show-battery-percentage", choices=["true", "false"], help="Show/hide battery percentage text")
     parser.add_argument("--primary-action", help="Primary click action")
     parser.add_argument("--secondary-action", help="Secondary click action")
+    parser.add_argument("--island-style", choices=["pill", "notch"], help="Island visual style (pill or notch)")
     parser.add_argument("--notepad-default-mode", choices=["edit", "preview"], help="Default notepad mode (edit or preview)")
     parser.add_argument("--notepad-auto-save", choices=["true", "false"], help="Default notepad auto-save state")
 
@@ -35,6 +36,8 @@ def main():
         config['dynamicIslandPrimaryAction'] = args.primary_action
     if args.secondary_action is not None:
         config['dynamicIslandSecondaryAction'] = args.secondary_action
+    if args.island_style is not None:
+        config['islandStyle'] = args.island_style
     if args.notepad_default_mode is not None:
         config['notepadDefaultMode'] = args.notepad_default_mode
     if args.notepad_auto_save is not None:

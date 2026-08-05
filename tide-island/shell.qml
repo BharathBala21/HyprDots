@@ -289,6 +289,14 @@ Scope {
             });
         }
 
+        function toggleSettings() {
+            shellRoot.settingsWindowOpen = !shellRoot.settingsWindowOpen;
+        }
+
+        function openSettings() {
+            shellRoot.settingsWindowOpen = true;
+        }
+
         function toggleCheatsheet() {
             shellRoot.toggleCheatsheetAll();
         }
