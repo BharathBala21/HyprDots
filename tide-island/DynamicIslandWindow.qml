@@ -1776,13 +1776,13 @@ PanelWindow {
                 NumberAnimation { duration: mainCapsule.morphDuration; easing.type: Easing.OutQuint }
             }
 
-            // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode)
+            // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode across all states)
             Rectangle {
                 visible: root.isNotchStyle && !root.overviewVisible
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                height: Math.min(18, parent.radius)
+                height: Math.max(28, parent.radius + 10)
                 color: parent.color
                 z: -2
             }
@@ -2668,7 +2668,7 @@ PanelWindow {
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: 4
+            anchors.topMargin: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
             cavaLevels: islandContainer.cavaLevels
             batteryCapacity: islandContainer.batteryCapacity
             isCharging: islandContainer.isCharging
@@ -2684,7 +2684,7 @@ PanelWindow {
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: 4
+            anchors.topMargin: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
             lyricText: islandContainer.lyricsDisplayText
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
             textFontFamily: root.textFontFamily
@@ -2699,7 +2699,7 @@ PanelWindow {
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top
-            anchors.topMargin: 4
+            anchors.topMargin: (root.isNotchStyle && !root.overviewVisible) ? 0 : root.islandTopOffset
             window: root
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily

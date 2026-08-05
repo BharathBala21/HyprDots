@@ -54,12 +54,26 @@ Item {
         }
     }
 
+    readonly property bool isNotchStyle: statusCfgData.islandStyle === "notch"
+
     Rectangle {
+        id: bgRect
         anchors.fill: parent
         color: StyleTokens.black
         radius: height / 2
         border.width: 1
         border.color: StyleTokens.overviewInnerBorder
+    }
+
+    // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode)
+    Rectangle {
+        visible: root.isNotchStyle
+        anchors.top: bgRect.top
+        anchors.left: bgRect.left
+        anchors.right: bgRect.right
+        height: Math.min(16, bgRect.height / 2)
+        color: bgRect.color
+        z: -1
     }
 
     Row {

@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 import Quickshell.Services.SystemTray
 import IslandBackend
 import "../common"
@@ -41,12 +43,42 @@ Item {
         }
     }
 
+    FileView {
+        id: trayCfgWatcher
+        path: (Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "user")) + "/.config/tide-island/userconfig.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: trayCfgWatcher.reload()
+    }
+
+    readonly property var trayCfgData: {
+        try {
+            return trayCfgWatcher.text() ? JSON.parse(trayCfgWatcher.text()) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    readonly property bool isNotchStyle: trayCfgData.islandStyle === "notch"
+
     Rectangle {
+        id: trayBgRect
         anchors.fill: parent
         color: StyleTokens.black
         radius: height / 2
         border.width: 1
         border.color: StyleTokens.overviewInnerBorder
+    }
+
+    // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode)
+    Rectangle {
+        visible: root.isNotchStyle
+        anchors.top: trayBgRect.top
+        anchors.left: trayBgRect.left
+        anchors.right: trayBgRect.right
+        height: Math.min(16, trayBgRect.height / 2)
+        color: trayBgRect.color
+        z: -1
     }
 
     Row {

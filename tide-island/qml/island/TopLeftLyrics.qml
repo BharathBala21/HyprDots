@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 import IslandBackend
 import "../common"
 
@@ -56,12 +58,42 @@ Item {
         }
     }
 
+    FileView {
+        id: lyricsCfgWatcher
+        path: (Quickshell.env("HOME") || "/home/" + (Quickshell.env("USER") || "user")) + "/.config/tide-island/userconfig.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: lyricsCfgWatcher.reload()
+    }
+
+    readonly property var lyricsCfgData: {
+        try {
+            return lyricsCfgWatcher.text() ? JSON.parse(lyricsCfgWatcher.text()) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    readonly property bool isNotchStyle: lyricsCfgData.islandStyle === "notch"
+
     Rectangle {
+        id: lyricsBgRect
         anchors.fill: parent
         color: StyleTokens.black
         radius: height / 2
         border.width: 1
         border.color: StyleTokens.overviewInnerBorder
+    }
+
+    // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode)
+    Rectangle {
+        visible: root.isNotchStyle
+        anchors.top: lyricsBgRect.top
+        anchors.left: lyricsBgRect.left
+        anchors.right: lyricsBgRect.right
+        height: Math.min(16, lyricsBgRect.height / 2)
+        color: lyricsBgRect.color
+        z: -1
     }
 
     // Text metrics for computing the layout width dynamically
