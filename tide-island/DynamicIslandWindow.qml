@@ -81,6 +81,9 @@ PanelWindow {
         }
     }
 
+    readonly property string islandStyle: activeUserConfig.islandStyle || "pill"
+    readonly property bool isNotchStyle: islandStyle === "notch"
+
     property int timerTotalSeconds: 300
     property int timerRemainingSeconds: 300
     property bool timerRunning: false
@@ -1757,12 +1760,27 @@ PanelWindow {
                 islandContainer.swipeTransitionProgress
             )
             color: root.overviewContentVisible ? root.overviewCapsuleColor : StyleTokens.black
-            y: 4
+            y: (root.isNotchStyle && !root.overviewVisible) ? 0 : 4
             anchors.horizontalCenter: parent.horizontalCenter
             clip: true
             width: displayedWidth
             height: targetHeight
             radius: targetRadius
+
+            Behavior on y {
+                NumberAnimation { duration: mainCapsule.morphDuration; easing.type: Easing.OutQuint }
+            }
+
+            // Top Notch Extension (Square top corners attached flush to top screen edge in Notch mode)
+            Rectangle {
+                visible: root.isNotchStyle && !root.overviewVisible
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: Math.min(18, parent.radius)
+                color: parent.color
+                z: -2
+            }
 
             onBaseTargetWidthChanged: {
                 if (!capsuleMouseArea.sideSwipeInteractive && !islandContainer.sideSwipeSettling)
