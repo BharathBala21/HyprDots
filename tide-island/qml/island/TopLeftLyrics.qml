@@ -180,12 +180,12 @@ Item {
         anchors.rightMargin: 12
         spacing: 8
 
-        // Media Album Art Thumbnail / Fallback Icon
+        // Circular Media Album Art Thumbnail / Fallback Icon
         Rectangle {
             id: musicArtBox
             Layout.preferredWidth: 20
             Layout.preferredHeight: 20
-            radius: 5
+            radius: height / 2
             color: "#20ffffff"
             clip: true
             Layout.alignment: Qt.AlignVCenter
@@ -193,11 +193,11 @@ Item {
             Image {
                 id: albumArtImg
                 anchors.fill: parent
-                source: root.artUrl
+                source: root.formatArtUrl(root.artUrl)
                 fillMode: Image.PreserveAspectCrop
-                visible: source.toString() !== "" && status === Image.Ready
-                sourceSize: Qt.size(40, 40)
+                visible: source.toString() !== "" && status !== Image.Error
                 asynchronous: true
+                cache: true
             }
 
             Text {
@@ -205,7 +205,7 @@ Item {
                 text: "🎧"
                 font.pixelSize: 11
                 color: "#a0a0a0"
-                visible: !albumArtImg.visible
+                visible: !albumArtImg.visible || albumArtImg.status === Image.Error
             }
         }
 
