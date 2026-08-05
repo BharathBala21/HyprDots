@@ -84,21 +84,7 @@ FloatingWindow {
         ]);
     }
 
-    // Escape key press to close
-    Timer {
-        id: focusTimer
-        interval: 10
-        running: true
-        repeat: false
-        onTriggered: root.forceActiveFocus()
-    }
 
-    Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape) {
-            root.close();
-            event.accepted = true;
-        }
-    }
 
     // Component: Switch
     component SettingsSwitch: Rectangle {
@@ -205,6 +191,14 @@ FloatingWindow {
             id: mainColumn
             width: scrollView.width - 12
             spacing: 16
+            focus: true
+
+            Keys.onPressed: (event) => {
+                if (event.key === Qt.Key_Escape) {
+                    root.close();
+                    event.accepted = true;
+                }
+            }
 
             // Header Title
             Row {
@@ -324,6 +318,8 @@ FloatingWindow {
                         saveSettings();
                     }
                 }
+            }
+
             SettingsCard {
                 title: "Island Visual Style"
                 subtitle: "Choose floating pill style or flush top screen notch style"
