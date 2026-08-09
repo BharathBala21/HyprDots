@@ -73,9 +73,22 @@ hl.bind(mainMod .. "+SHIFT + left",hl.dsp.window.move({direction = "left"}))
 hl.bind(mainMod .. "+SHIFT + right",hl.dsp.window.move({direction = "right"}))
 
 
--- Niri-style Layout-Aware Fullscreen (Full screen, switchable with SUPER + Left/Right)
+-- Niri-style Fullscreen (True Fullscreen: hides tide-island pills, switchable with SUPER + Left/Right)
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", layout_aware = true }))
-hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", layout_aware = true }))
+
+-- Niri-style Fit/Maximize (100% Monitor Width: keeps tide-island pills VISIBLE, switchable with SUPER + Left/Right)
+local col_maximized = {}
+hl.bind(mainMod .. " + SHIFT + F", function()
+    local win = hl.get_active_window()
+    local addr = win and win.address or "active"
+    if col_maximized[addr] then
+        hl.dispatch(hl.dsp.layout("colresize 0.5"))
+        col_maximized[addr] = nil
+    else
+        hl.dispatch(hl.dsp.layout("colresize 1.0"))
+        col_maximized[addr] = true
+    end
+end)
 
 hl.bind(
     "SUPER + D",

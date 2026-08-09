@@ -2694,7 +2694,7 @@ PanelWindow {
 
         TopRightStatus {
             id: topRightComponent
-            visible: !root.isWorkspaceFullscreen && root.showTopRightPill
+            visible: root.showTopRightPill
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
@@ -2714,7 +2714,7 @@ PanelWindow {
 
         TopLeftLyrics {
             id: topLeftComponent
-            visible: !root.isWorkspaceFullscreen && root.showTopLeftPill
+            visible: root.showTopLeftPill
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
@@ -2735,7 +2735,7 @@ PanelWindow {
 
         TopRightTray {
             id: topRightTray
-            visible: !root.isWorkspaceFullscreen && root.showTopRightTray
+            visible: root.showTopRightTray
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top
