@@ -5,9 +5,9 @@ require("hyprlua.env")
 
 local closeWindowBind = hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 
--- Move focus with "SUPER" + arrow keys
-hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "left" }))
-hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
+-- Move focus with "SUPER" + arrow keys (scrolling layout aware)
+hl.bind(mainMod .. " + left",  hl.dsp.layout("focus l"))
+hl.bind(mainMod .. " + right", hl.dsp.layout("focus r"))
 hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
 
@@ -73,10 +73,9 @@ hl.bind(mainMod .. "+SHIFT + left",hl.dsp.window.move({direction = "left"}))
 hl.bind(mainMod .. "+SHIFT + right",hl.dsp.window.move({direction = "right"}))
 
 
---fullscreen a window
-hl.bind(mainMod .. "+SHIFT + F",hl.dsp.window.fullscreen({mode = "fullscreen"}))
--- maximize a window
-hl.bind(mainMod .. "+F",hl.dsp.window.fullscreen({mode = "maximized"}))
+-- Niri-style Layout-Aware Fullscreen (Full screen, switchable with SUPER + Left/Right)
+hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", layout_aware = true }))
+hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", layout_aware = true }))
 
 hl.bind(
     "SUPER + D",
@@ -172,10 +171,10 @@ hl.bind(mainMod .. " +SHIFT + W", hl.dsp.exec_cmd("hyprshot -z -m window"))
 hl.bind(mainMod .. " +SHIFT + O", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/ocr.sh"))
 hl.bind(mainMod .. " +SHIFT + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/visual_search.sh"))
 hl.bind(mainMod .. " +SHIFT + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/qr_barcode.sh"))
-hl.bind(mainMod .. " +SHIFT + M", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/mirror.sh"))
+-- hl.bind(mainMod .. " +SHIFT + M", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/mirror.sh"))
 
 --wf-Recorder
-hl.bind(mainMod .. " + R", function()
+hl.bind(mainMod .. " + SHIFT+R", function()
     local status = os.execute("pgrep -x wf-recorder")
     local is_running = (status == 0 or status == true)
     if is_running then
@@ -221,11 +220,16 @@ hl.bind(mainMod .. " + bracketleft", hl.dsp.layout("consume_or_expel prev"))
 hl.bind(mainMod .. " + semicolon", hl.dsp.layout("swapcol l"))
 hl.bind(mainMod .. " + apostrophe", hl.dsp.layout("swapcol r"))
 
+-- Monitor width & column fit controls (Niri-style fit to width)
+hl.bind(mainMod .. " + M", hl.dsp.layout("colresize 1.0"))             -- Fit active column to 100% monitor width
+hl.bind(mainMod .. " + SHIFT + M", hl.dsp.layout("fit expand"))        -- Expand column to fill available monitor space
+hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))            -- Cycle column width presets (0.333, 0.5, 0.667, 1.0)
+
 
 --NIRI-LIKE_OVERVIEW
 hl.bind("SUPER + TAB", function()
     hl.plugin.scrolloverview.overview("toggle")
 end)
 
-hl.bind("SUPER + mouse_up", hl.dsp.focus({ direction = "right" }))
-hl.bind("SUPER + mouse_down", hl.dsp.focus({ direction = "left" }))
+hl.bind("SUPER + mouse_up", hl.dsp.layout("focus r"))
+hl.bind("SUPER + mouse_down", hl.dsp.layout("focus l"))
