@@ -234,9 +234,11 @@ hl.bind(mainMod .. " + semicolon", hl.dsp.layout("swapcol l"))
 hl.bind(mainMod .. " + apostrophe", hl.dsp.layout("swapcol r"))
 
 -- Monitor width & column fit controls (Niri-style fit to width)
-hl.bind(mainMod .. " + M", hl.dsp.layout("colresize 1.0"))             -- Fit active column to 100% monitor width
+-- hl.bind(mainMod .. " + M", hl.dsp.layout("colresize 1.0"))             -- Fit active column to 100% monitor width (within gaps)
+hl.bind(mainMod .. " + ALT + M", hl.dsp.window.fullscreen({ mode = "maximized" })) -- Fit active window to 100% monitor width, ignoring gaps
 hl.bind(mainMod .. " + SHIFT + M", hl.dsp.layout("fit expand"))        -- Expand column to fill available monitor space
 hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))            -- Cycle column width presets (0.333, 0.5, 0.667, 1.0)
+
 
 
 --NIRI-LIKE_OVERVIEW
