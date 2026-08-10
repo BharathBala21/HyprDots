@@ -1,4 +1,5 @@
 hl.on("hyprland.start", function () 
+  hl.exec_cmd("hyprctl plugin load /home/pirate/.local/src/hyprland-scroll-overview/scrolloverview.so")
   hl.exec_cmd("waypaper --restore")
   hl.exec_cmd("quickshell -p ~/.local/src/HyprDots/tide-island/")
   hl.exec_cmd("systemctl --user start dunst")
@@ -8,5 +9,4 @@ hl.on("hyprland.start", function ()
   
   -- Open cheatsheet on first boot (using flag file ~/.cache/hyprdots_first_boot)
   hl.exec_cmd("if [ -f ~/.cache/hyprdots_first_boot ]; then rm -f ~/.cache/hyprdots_first_boot && sleep 2 && qs ipc -p ~/.local/src/HyprDots/tide-island/ call island toggleCheatsheet; fi")
-  hl.exec_cmd("hyprctl plugin load /home/pirate/.local/src/hyprland-scroll-overview/scrolloverview.so")
 end)

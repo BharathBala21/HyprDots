@@ -544,6 +544,12 @@ PanelWindow {
         islandContainer.toggleNotepad();
     }
 
+    function toggleCaffeine() {
+        if (shellRootController) {
+            shellRootController.toggleCaffeineMode();
+        }
+    }
+
     onOverviewVisibleChanged: {
         if (overviewVisible && monitorFocused) overviewFocusTimer.restart();
     }

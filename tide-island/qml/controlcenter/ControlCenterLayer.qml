@@ -1804,7 +1804,7 @@ Item {
                 }
             }
 
-            // Quick Toggles Card (Silent & Night mode)
+            // Quick Toggles Card (Silent, Night mode & Caffeine mode)
             Rectangle {
                 id: quickTogglesCard
                 width: (parent.width - 12) / 2
@@ -1817,7 +1817,7 @@ Item {
 
                     // Silent / DND Column
                     Item {
-                        width: parent.width / 2
+                        width: (parent.width - 2) / 3
                         height: parent.height
 
                         Column {
@@ -1859,7 +1859,7 @@ Item {
 
                     // Night Mode Column
                     Item {
-                        width: parent.width / 2
+                        width: (parent.width - 2) / 3
                         height: parent.height
 
                         Column {
@@ -1892,6 +1892,48 @@ Item {
                                 controlCenter.queueTemp(nextVal);
                                 controlCenter.flushTemp(true);
                             }
+                        }
+                    }
+
+                    // Divider
+                    Rectangle {
+                        width: 1
+                        height: parent.height - 24
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "#2c2c2e"
+                    }
+
+                    // Caffeine Mode Column
+                    Item {
+                        width: (parent.width - 2) / 3
+                        height: parent.height
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 4
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "\uf0f4"
+                                color: controlCenter.caffeineMode ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 18
+                                font.family: iconFontFamily
+                            }
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "Caffeine"
+                                color: controlCenter.caffeineMode ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 11
+                                font.family: textFontFamily
+                                font.weight: Font.Medium
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenter.toggleCaffeineMode()
                         }
                     }
                 }

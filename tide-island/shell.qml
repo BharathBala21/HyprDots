@@ -32,6 +32,16 @@ Scope {
         Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/apply_theme_mode.py", modeStr]);
     }
 
+    function toggleCaffeineMode() {
+        if (shellRoot.caffeineMode) {
+            Quickshell.execDetached(["sh", "-c", "systemctl --user start hypridle || hypridle"]);
+            shellRoot.caffeineMode = false;
+        } else {
+            Quickshell.execDetached(["sh", "-c", "systemctl --user stop hypridle || true; pkill -x hypridle || true"]);
+            shellRoot.caffeineMode = true;
+        }
+    }
+
 
 
     Timer {
@@ -303,6 +313,10 @@ Scope {
 
         function toggleDarkMode() {
             shellRoot.toggleDarkMode();
+        }
+
+        function toggleCaffeine() {
+            shellRoot.toggleCaffeineMode();
         }
     }
 
