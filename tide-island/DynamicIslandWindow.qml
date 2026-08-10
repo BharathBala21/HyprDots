@@ -2754,6 +2754,74 @@ PanelWindow {
                 NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
             }
         }
+
+        // Silent Layout Indicator Pill between Center Pill and Right Pill
+        Rectangle {
+            id: layoutToastPill
+            property string layoutName: ""
+            property bool active: false
+
+            visible: opacity > 0.0
+            opacity: active ? 1.0 : 0.0
+            scale: active ? 1.0 : 0.85
+
+            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+            Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+
+            height: 32
+            width: layoutRow.implicitWidth + 24
+            radius: 16
+            color: StyleTokens.black
+            border.width: 1
+            border.color: StyleTokens.overviewInnerBorder
+
+            anchors.left: mainCapsule.right
+            anchors.leftMargin: 12
+            anchors.top: parent.top
+            anchors.topMargin: root.islandTopOffset
+
+            Row {
+                id: layoutRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Text {
+                    text: layoutToastPill.layoutName.toLowerCase() === "scrolling" ? "\uf0db" : "\uf1b8"
+                    color: "#38bdf8"
+                    font.pixelSize: 13
+                    font.family: root.iconFontFamily
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: layoutToastPill.layoutName !== "" ? (layoutToastPill.layoutName.charAt(0).toUpperCase() + layoutToastPill.layoutName.slice(1)) : ""
+                    color: StyleTokens.textPrimary
+                    font.pixelSize: 12
+                    font.family: root.textFontFamily
+                    font.weight: Font.Medium
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            Timer {
+                id: layoutToastTimer
+                interval: 2000
+                repeat: false
+                onTriggered: layoutToastPill.active = false
+            }
+
+            function show(name) {
+                layoutName = name;
+                active = true;
+                layoutToastTimer.restart();
+            }
+        }
+    }
+
+    function showLayoutToast(layoutName) {
+        if (layoutToastPill) {
+            layoutToastPill.show(layoutName);
+        }
     }
 
 }

@@ -318,6 +318,13 @@ Scope {
         function toggleCaffeine() {
             shellRoot.toggleCaffeineMode();
         }
+
+        function showLayoutToast(layoutName: string) {
+            shellRoot.forEachWindow((window) => {
+                if (window && window.showLayoutToast)
+                    window.showLayoutToast(layoutName);
+            });
+        }
     }
 
     GlobalShortcut {

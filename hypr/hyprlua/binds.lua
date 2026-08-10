@@ -1,13 +1,30 @@
 require("hyprlua.env")
 
--- hl.bind(keys, dispatcher, { flag1 = true, flag2 = true })
+-- Helper for layout-aware keybindings
+local function layout_bind(bind_table)
+    return function()
+        local workspace = hl.get_active_special_workspace() or hl.get_active_workspace()
+        if not workspace then return end
 
+        local layout = workspace.tiled_layout or "dwindle"
+        local dispatcher = bind_table[layout] or bind_table["default"]
+        if dispatcher then
+            hl.dispatch(dispatcher)
+        end
+    end
+end
 
 local closeWindowBind = hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 
--- Move focus with "SUPER" + arrow keys (scrolling layout aware)
-hl.bind(mainMod .. " + left",  hl.dsp.layout("focus l"))
-hl.bind(mainMod .. " + right", hl.dsp.layout("focus r"))
+-- Move focus with "SUPER" + arrow keys (layout aware: handles scrolling vs dwindle/master/etc)
+hl.bind(mainMod .. " + left", layout_bind({
+    scrolling = hl.dsp.layout("focus l"),
+    default   = hl.dsp.focus({ direction = "left" }),
+}))
+hl.bind(mainMod .. " + right", layout_bind({
+    scrolling = hl.dsp.layout("focus r"),
+    default   = hl.dsp.focus({ direction = "right" }),
+}))
 hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
 
@@ -225,19 +242,38 @@ hl.bind(
 )
 
 
--- SCROLLING BINDS
+-- LAYOUT SPECIFIC BINDS
 hl.bind(mainMod .. " + equal", hl.dsp.layout("colresize +0.1"))
 hl.bind(mainMod .. " + minus", hl.dsp.layout("colresize -0.1"))
-hl.bind(mainMod .. " + bracketright", hl.dsp.layout("consume_or_expel next"))
-hl.bind(mainMod .. " + bracketleft", hl.dsp.layout("consume_or_expel prev"))
-hl.bind(mainMod .. " + semicolon", hl.dsp.layout("swapcol l"))
-hl.bind(mainMod .. " + apostrophe", hl.dsp.layout("swapcol r"))
+
+hl.bind(mainMod .. " + bracketright", layout_bind({
+    scrolling = hl.dsp.layout("consume_or_expel next"),
+    dwindle   = hl.dsp.window.swap({ next = true }),
+}))
+
+hl.bind(mainMod .. " + bracketleft", layout_bind({
+    scrolling = hl.dsp.layout("consume_or_expel prev"),
+    dwindle   = hl.dsp.window.swap({ prev = true }),
+}))
+
+hl.bind(mainMod .. " + semicolon", layout_bind({
+    scrolling = hl.dsp.layout("swapcol l"),
+    dwindle   = hl.dsp.window.swap({ direction = "left" }),
+}))
+
+hl.bind(mainMod .. " + apostrophe", layout_bind({
+    scrolling = hl.dsp.layout("swapcol r"),
+    dwindle   = hl.dsp.window.swap({ direction = "right" }),
+}))
 
 -- Monitor width & column fit controls (Niri-style fit to width)
 -- hl.bind(mainMod .. " + M", hl.dsp.layout("colresize 1.0"))             -- Fit active column to 100% monitor width (within gaps)
 hl.bind(mainMod .. " + ALT + M", hl.dsp.window.fullscreen({ mode = "maximized" })) -- Fit active window to 100% monitor width, ignoring gaps
 hl.bind(mainMod .. " + SHIFT + M", hl.dsp.layout("fit expand"))        -- Expand column to fill available monitor space
-hl.bind(mainMod .. " + R", hl.dsp.layout("colresize +conf"))            -- Cycle column width presets (0.333, 0.5, 0.667, 1.0)
+hl.bind(mainMod .. " + R", layout_bind({
+    scrolling = hl.dsp.layout("colresize +conf"),
+    dwindle   = hl.dsp.layout("togglesplit"),
+}))
 
 
 
@@ -246,5 +282,40 @@ hl.bind("SUPER + TAB", function()
     hl.plugin.scrolloverview.overview("toggle")
 end)
 
-hl.bind("SUPER + mouse_up", hl.dsp.layout("focus r"))
-hl.bind("SUPER + mouse_down", hl.dsp.layout("focus l"))
+hl.bind("SUPER + mouse_up", layout_bind({
+    scrolling = hl.dsp.layout("focus r"),
+    default   = hl.dsp.focus({ direction = "right" }),
+}))
+hl.bind("SUPER + mouse_down", layout_bind({
+    scrolling = hl.dsp.layout("focus l"),
+    default   = hl.dsp.focus({ direction = "left" }),
+}))
+
+
+
+-- Cycle current workspace layout between scrolling <-> dwindle
+hl.bind("SUPER + SHIFT + J", function()
+    local workspace = hl.get_active_special_workspace() or hl.get_active_workspace()
+    if not workspace then return end
+
+    local layouts = { "scrolling", "dwindle" }
+    local current_layout = workspace.tiled_layout or "dwindle"
+    local next_layout = layouts[1]
+
+    for i = 1, #layouts do
+        if layouts[i] == current_layout then
+            local next_idx = (i % #layouts) + 1
+            next_layout = layouts[next_idx]
+            break
+        end
+    end
+
+    if workspace.special then
+        hl.workspace_rule({ workspace = "special:" .. workspace.name, layout = next_layout })
+    else
+        hl.workspace_rule({ workspace = tostring(workspace.id), layout = next_layout })
+    end
+
+    hl.exec_scheduled_prop_refresh_immediately()
+    hl.exec_cmd(string.format('qs ipc -p %s/.local/src/HyprDots/tide-island call island showLayoutToast "%s"', os.getenv("HOME"), next_layout))
+end)
