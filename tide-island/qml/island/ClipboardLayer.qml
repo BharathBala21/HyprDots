@@ -172,11 +172,36 @@ FocusScope {
         }
     }
 
-    function clearAll() {
-        Quickshell.execDetached(["sh", "-c", "cliphist wipe && rm -rf ~/.cache/cliphist/thumbnails/*"]);
-        root.allClips = [];
-        root.searchText = "";
+    function clearUnpinned() {
+        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/clip_list.py", "--wipe-unpinned"]);
+        var updated = [];
+        for (var i = 0; i < root.allClips.length; i++) {
+            if (root.allClips[i].is_pinned) {
+                updated.push(root.allClips[i]);
+            }
+        }
+        root.allClips = updated;
         root.selectedIndex = 0;
+    }
+
+    function clearPinned() {
+        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/clip_list.py", "--wipe-pinned"]);
+        var updated = [];
+        for (var i = 0; i < root.allClips.length; i++) {
+            if (!root.allClips[i].is_pinned) {
+                updated.push(root.allClips[i]);
+            }
+        }
+        root.allClips = updated;
+        root.selectedIndex = 0;
+    }
+
+    function clearAll() {
+        if (root.currentTab === "pinned") {
+            clearPinned();
+        } else {
+            clearUnpinned();
+        }
     }
 
     Process {
@@ -292,7 +317,7 @@ FocusScope {
             // Clear All Button
             Rectangle {
                 id: clearAllButton
-                visible: root.currentTab === "recent"
+                visible: root.activeClips.length > 0
                 width: 120
                 height: 44
                 radius: 14
@@ -314,7 +339,7 @@ FocusScope {
                     }
 
                     Text {
-                        text: qsTr("Clear All")
+                        text: root.currentTab === "pinned" ? qsTr("Clear Pinned") : qsTr("Clear All")
                         font.family: root.textFontFamily
                         font.pixelSize: 13
                         font.weight: Font.Medium
@@ -713,7 +738,7 @@ FocusScope {
 
         Rectangle {
             width: 320
-            height: 170
+            height: modalColumn.implicitHeight + 40
             radius: 20
             color: "#18181a"
             border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -726,12 +751,15 @@ FocusScope {
             }
 
             Column {
-                anchors.fill: parent
-                anchors.margins: 20
-                spacing: 16
+                id: modalColumn
+                anchors.centerIn: parent
+                width: parent.width - 40
+                spacing: 14
 
                 Text {
-                    text: qsTr("Clear clipboard history?")
+                    text: root.currentTab === "pinned"
+                        ? qsTr("Clear pinned items?")
+                        : qsTr("Clear recent history?")
                     color: "#ffffff"
                     font.family: root.textFontFamily
                     font.pixelSize: 16
@@ -740,7 +768,9 @@ FocusScope {
                 }
 
                 Text {
-                    text: qsTr("This will delete all items and cannot be undone.")
+                    text: root.currentTab === "pinned"
+                        ? qsTr("This will delete all pinned items from history and cannot be undone.")
+                        : qsTr("This will delete all unpinned items. Pinned items will be kept.")
                     color: Qt.rgba(1, 1, 1, 0.5)
                     font.family: root.textFontFamily
                     font.pixelSize: 13
@@ -749,6 +779,8 @@ FocusScope {
                     wrapMode: Text.Wrap
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
+
+                Item { width: 1; height: 2 }
 
                 Row {
                     width: parent.width
@@ -793,7 +825,7 @@ FocusScope {
                         Behavior on color { ColorAnimation { duration: 150 } }
 
                         Text {
-                            text: qsTr("Clear All")
+                            text: root.currentTab === "pinned" ? qsTr("Clear Pinned") : qsTr("Clear Recent")
                             color: "#ffffff"
                             font.family: root.textFontFamily
                             font.pixelSize: 13

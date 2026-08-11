@@ -139,6 +139,41 @@ def unpin_item(item_id):
         save_pinned_descriptions(pinned)
     return removed
 
+def wipe_unpinned():
+    history = get_clipboard_history()
+    thumbnail_dir = os.path.expanduser('~/.cache/cliphist/thumbnails')
+    for item in history:
+        if not item.get('is_pinned', False):
+            subprocess.run(['cliphist', 'delete'], input=item['raw'].encode('utf-8'), check=False)
+            if item.get('is_image', False):
+                match = re.search(r'(png|jpg|jpeg|bmp|gif)\s*\]\]$', item['content'], re.IGNORECASE)
+                ext = match.group(1).lower() if match else 'png'
+                thumb_path = os.path.join(thumbnail_dir, f"{item['id']}.{ext}")
+                if os.path.exists(thumb_path):
+                    try:
+                        os.remove(thumb_path)
+                    except Exception:
+                        pass
+    return True
+
+def wipe_pinned():
+    history = get_clipboard_history()
+    thumbnail_dir = os.path.expanduser('~/.cache/cliphist/thumbnails')
+    for item in history:
+        if item.get('is_pinned', False):
+            subprocess.run(['cliphist', 'delete'], input=item['raw'].encode('utf-8'), check=False)
+            if item.get('is_image', False):
+                match = re.search(r'(png|jpg|jpeg|bmp|gif)\s*\]\]$', item['content'], re.IGNORECASE)
+                ext = match.group(1).lower() if match else 'png'
+                thumb_path = os.path.join(thumbnail_dir, f"{item['id']}.{ext}")
+                if os.path.exists(thumb_path):
+                    try:
+                        os.remove(thumb_path)
+                    except Exception:
+                        pass
+    save_pinned_descriptions([])
+    return True
+
 if __name__ == '__main__':
     ensure_dirs()
     if len(sys.argv) > 1:
@@ -154,6 +189,12 @@ if __name__ == '__main__':
         elif arg == '--unpin' and len(sys.argv) > 2:
             item_id = sys.argv[2]
             success = unpin_item(item_id)
+            print(json.dumps({'success': success}))
+        elif arg == '--wipe-unpinned':
+            success = wipe_unpinned()
+            print(json.dumps({'success': success}))
+        elif arg == '--wipe-pinned':
+            success = wipe_pinned()
             print(json.dumps({'success': success}))
         else:
             print(json.dumps(get_clipboard_history()))
