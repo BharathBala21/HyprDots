@@ -1689,10 +1689,11 @@ PanelWindow {
                 case "control_center":
                     return 540;
                 case "launcher":
-                case "clipboard":
                 case "emojis":
                 case "wallpapers":
                     return 680;
+                case "clipboard":
+                    return 480;
                 case "notepad":
                     return 780;
                 case "expanded":

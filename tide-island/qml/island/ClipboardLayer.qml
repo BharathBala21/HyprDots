@@ -431,7 +431,7 @@ FocusScope {
             delegate: Item {
                 id: clipItem
                 width: listView.width
-                height: modelData.is_image ? 176 : 52
+                height: modelData.is_image ? 180 : 52
 
                 readonly property bool isSelected: index === root.selectedIndex
 
@@ -445,12 +445,13 @@ FocusScope {
                     
                     Behavior on color { ColorAnimation { duration: 100 } }
 
-                    // Header row (contains text preview, pin button, and delete button)
+                    // Header row for text clips only
                     Item {
                         id: headerItem
                         width: parent.width
                         height: 52
                         anchors.top: parent.top
+                        visible: !modelData.is_image
 
                         Row {
                             anchors.fill: parent
@@ -530,50 +531,114 @@ FocusScope {
                         }
                     }
 
-                    // Big image preview below the header
+                    // Full-width edge-to-edge clear image preview for image clips
                     Rectangle {
                         id: bigImagePreview
-                        anchors.top: headerItem.bottom
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 12
-                        anchors.left: parent.left
-                        anchors.leftMargin: 16
-                        anchors.right: parent.right
-                        anchors.rightMargin: 16
-                        radius: 8
-                        color: "#0a0a0c"
-                        border.color: isSelected ? Qt.rgba(255, 255, 255, 0.15) : Qt.rgba(255, 255, 255, 0.05)
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        radius: 10
+                        color: "#0c0c0e"
+                        border.color: isSelected ? Qt.rgba(255, 255, 255, 0.2) : Qt.rgba(255, 255, 255, 0.06)
                         border.width: 1
                         clip: true
                         visible: modelData.is_image
 
-                        // 1. Blurred background representation for color-matched ambient fallback
-                        Image {
-                            anchors.fill: parent
-                            source: modelData.is_image ? modelData.thumbnail : ""
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            opacity: 0.3
-                            sourceSize.width: 100
-                            sourceSize.height: 50
-                        }
-
-                        // 2. Foreground full image preview preserving aspect ratio
+                        // Clean, high-resolution image preview without downscaling or dark overlays
                         Image {
                             anchors.fill: parent
                             anchors.margins: 4
                             source: modelData.is_image ? modelData.thumbnail : ""
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
-                            sourceSize.width: 600
-                            sourceSize.height: 300
+                            smooth: true
+                            mipmap: true
                         }
 
+                        // Floating top-right overlay action buttons for Pin & Delete on image clips
+                        Row {
+                            anchors.top: parent.top
+                            anchors.topMargin: 8
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            spacing: 6
+                            z: 10
+
+                            Rectangle {
+                                id: imgPinBtn
+                                width: 32
+                                height: 32
+                                radius: 16
+                                color: imgPinMouseArea.containsMouse ? Qt.rgba(0, 0, 0, 0.8) : Qt.rgba(0, 0, 0, 0.55)
+                                border.color: Qt.rgba(255, 255, 255, 0.15)
+                                border.width: 1
+
+                                readonly property bool isPinnedItem: root.currentTab === "pinned" || !!modelData.is_pinned
+
+                                Text {
+                                    text: ""
+                                    font.family: root.iconFontFamily
+                                    font.pixelSize: 13
+                                    color: imgPinBtn.isPinnedItem 
+                                        ? (imgPinMouseArea.containsMouse ? "#38bdf8" : "#0ea5e9") 
+                                        : (imgPinMouseArea.containsMouse ? "#ffffff" : Qt.rgba(1, 1, 1, 0.7))
+                                    anchors.centerIn: parent
+                                }
+
+                                MouseArea {
+                                    id: imgPinMouseArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: root.togglePin(modelData)
+                                }
+                            }
+
+                            Rectangle {
+                                id: imgDeleteBtn
+                                width: 32
+                                height: 32
+                                radius: 16
+                                color: imgDeleteMouseArea.containsMouse ? Qt.rgba(1, 0.2, 0.2, 0.4) : Qt.rgba(0, 0, 0, 0.55)
+                                border.color: Qt.rgba(255, 255, 255, 0.15)
+                                border.width: 1
+
+                                Text {
+                                    text: ""
+                                    font.family: root.iconFontFamily
+                                    font.pixelSize: 13
+                                    color: imgDeleteMouseArea.containsMouse ? "#ff5555" : Qt.rgba(1, 1, 1, 0.7)
+                                    anchors.centerIn: parent
+                                }
+
+                                MouseArea {
+                                    id: imgDeleteMouseArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: root.deleteClip(modelData, index)
+                                }
+                            }
+                        }
+
+                        // Floating bottom-left badge tag
                         Rectangle {
-                            anchors.fill: parent
-                            gradient: Gradient {
-                                GradientStop { position: 0.0; color: "transparent" }
-                                GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.25) }
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 8
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            height: 22
+                            width: imgTagText.implicitWidth + 14
+                            radius: 11
+                            color: Qt.rgba(0, 0, 0, 0.55)
+                            border.color: Qt.rgba(255, 255, 255, 0.1)
+                            border.width: 1
+                            z: 10
+
+                            Text {
+                                id: imgTagText
+                                anchors.centerIn: parent
+                                text: "🖼️ Image"
+                                color: Qt.rgba(1, 1, 1, 0.75)
+                                font.family: root.textFontFamily
+                                font.pixelSize: 11
                             }
                         }
                     }
@@ -582,7 +647,7 @@ FocusScope {
                 MouseArea {
                     id: itemMouseArea
                     anchors.fill: parent
-                    anchors.rightMargin: 96 // Avoid copy on button clicks
+                    anchors.rightMargin: modelData.is_image ? 0 : 96
                     hoverEnabled: true
                     onContainsMouseChanged: {
                         if (containsMouse) {
