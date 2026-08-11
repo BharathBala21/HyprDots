@@ -792,6 +792,10 @@ PanelWindow {
             || islandState === "utilities"
             || islandState === "timer"
             || islandState === "notepad"
+        readonly property bool isAutoExpanded: islandState === "notification"
+            || islandState === "bluetooth_expanded"
+            || (islandState === "expanded" && expandedByPlayerAutoOpen)
+        readonly property bool allowWorkspaceScrollOnPill: !blocksTransientSplit || isAutoExpanded
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
@@ -2011,6 +2015,8 @@ PanelWindow {
                 property real lastScrollTime: 0
 
                 onWheel: (wheel) => {
+                    if (!islandContainer.allowWorkspaceScrollOnPill) return;
+
                     const now = Date.now();
                     if (now - lastScrollTime < 150) return;
                     lastScrollTime = now;
