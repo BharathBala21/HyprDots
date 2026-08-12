@@ -1,7 +1,7 @@
 hl.config({
 
     dwindle = {
-        special_scale_factor = 0.7,
+        special_scale_factor = 0.9,
         force_split = 2,
         default_split_ratio = 1.3,
         split_bias = 1,
