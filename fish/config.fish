@@ -22,3 +22,4 @@ end
 
 # Added by Antigravity CLI installer
 set -gx PATH "/home/pirate/.local/bin" $PATH
+zoxide init fish | source

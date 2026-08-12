@@ -133,7 +133,7 @@ hl.bind(
 --application binds
 -- hl.bind(mainMod .. " +ALT+E", hl.dsp.exec_cmd("kitty yazi"))
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
-hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal,{float = true}))
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd(terminal,{float = true,size= {713,433}}))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(filemanager))
 hl.bind(mainMod .. " + C", hl.dsp.exec_cmd(code_editor))
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(browser))
