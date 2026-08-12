@@ -93,3 +93,8 @@ input_path = '~/.config/matugen/templates/spicetify.ini'
 output_path = '~/.config/spicetify/Themes/Sleek/color.ini'
 post_hook = '~/.spicetify/spicetify watch -s 2>&1 | sed "/Reloaded Spotify/q"'
 # ...
+
+[templates.neovim]
+input_path = "~/.config/matugen/templates/nvim-colors.json"
+output_path = "~/.cache/matugen/nvim-colors.json"
+post_hook = "pkill -SIGUSR1 nvim"
