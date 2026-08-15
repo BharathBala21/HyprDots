@@ -3,12 +3,16 @@ import QtQml
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import IslandBackend
 
 Item {
     id: controlCenter
 
     signal connectivityPanelRequested(string kind, bool open)
+    signal batteryModeIndexChangedExternal(int index)
+    signal dndToggleRequested()
+    signal tempChanged(real val)
 
     readonly property var userConfig: UserConfig
 
@@ -35,7 +39,6 @@ Item {
     property string textFontFamily: userConfig.textFontFamily
     property string heroFontFamily: userConfig.heroFontFamily
     property var shellRootController: null
-    // ... rest of properties ...
 
     scale: showCondition ? 1.0 : 0.12
     transformOrigin: Item.Top
@@ -46,6 +49,7 @@ Item {
             easing.type: Easing.OutQuint
         }
     }
+
     property string currentTime: "00:00"
     property string currentDateLabel: ""
     property int batteryCapacity: 0
@@ -57,6 +61,13 @@ Item {
     property int currentWorkspace: 1
     property string currentTrack: ""
     property string currentArtist: ""
+    property string currentArtUrl: ""
+    property string timePlayed: "0:00"
+    property string timeTotal: "0:00"
+    property real trackProgress: 0
+    property var activePlayer: null
+    property bool musicPlaying: false
+    property bool screenRecordingActive: false
 
     property real localVolume: 0.5
     property real localBrightness: 0.5
@@ -69,6 +80,7 @@ Item {
     property bool brightnessSetterRunning: false
     property bool volumeSetterRunning: false
     property bool sliderIntroPending: false
+
     property bool wifiPanelOpen: false
     property bool bluetoothPanelOpen: false
     property bool batteryPanelOpen: false
@@ -76,36 +88,26 @@ Item {
     property string activeSinkName: ""
     property string activeSinkDescription: "Default Output"
     property var audioSinks: []
-    property bool batteryDrawerOpen: false
-    property bool batteryDrawerDragging: false
-    property real batteryDrawerProgress: 0
-    property bool batteryDrawerSettling: false
-    readonly property bool batteryDrawerMoving: batteryDrawerDragging
-        || batteryDrawerSettling
-        || batteryDrawerProgressAnimation.running
+
     property bool batteryModeBusy: false
     property bool batteryModeStateRunning: false
     property bool batteryModeSetterRunning: false
-    property bool batteryModeSliderDragging: false
     property bool batteryTlpAvailable: false
     property bool batteryTlpChecked: false
     property int batteryModeInitialIndex: 1
     property int batteryModeIndex: batteryModeInitialIndex
     property int batteryModeAppliedIndex: batteryModeInitialIndex
-    property bool dndActive: false
-
-    signal batteryModeIndexChangedExternal(int index)
-    signal dndToggleRequested()
-
-    onBatteryModeIndexChanged: {
-        batteryModeIndexChangedExternal(batteryModeIndex);
-    }
     property int batteryModePendingIndex: 1
-    property real batteryModeDragOffset: 0
     property string batteryModeInfoMessage: ""
     property string batteryModeError: ""
     property string batteryModeLastCommandOutput: ""
     property int batteryModeRefreshPollsRemaining: 0
+
+    onBatteryModeIndexChanged: {
+        batteryModeIndexChangedExternal(batteryModeIndex);
+    }
+
+    property bool dndActive: false
     property bool caffeineMode: false
     readonly property bool darkMode: shellRootController ? shellRootController.darkMode : true
 
@@ -115,8 +117,6 @@ Item {
     property real pendingTemp: 0.0
     property real lastAppliedTemp: 0.0
     property bool tempSetterRunning: false
-
-    signal tempChanged(real val)
 
     onLocalTempChanged: {
         tempChanged(localTemp);
@@ -131,21 +131,124 @@ Item {
     property string bluetoothError: ""
     property string bluetoothPairAndConnectPath: ""
     property string bluetoothPendingSecretValue: ""
+
     readonly property var wifiController: WifiController
     readonly property var bluetoothPairingAgent: BluetoothPairingAgent
     readonly property var wifiNetworks: wifiController ? wifiController.networks : null
 
     property int wifiSignal: -1
 
+    // Notification drawer expansion
+    property bool notificationsExpanded: false
+    property real controlCenterExtraHeight: notificationsExpanded ? 220 : 0
+    Behavior on controlCenterExtraHeight {
+        NumberAnimation {
+            duration: 320
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    // Power menu popup
+    property bool powerMenuOpen: false
+
+    // Screen recording timer
+    property int recordingElapsedSeconds: 0
+    property double recordingStartTime: 0
+
+    onScreenRecordingActiveChanged: {
+        if (screenRecordingActive) {
+            recordingStartTime = Date.now();
+            recordingElapsedSeconds = 0;
+            recordingTimer.start();
+        } else {
+            recordingTimer.stop();
+            recordingElapsedSeconds = 0;
+        }
+    }
+
+    Timer {
+        id: recordingTimer
+        interval: 1000
+        repeat: true
+        running: controlCenter.screenRecordingActive
+        onTriggered: {
+            if (controlCenter.recordingStartTime > 0) {
+                controlCenter.recordingElapsedSeconds = Math.max(0, Math.floor((Date.now() - controlCenter.recordingStartTime) / 1000));
+            } else {
+                controlCenter.recordingElapsedSeconds += 1;
+            }
+        }
+    }
+
+    function formatRecordingTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return (m < 10 ? "0" + m : String(m)) + ":" + (s < 10 ? "0" + s : String(s));
+    }
+
+    // Audio waveform animation phase
+    property real wavePhase: 0
+    NumberAnimation {
+        id: waveAnim
+        target: controlCenter
+        property: "wavePhase"
+        from: 0
+        to: Math.PI * 2
+        duration: 2400
+        loops: Animation.Infinite
+        running: controlCenter.showCondition && (controlCenter.musicPlaying || (controlCenter.activePlayer && controlCenter.activePlayer.playbackState === MprisPlaybackState.Playing))
+    }
+
+    function waveformHeight(index, total) {
+        if (!controlCenter.musicPlaying && (!controlCenter.activePlayer || controlCenter.activePlayer.playbackState !== MprisPlaybackState.Playing)) {
+            const baseShape = Math.sin((index / total) * Math.PI);
+            return 3 + baseShape * 10;
+        }
+        const norm = index / total;
+        const baseShape = Math.sin(norm * Math.PI);
+        const dynamic = Math.sin(controlCenter.wavePhase + index * 0.45);
+        const dynamic2 = Math.cos(controlCenter.wavePhase * 1.5 + index * 0.7);
+        const val = (baseShape * 0.5 + (dynamic + 1) * 0.25 + (dynamic2 + 1) * 0.25);
+        return 3 + Math.max(0, Math.min(18, val * 18));
+    }
+
+    // Date formatting helpers matching the sketch (e.g. "24th February", "Thursday")
+    readonly property var nowObj: new Date()
+    property string formattedDayOfWeek: getDayOfWeek(nowObj)
+    property string formattedOrdinalDate: getFormattedDate(nowObj)
+
+    Timer {
+        id: dateUpdateTimer
+        interval: 30000
+        repeat: true
+        running: true
+        onTriggered: {
+            const d = new Date();
+            controlCenter.formattedDayOfWeek = controlCenter.getDayOfWeek(d);
+            controlCenter.formattedOrdinalDate = controlCenter.getFormattedDate(d);
+        }
+    }
+
+    function getDayOfWeek(date) {
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        return days[date.getDay()];
+    }
+
+    function getFormattedDate(date) {
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const d = date.getDate();
+        let suffix = "th";
+        if (d === 1 || d === 21 || d === 31) suffix = "st";
+        else if (d === 2 || d === 22) suffix = "nd";
+        else if (d === 3 || d === 23) suffix = "rd";
+        return d + suffix + " " + months[date.getMonth()];
+    }
+
     Instantiator {
         id: wifiSignalTracker
         model: wifiController ? wifiController.networks : null
-        onObjectAdded: (index, object) => {
-            updateSignal();
-        }
-        onObjectRemoved: (index, object) => {
-            updateSignal();
-        }
+        onObjectAdded: (index, object) => updateSignal()
+        onObjectRemoved: (index, object) => updateSignal()
 
         delegate: QtObject {
             required property bool connected
@@ -164,85 +267,44 @@ Item {
                 }
             }
             controlCenter.wifiSignal = found;
-            console.log("[WifiTracker] Connected SSID:", wifiCurrentSsid, "Signal Strength:", found);
         }
     }
 
     readonly property var themeColors: shellRootController ? shellRootController.matugenThemeColors : null
 
-    readonly property real sliderKnobSize: 24
     readonly property color panelColor: themeColors ? themeColors.background : StyleTokens.panel
-    readonly property color moduleColor: themeColors ? themeColors.secondary_container : StyleTokens.module
-    readonly property color moduleHover: themeColors ? Qt.lighter(themeColors.secondary_container, 1.15) : StyleTokens.moduleHover
-    readonly property color trackColor: themeColors ? themeColors.secondary_container : StyleTokens.track
-    readonly property color textPrimary: themeColors ? themeColors.on_surface : StyleTokens.textPrimary
-    readonly property color textSecondary: themeColors ? themeColors.on_surface_variant : StyleTokens.textSecondary
-    readonly property color cardAccent: themeColors ? themeColors.primary : StyleTokens.accent
-    readonly property color cardAccentPressed: themeColors ? Qt.darker(themeColors.primary, 1.15) : StyleTokens.accentPressed
-    readonly property color cardFillActive: themeColors ? themeColors.primary : StyleTokens.cardFillActive
-    readonly property color cardFillHover: themeColors ? Qt.lighter(themeColors.primary, 1.1) : StyleTokens.cardFillHover
-    readonly property color buttonFill: themeColors ? themeColors.secondary_container : StyleTokens.buttonFill
-    readonly property color buttonFillHover: themeColors ? Qt.lighter(themeColors.secondary_container, 1.15) : StyleTokens.buttonFillHover
-    readonly property color buttonFillPressed: themeColors ? Qt.darker(themeColors.secondary_container, 1.15) : StyleTokens.buttonFillPressed
+    readonly property color moduleColor: themeColors ? themeColors.secondary_container : "#1c1c1e"
+    readonly property color moduleHover: themeColors ? Qt.lighter(themeColors.secondary_container, 1.15) : "#252528"
+    readonly property color trackColor: themeColors ? themeColors.secondary_container : "#2c2c2e"
+    readonly property color textPrimary: themeColors ? themeColors.on_surface : "#ffffff"
+    readonly property color textSecondary: themeColors ? themeColors.on_surface_variant : "#8e8e93"
+    readonly property color cardAccent: themeColors ? themeColors.primary : "#0a84ff"
+    readonly property color cardAccentPressed: themeColors ? Qt.darker(themeColors.primary, 1.15) : "#0066cc"
+
     readonly property string wifiGlyph: {
-        if (!wifiEnabled) return "\u{F05AE}"; // wifi-strength-off
-        if (wifiCurrentSsid.length === 0 || wifiSignal < 0) return "\u{F05AD}"; // wifi-strength-outline
-        if (wifiSignal >= 75) return "\u{F05AC}"; // wifi-strength-4
-        if (wifiSignal >= 50) return "\u{F05AB}"; // wifi-strength-3
-        if (wifiSignal >= 25) return "\u{F05AA}"; // wifi-strength-2
-        return "\u{F05A9}"; // wifi-strength-1
+        if (!wifiEnabled) return "\u{F05AE}";
+        if (wifiCurrentSsid.length === 0 || wifiSignal < 0) return "\u{F05AD}";
+        if (wifiSignal >= 75) return "\u{F05AC}";
+        if (wifiSignal >= 50) return "\u{F05AB}";
+        if (wifiSignal >= 25) return "\u{F05AA}";
+        return "\u{F05A9}";
     }
     readonly property string bluetoothGlyph: ""
     readonly property string chargingIconGlyph: "\uf0e7"
     readonly property string brightnessIconGlyph: "\u{F00DF}"
-    readonly property string volumeIconGlyph: {
-        return volumeGlyph(displayedVolume, isMuted);
-    }
+    readonly property string volumeIconGlyph: volumeGlyph(displayedVolume, isMuted)
 
-    readonly property var batteryModeGlyphs: ["", "", ""]
     property var notificationModel: null
-    readonly property real controlCenterExtraHeight: 230
-    readonly property real controlCenterMaximumExtraHeight: 230
-    readonly property real shortTileWidth: (controlCenter.width - 24) / 3
     readonly property bool bluetoothAvailable: !!bluetoothAdapter
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
     readonly property var bluetoothDeviceValues: bluetoothAdapter ? bluetoothAdapter.devices.values : []
     readonly property bool wifiSupported: wifiController ? wifiController.supported : false
-    readonly property bool wifiReadOnly: wifiController ? wifiController.readOnly : true
     readonly property bool wifiAvailable: wifiController ? wifiController.available : false
     readonly property bool wifiEnabled: wifiController ? wifiController.enabled : false
-    readonly property bool wifiBusy: wifiController ? wifiController.busy : false
-    readonly property bool wifiListRunning: wifiController ? wifiController.scanning : false
     readonly property string wifiCurrentSsid: wifiController ? wifiController.currentSsid : ""
-    readonly property string wifiInfoMessage: wifiLocalInfoMessage.length > 0
-        ? wifiLocalInfoMessage
-        : (wifiController ? wifiController.infoMessage : "")
-    readonly property string wifiError: wifiLocalError.length > 0
-        ? wifiLocalError
-        : (wifiController ? wifiController.errorMessage : "")
-    readonly property string wifiUnsupportedReason: wifiController ? wifiController.unsupportedReason : ""
-    readonly property string wifiAvailabilityMessage: {
-        if (wifiUnsupportedReason.length > 0) return wifiUnsupportedReason;
-        if (wifiSupported && !wifiAvailable) return "No Wi-Fi device is available.";
-        return "";
-    }
     readonly property bool bluetoothEnabled: bluetoothAdapter ? bluetoothAdapter.enabled : false
-    readonly property bool bluetoothBusy: bluetoothAdapter
-        ? bluetoothAdapter.state === BluetoothAdapterState.Enabling
-            || bluetoothAdapter.state === BluetoothAdapterState.Disabling
-        : false
     readonly property bool bluetoothPairingActive: bluetoothPairingAgent ? bluetoothPairingAgent.requestActive : false
-    readonly property bool bluetoothPairingRequiresInput: bluetoothPairingAgent ? bluetoothPairingAgent.requestRequiresInput : false
-    readonly property bool bluetoothPairingNumericInput: bluetoothPairingAgent ? bluetoothPairingAgent.requestNumericInput : false
-    readonly property bool bluetoothPairingRequiresConfirmation: bluetoothPairingAgent ? bluetoothPairingAgent.requestRequiresConfirmation : false
-    readonly property string bluetoothPairingTitle: bluetoothPairingAgent ? bluetoothPairingAgent.promptTitle : ""
-    readonly property string bluetoothPairingMessage: bluetoothPairingAgent ? bluetoothPairingAgent.promptMessage : ""
-    readonly property string bluetoothPairingDisplayedCode: bluetoothPairingAgent ? bluetoothPairingAgent.displayedCode : ""
     readonly property bool hasConnectivityPrompt: wifiPendingPasswordSsid.length > 0 || bluetoothPairingActive
-    readonly property bool anyConnectivityPanelOpen: wifiPanelOpen || bluetoothPanelOpen || batteryPanelOpen || audioPanelOpen
-    readonly property string wifiStatusText: wifiController ? wifiController.statusText : "Unavailable"
-    readonly property string bluetoothStatusText: buildBluetoothStatusText()
-    readonly property string bluetoothAvailabilityMessage: bluetoothAvailable ? "" : "No Bluetooth adapter is available."
     readonly property string batteryModeStatusText: buildBatteryModeStatusText()
 
     function clamp01(value) {
@@ -278,24 +340,8 @@ Item {
         batteryModeIndex = nextIndex;
     }
 
-    function setBatteryDrawerOpen(open) {
-        const nextOpen = !!open;
-        batteryDrawerOpen = nextOpen;
-        batteryDrawerSettling = true;
-        batteryDrawerProgress = nextOpen ? 1 : 0;
-        batteryDrawerSettleTimer.restart();
-        if (nextOpen && !batteryTlpChecked)
-            refreshBatteryModeState();
-    }
-
-    function toggleBatteryDrawer() {
-        setBatteryDrawerOpen(!batteryDrawerOpen);
-    }
-
     function refreshBatteryModeState() {
-        if (batteryModeStateRunning)
-            return;
-
+        if (batteryModeStateRunning) return;
         batteryModeStateRunning = true;
         tlpStateTimeoutTimer.start();
         ppQueryProcess.running = true;
@@ -350,34 +396,17 @@ Item {
         batteryModeBusy = false;
         batteryModeError = message;
         batteryModeInfoMessage = "";
-        batteryModeDragOffset = 0;
         setBatteryModeVisualIndex(batteryModeAppliedIndex, true);
-    }
-
-    function classifyBatteryModeFailure(exitCode) {
-        return "Failed to apply power mode.";
-    }
-
-    function queueBatteryModeStateRefresh(polls) {
-        batteryModeRefreshPollsRemaining = Math.max(0, polls);
-        if (batteryModeRefreshPollsRemaining > 0)
-            batteryModeRefreshTimer.restart();
-        else
-            batteryModeRefreshTimer.stop();
     }
 
     function selectBatteryMode(index) {
         if (batteryModeBusy) {
-            if (batteryModeSetterRunning)
-                ppSetProcess.running = false;
+            if (batteryModeSetterRunning) ppSetProcess.running = false;
             batteryModeBusy = false;
             batteryModeSetterRunning = false;
         }
 
-        queueBatteryModeStateRefresh(0);
-
         const nextIndex = Math.max(0, Math.min(2, index));
-
         if (trimString(controlCenter.tlpPermissionMode) === "skip") {
             rollbackBatteryMode("Power mode switching is disabled in userconfig.json.");
             return;
@@ -407,7 +436,6 @@ Item {
         batteryModeError = "";
         batteryModeInfoMessage = "Applying " + batteryModeLabel(nextIndex) + "...";
         setBatteryModeVisualIndex(nextIndex, true);
-        batteryModeLastCommandOutput = "";
         
         ppSetProcess.pendingMode = batteryModeCommand(nextIndex);
         ppSetProcess.running = true;
@@ -416,77 +444,15 @@ Item {
     function finishBatteryModeApply(success, exitCode, output, errorString) {
         batteryModeSetterRunning = false;
         batteryModeBusy = false;
-        batteryModeLastCommandOutput = trimString(output);
-        if (batteryModeLastCommandOutput.length === 0)
-            batteryModeLastCommandOutput = trimString(errorString);
-
         if (!success) {
-            rollbackBatteryMode(classifyBatteryModeFailure(exitCode));
+            rollbackBatteryMode("Failed to apply power mode.");
             return;
         }
-
         batteryModeAppliedIndex = batteryModePendingIndex;
         batteryModeError = "";
         batteryModeInfoMessage = batteryModeLabel(batteryModeAppliedIndex) + " active.";
         setBatteryModeVisualIndex(batteryModeAppliedIndex, true);
         refreshBatteryModeState();
-    }
-
-    function clearWifiPrompt() {
-        wifiPendingPasswordSsid = "";
-        wifiPendingPasswordValue = "";
-        wifiLocalInfoMessage = "";
-        wifiLocalError = "";
-    }
-
-    function clearWifiMessages() {
-        wifiLocalInfoMessage = "";
-        wifiLocalError = "";
-        if (wifiController)
-            wifiController.clearMessages();
-    }
-
-    function clearBluetoothMessages() {
-        bluetoothInfoMessage = "";
-        bluetoothError = "";
-    }
-
-    function submitBluetoothPairingSecret() {
-        if (!bluetoothPairingAgent || !bluetoothPairingRequiresInput)
-            return;
-
-        const secret = trimString(bluetoothPendingSecretValue);
-        if (!secret) {
-            bluetoothError = bluetoothPairingNumericInput
-                ? "Enter the 6-digit passkey first."
-                : "Enter the PIN first.";
-            return;
-        }
-
-        if (bluetoothPairingNumericInput && !/^\d{1,6}$/.test(secret)) {
-            bluetoothError = "Passkeys must be 1 to 6 digits.";
-            return;
-        }
-
-        bluetoothError = "";
-        bluetoothPairingAgent.submitSecret(secret);
-        bluetoothPendingSecretValue = "";
-    }
-
-    function confirmBluetoothPairing() {
-        if (!bluetoothPairingAgent)
-            return;
-
-        bluetoothError = "";
-        bluetoothPairingAgent.confirmRequest();
-    }
-
-    function cancelBluetoothPairing() {
-        if (!bluetoothPairingAgent)
-            return;
-
-        bluetoothPairingAgent.cancelRequest();
-        bluetoothPendingSecretValue = "";
     }
 
     function isConnectivityPanelOpen(kind) {
@@ -498,66 +464,30 @@ Item {
     }
 
     function setConnectivityPanelOpen(kind, open, emitSignal) {
-        if (emitSignal === undefined)
-            emitSignal = true;
-
+        if (emitSignal === undefined) emitSignal = true;
         const nextOpen = !!open;
 
         if (nextOpen) {
-            if (kind !== "wifi" && wifiPanelOpen)
-                setConnectivityPanelOpen("wifi", false, emitSignal);
-            if (kind !== "bluetooth" && bluetoothPanelOpen)
-                setConnectivityPanelOpen("bluetooth", false, emitSignal);
-            if (kind !== "battery" && batteryPanelOpen)
-                setConnectivityPanelOpen("battery", false, emitSignal);
-            if (kind !== "audio" && audioPanelOpen)
-                setConnectivityPanelOpen("audio", false, emitSignal);
+            if (kind !== "wifi" && wifiPanelOpen) setConnectivityPanelOpen("wifi", false, emitSignal);
+            if (kind !== "bluetooth" && bluetoothPanelOpen) setConnectivityPanelOpen("bluetooth", false, emitSignal);
+            if (kind !== "battery" && batteryPanelOpen) setConnectivityPanelOpen("battery", false, emitSignal);
+            if (kind !== "audio" && audioPanelOpen) setConnectivityPanelOpen("audio", false, emitSignal);
         }
 
         let changed = false;
-
         if (kind === "wifi") {
             changed = wifiPanelOpen !== nextOpen;
             wifiPanelOpen = nextOpen;
-
-            if (nextOpen) {
-                if (showCondition) {
-                    requestWifiStateRefresh();
-                    if (wifiSupported && wifiEnabled)
-                        requestWifiListRefresh(true);
-                }
-            } else {
-                clearWifiPrompt();
-                clearWifiMessages();
-            }
         } else if (kind === "bluetooth") {
             changed = bluetoothPanelOpen !== nextOpen;
             bluetoothPanelOpen = nextOpen;
-
-            if (!nextOpen) {
-                if (bluetoothPairingActive)
-                    cancelBluetoothPairing();
-                if (bluetoothAdapter && bluetoothAdapter.discovering)
-                    bluetoothAdapter.discovering = false;
-                bluetoothScanStopTimer.stop();
-                bluetoothPairAndConnectPath = "";
-                bluetoothPendingSecretValue = "";
-                clearBluetoothMessages();
-            }
         } else if (kind === "battery") {
             changed = batteryPanelOpen !== nextOpen;
             batteryPanelOpen = nextOpen;
         } else if (kind === "audio") {
             changed = audioPanelOpen !== nextOpen;
             audioPanelOpen = nextOpen;
-
-            if (nextOpen) {
-                if (showCondition) {
-                    refreshAudioSinks();
-                }
-            }
-        } else {
-            return;
+            if (nextOpen && showCondition) refreshAudioSinks();
         }
 
         if (changed && emitSignal)
@@ -569,293 +499,19 @@ Item {
     }
 
     function closeConnectivityPanels(emitSignals) {
-        if (emitSignals === undefined)
-            emitSignals = true;
-
+        if (emitSignals === undefined) emitSignals = true;
         setConnectivityPanelOpen("wifi", false, emitSignals);
         setConnectivityPanelOpen("bluetooth", false, emitSignals);
         setConnectivityPanelOpen("battery", false, emitSignals);
         setConnectivityPanelOpen("audio", false, emitSignals);
-        clearWifiPrompt();
-        clearWifiMessages();
-        clearBluetoothMessages();
-    }
-
-    function requestWifiStateRefresh() {
-        if (!showCondition || !wifiController) return;
-        wifiController.refreshState();
-    }
-
-    function requestWifiListRefresh(rescan) {
-        if (!showCondition || !wifiController) return;
-        if (!wifiSupported || !wifiAvailable || !wifiEnabled) return;
-        wifiController.refreshNetworks(!!rescan);
     }
 
     function toggleWifiEnabled() {
-        clearWifiPrompt();
-        clearWifiMessages();
-        if (wifiController)
-            wifiController.setEnabled(!wifiEnabled);
-    }
-
-    function disconnectWifi() {
-        if (!wifiSupported || !wifiAvailable) {
-            wifiLocalError = wifiAvailabilityMessage.length > 0 ? wifiAvailabilityMessage : "No Wi-Fi device is available.";
-            return;
-        }
-
-        clearWifiPrompt();
-        clearWifiMessages();
-        if (wifiController)
-            wifiController.disconnectCurrent();
-    }
-
-    function connectWifiNetwork(network) {
-        if (!network) return;
-        if (!wifiSupported) {
-            wifiLocalError = wifiAvailabilityMessage.length > 0 ? wifiAvailabilityMessage : "Wi-Fi control is unavailable.";
-            return;
-        }
-        if (!wifiAvailable) {
-            wifiLocalError = wifiAvailabilityMessage.length > 0 ? wifiAvailabilityMessage : "No Wi-Fi device is available.";
-            return;
-        }
-        if (!wifiEnabled) {
-            wifiLocalError = "Turn on Wi-Fi first.";
-            return;
-        }
-        if (network.connected) return;
-
-        const ssid = trimString(network.ssid);
-        const networkType = trimString(network.type);
-        const secure = !!network.secure;
-        const savedConnection = !!network.savedConnection;
-
-        if (!ssid) {
-            wifiLocalError = "Hidden networks are not supported in this panel yet.";
-            return;
-        }
-
-        if (!savedConnection && networkType === "wep") {
-            wifiLocalError = "WEP networks aren't supported by this panel.";
-            return;
-        }
-
-        if (!savedConnection && networkType === "8021x") {
-            wifiLocalError = "802.1X networks need to be provisioned first.";
-            return;
-        }
-
-        clearWifiPrompt();
-        clearWifiMessages();
-
-        if (savedConnection) {
-            if (wifiController)
-                wifiController.connectToNetwork(ssid);
-            return;
-        }
-
-        if (!secure) {
-            if (wifiController)
-                wifiController.connectToNetwork(ssid);
-            return;
-        }
-
-        wifiPendingPasswordSsid = ssid;
-        wifiPendingPasswordValue = "";
-        wifiLocalInfoMessage = "Enter the password for " + ssid + ".";
-    }
-
-    function submitWifiPassword() {
-        const ssid = trimString(wifiPendingPasswordSsid);
-        if (!ssid) return;
-
-        if (trimString(wifiPendingPasswordValue).length === 0) {
-            wifiLocalError = "Enter a password first.";
-            return;
-        }
-
-        const password = wifiPendingPasswordValue;
-        clearWifiPrompt();
-        clearWifiMessages();
-        if (wifiController)
-            wifiController.connectToNetwork(ssid, password);
-    }
-
-    function applyBrightnessSnapshot(value) {
-        if (value >= 0)
-            syncBrightnessFromLevel(value);
-    }
-
-    function applyVolumeSnapshot(value) {
-        if (value >= 0)
-            syncVolumeFromLevel(value);
-    }
-
-    function applyVolumeSnapshotWithMute(value, muted) {
-        applyVolumeSnapshot(value);
-        isMuted = !!muted;
-    }
-
-    function volumeGlyph(value, muted) {
-        if (muted) return "\u{F075F}"; // volume-mute
-        if (value <= 0) return "\u{F0581}"; // volume-off
-        if (value < 0.33) return "\u{F057F}"; // volume-low
-        if (value < 0.66) return "\u{F0580}"; // volume-medium
-        return "\u{F057E}"; // volume-high
-    }
-
-    function flushBrightness(force) {
-        const nextValue = clamp01(pendingBrightness);
-        if (!force && Math.abs(nextValue - lastAppliedBrightness) < 0.01) return;
-        if (brightnessSetterRunning) {
-            brightnessApplyTimer.restart();
-            return;
-        }
-
-        lastAppliedBrightness = nextValue;
-        brightnessSetterRunning = true;
-        SystemServices.setBrightness(nextValue);
-    }
-
-    function queueBrightness(value) {
-        localBrightness = clamp01(value);
-        if (showCondition && !sliderIntroPending) displayedBrightness = localBrightness;
-        pendingBrightness = localBrightness;
-        brightnessApplyTimer.restart();
-    }
-
-    function flushVolume(force) {
-        const nextValue = clamp01(pendingVolume);
-        if (!force && Math.abs(nextValue - lastAppliedVolume) < 0.01) return;
-        if (volumeSetterRunning) {
-            volumeApplyTimer.restart();
-            return;
-        }
-
-        lastAppliedVolume = nextValue;
-        volumeSetterRunning = true;
-        SystemServices.setVolume(nextValue);
-    }
-
-    function queueVolume(value) {
-        localVolume = clamp01(value);
-        if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
-        pendingVolume = localVolume;
-        volumeApplyTimer.restart();
-    }
-
-    function syncBrightnessFromLevel(level) {
-        if (level < 0 || brightnessCard.pressed || sliderIntroPending) return;
-        localBrightness = clamp01(level);
-        if (showCondition && !sliderIntroPending) displayedBrightness = localBrightness;
-        pendingBrightness = localBrightness;
-        lastAppliedBrightness = localBrightness;
-    }
-
-    function syncVolumeFromLevel(level) {
-        if (level < 0 || volumeCard.pressed || sliderIntroPending) return;
-        localVolume = clamp01(level);
-        if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
-        pendingVolume = localVolume;
-        lastAppliedVolume = localVolume;
-    }
-
-    function syncLevelsFromProps() {
-        syncBrightnessFromLevel(brightnessLevel);
-        syncVolumeFromLevel(volumeLevel);
-    }
-
-    function bluetoothDeviceName(device) {
-        if (!device) return "Unknown device";
-        const preferred = trimString(device.deviceName);
-        if (preferred.length > 0) return preferred;
-
-        const alias = trimString(device.name);
-        if (alias.length > 0) return alias;
-
-        const address = trimString(device.address);
-        return address.length > 0 ? address : "Unknown device";
-    }
-
-    function bluetoothDeviceStateText(device) {
-        if (!device) return "";
-        if (device.pairing) return "Pairing";
-
-        switch (device.state) {
-        case BluetoothDeviceState.Connecting:
-            return "Connecting";
-        case BluetoothDeviceState.Connected:
-            return "Connected";
-        case BluetoothDeviceState.Disconnecting:
-            return "Disconnecting";
-        default:
-            break;
-        }
-
-        if (device.paired || device.bonded) return "Paired";
-        return "Available";
-    }
-
-    function bluetoothDeviceSubtitle(device) {
-        const parts = [];
-        const stateLabel = bluetoothDeviceStateText(device);
-        if (stateLabel.length > 0) parts.push(stateLabel);
-        if (device && device.batteryAvailable) parts.push(bluetoothBatteryPercent(device) + "%");
-        return parts.join(" • ");
-    }
-
-    function bluetoothBatteryPercent(device) {
-        if (!device || !device.batteryAvailable)
-            return -1;
-
-        const rawValue = Math.max(0, Number(device.battery) || 0);
-        return Math.max(0, Math.min(100, Math.round(rawValue <= 1 ? rawValue * 100 : rawValue)));
-    }
-
-    function bluetoothDeviceMatchesSection(device, section) {
-        if (!device) return false;
-
-        const paired = device.paired || device.bonded;
-        if (section === "connected") return device.connected;
-        if (section === "paired") return !device.connected && paired;
-        if (section === "available") return !paired;
-        return false;
-    }
-
-    function buildBluetoothStatusText() {
-        if (!bluetoothAvailable) return "Unavailable";
-        if (!bluetoothEnabled) return "Off";
-
-        const devices = bluetoothDeviceValues || [];
-        const connectedNames = [];
-
-        for (let index = 0; index < devices.length; index++) {
-            const device = devices[index];
-            if (device && device.connected)
-                connectedNames.push(bluetoothDeviceName(device));
-        }
-
-        if (connectedNames.length === 1) return connectedNames[0];
-        if (connectedNames.length > 1) return connectedNames[0] + " +" + (connectedNames.length - 1);
-        if (bluetoothAdapter.discovering) return "Scanning";
-        return bluetoothBusy ? "Working..." : "On";
+        if (wifiController) wifiController.setEnabled(!wifiEnabled);
     }
 
     function toggleBluetoothEnabled() {
-        if (!bluetoothAdapter) {
-            bluetoothError = "No Bluetooth adapter is available.";
-            return;
-        }
-
-        bluetoothError = "";
-        bluetoothInfoMessage = "";
-        bluetoothPairAndConnectPath = "";
-
-        if (bluetoothAdapter.discovering)
-            bluetoothAdapter.discovering = false;
-
+        if (!bluetoothAdapter) return;
         bluetoothAdapter.enabled = !bluetoothAdapter.enabled;
     }
 
@@ -877,25 +533,144 @@ Item {
         onTriggered: checkHypridleProcess.running = true
     }
 
+    function toggleScreenRecording() {
+        const home = Quickshell.env("HOME") || "";
+        const recordScript = Quickshell.shellDir + "/bin/record.sh";
+        if (screenRecordingActive) {
+            Quickshell.execDetached([recordScript]);
+        } else {
+            Quickshell.execDetached([recordScript, "-r"]);
+        }
+    }
+
+    function togglePlayback() {
+        if (!activePlayer || !activePlayer.canControl) return;
+        if (activePlayer.canTogglePlaying) {
+            activePlayer.togglePlaying();
+            return;
+        }
+        if (activePlayer.playbackState === MprisPlaybackState.Playing) {
+            if (activePlayer.canPause) activePlayer.pause();
+            return;
+        }
+        if (activePlayer.canPlay) activePlayer.play();
+    }
+
+    function toSeconds(value) {
+        const num = Number(value);
+        if (isNaN(num) || num <= 0) return 0;
+        if (num > 10000000) return num / 1000000;
+        if (num > 10000) return num / 1000;
+        return num;
+    }
+
+    function formatTrackTime(value) {
+        const sec = Math.floor(toSeconds(value));
+        if (sec <= 0) return "0:00";
+        const hours = Math.floor(sec / 3600);
+        const minutes = Math.floor((sec % 3600) / 60);
+        const seconds = sec % 60;
+        const secStr = seconds < 10 ? "0" + seconds : String(seconds);
+        if (hours > 0) {
+            const minStr = minutes < 10 ? "0" + minutes : String(minutes);
+            return hours + ":" + minStr + ":" + secStr;
+        }
+        return minutes + ":" + secStr;
+    }
+
+    function updateTrackProgress() {
+        if (!activePlayer) return;
+        const posSec = toSeconds(activePlayer.position);
+        let lenRaw = Number(activePlayer.length) || 0;
+        if (lenRaw <= 0 && activePlayer.metadata && activePlayer.metadata["mpris:length"])
+            lenRaw = Number(activePlayer.metadata["mpris:length"]);
+        const lenSec = toSeconds(lenRaw);
+
+        if (lenSec > 0) {
+            controlCenter.trackProgress = Math.max(0, Math.min(1, posSec / lenSec));
+            controlCenter.timePlayed = formatTrackTime(posSec);
+            controlCenter.timeTotal = formatTrackTime(lenSec);
+        } else {
+            controlCenter.trackProgress = 0;
+            controlCenter.timePlayed = formatTrackTime(posSec);
+            controlCenter.timeTotal = "0:00";
+        }
+    }
+
+    Timer {
+        id: ccProgressTimer
+        interval: 500
+        repeat: true
+        running: controlCenter.showCondition && controlCenter.activePlayer !== null
+        triggeredOnStart: true
+        onTriggered: controlCenter.updateTrackProgress()
+    }
+
+    function seekTrack(progress) {
+        if (!activePlayer || !activePlayer.canControl) return;
+        let lenRaw = Number(activePlayer.length) || 0;
+        if (lenRaw <= 0 && activePlayer.metadata && activePlayer.metadata["mpris:length"])
+            lenRaw = Number(activePlayer.metadata["mpris:length"]);
+        const lenSec = toSeconds(lenRaw);
+        if (lenSec > 0) {
+            const targetPosSec = Math.max(0, Math.min(lenSec, progress * lenSec));
+            activePlayer.position = targetPosSec;
+            controlCenter.trackProgress = progress;
+            controlCenter.timePlayed = formatTrackTime(targetPosSec);
+        }
+    }
+
+    function volumeGlyph(value, muted) {
+        if (muted) return "\u{F075F}";
+        if (value <= 0) return "\u{F0581}";
+        if (value < 0.33) return "\u{F057F}";
+        if (value < 0.66) return "\u{F0580}";
+        return "\u{F057E}";
+    }
+
+    function flushBrightness(force) {
+        const nextValue = clamp01(pendingBrightness);
+        if (!force && Math.abs(nextValue - lastAppliedBrightness) < 0.01) return;
+        if (brightnessSetterRunning) {
+            brightnessApplyTimer.restart();
+            return;
+        }
+        lastAppliedBrightness = nextValue;
+        brightnessSetterRunning = true;
+        SystemServices.setBrightness(nextValue);
+    }
+
+    function queueBrightness(value) {
+        localBrightness = clamp01(value);
+        if (showCondition && !sliderIntroPending) displayedBrightness = localBrightness;
+        pendingBrightness = localBrightness;
+        brightnessApplyTimer.restart();
+    }
+
+    function flushVolume(force) {
+        const nextValue = clamp01(pendingVolume);
+        if (!force && Math.abs(nextValue - lastAppliedVolume) < 0.01) return;
+        if (volumeSetterRunning) {
+            volumeApplyTimer.restart();
+            return;
+        }
+        lastAppliedVolume = nextValue;
+        volumeSetterRunning = true;
+        SystemServices.setVolume(nextValue);
+    }
+
+    function queueVolume(value) {
+        localVolume = clamp01(value);
+        if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
+        pendingVolume = localVolume;
+        volumeApplyTimer.restart();
+    }
+
     function tempFromValue(v) {
         return Math.round(6500 - v * 4000);
     }
 
-    function valueFromTemp(t) {
-        return Math.max(0.0, Math.min(1.0, (6500 - t) / 4000));
-    }
-
-    function syncTempFromSystem(value) {
-        if (tempCard.pressed || sliderIntroPending) return;
-        console.log("[NightLight] syncTempFromSystem: value = " + value);
-        localTemp = clamp01(value);
-        if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
-        pendingTemp = localTemp;
-        lastAppliedTemp = localTemp;
-    }
-
     function queueTemp(value) {
-        console.log("[NightLight] queueTemp: value = " + value);
         localTemp = clamp01(value);
         if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
         pendingTemp = localTemp;
@@ -904,20 +679,12 @@ Item {
 
     function flushTemp(force) {
         const nextValue = clamp01(pendingTemp);
-        console.log("[NightLight] flushTemp: force = " + force + ", nextValue = " + nextValue + ", lastApplied = " + lastAppliedTemp);
-        if (!force && Math.abs(nextValue - lastAppliedTemp) < 0.02) {
-            console.log("[NightLight] flushTemp: change is too small, ignoring");
-            return;
-        }
-
+        if (!force && Math.abs(nextValue - lastAppliedTemp) < 0.02) return;
         lastAppliedTemp = nextValue;
-
         if (nextValue < 0.05) {
-            console.log("[NightLight] flushTemp: stopping night light");
             Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
         } else {
             const targetK = tempFromValue(nextValue);
-            console.log("[NightLight] flushTemp: setting night light temp via execDetached to " + targetK);
             Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
         }
     }
@@ -927,181 +694,6 @@ Item {
         interval: 100
         repeat: false
         onTriggered: controlCenter.flushTemp(false)
-    }
-
-    function toggleBluetoothScan() {
-        if (!bluetoothAdapter) {
-            bluetoothError = "No Bluetooth adapter is available.";
-            return;
-        }
-        if (!bluetoothEnabled) {
-            bluetoothError = "Turn on Bluetooth first.";
-            return;
-        }
-
-        bluetoothError = "";
-        if (bluetoothAdapter.discovering) {
-            bluetoothAdapter.discovering = false;
-            bluetoothInfoMessage = "";
-            bluetoothScanStopTimer.stop();
-        } else {
-            bluetoothAdapter.discovering = true;
-            bluetoothInfoMessage = "Scanning for nearby devices...";
-            bluetoothScanStopTimer.restart();
-        }
-    }
-
-    function handleBluetoothDevicePressed(device) {
-        if (!device) return;
-        if (!bluetoothAdapter || !bluetoothEnabled) {
-            bluetoothError = "Turn on Bluetooth first.";
-            return;
-        }
-
-        bluetoothError = "";
-
-        if (device.connected) {
-            bluetoothInfoMessage = "";
-            device.disconnect();
-            return;
-        }
-
-        if (device.paired || device.bonded) {
-            bluetoothInfoMessage = "";
-            device.connect();
-            return;
-        }
-
-        bluetoothPairAndConnectPath = device.dbusPath;
-        bluetoothInfoMessage = "Pairing " + bluetoothDeviceName(device) + "...";
-        device.pair();
-    }
-
-    function forgetBluetoothDevice(device) {
-        if (!device) return;
-        if (bluetoothPairAndConnectPath === device.dbusPath)
-            bluetoothPairAndConnectPath = "";
-        device.forget();
-    }
-
-    anchors.fill: parent
-    anchors.margins: 12
-    opacity: showCondition ? 1 : 0
-    visible: opacity > 0
-
-    onBrightnessLevelChanged: syncBrightnessFromLevel(brightnessLevel)
-    onVolumeLevelChanged: syncVolumeFromLevel(volumeLevel)
-    onShowConditionChanged: {
-        if (showCondition) {
-            syncLevelsFromProps();
-            sliderIntroPending = true;
-            displayedBrightness = localBrightness;
-            displayedVolume = localVolume;
-            displayedTemp = localTemp;
-            sliderIntroTimer.interval = sliderIntroDelay;
-            sliderIntroTimer.restart();
-            refreshBatteryModeState();
-            controlCenter.refreshAudioSinks();
-            requestWifiStateRefresh();
-            checkHypridleProcess.running = true;
-            queryHyprsunsetProcess.running = true;
-            if (wifiPanelOpen && wifiSupported && wifiEnabled)
-                requestWifiListRefresh(true);
-        } else {
-            sliderIntroTimer.stop();
-            sliderIntroPending = false;
-            // displayedBrightness = localBrightness;
-            // displayedVolume = localVolume;
-            // displayedTemp = localTemp;
-            closeConnectivityPanels();
-        }
-    }
-
-    Component.onCompleted: {
-        syncLevelsFromProps();
-        displayedBrightness = localBrightness;
-        displayedVolume = localVolume;
-        displayedTemp = localTemp;
-        SystemServices.requestBrightness();
-        SystemServices.requestVolume();
-        refreshBatteryModeState();
-        controlCenter.refreshAudioSinks();
-        checkHypridleProcess.running = true;
-        queryHyprsunsetProcess.running = true;
-    }
-
-    Behavior on opacity {
-        NumberAnimation {
-            duration: showCondition ? 240 : 100
-            easing.type: Easing.InOutQuad
-        }
-    }
-
-    Behavior on displayedBrightness {
-        enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending && !brightnessCard.pressed
-
-        NumberAnimation {
-            duration: 130
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    Behavior on displayedVolume {
-        enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending && !volumeCard.pressed
-
-        NumberAnimation {
-            duration: 130
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    Behavior on displayedTemp {
-        enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending && !tempCard.pressed
-
-        NumberAnimation {
-            duration: 130
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    Behavior on batteryDrawerProgress {
-        enabled: !controlCenter.batteryDrawerDragging
-
-        NumberAnimation {
-            id: batteryDrawerProgressAnimation
-            duration: 240
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    Connections {
-        target: SystemServices
-
-        function onBrightnessSnapshotReady(value, errorString) {
-            if (errorString === "")
-                controlCenter.applyBrightnessSnapshot(value);
-        }
-
-        function onBrightnessSetFinished(value, success, errorString) {
-            controlCenter.brightnessSetterRunning = false;
-            if (success)
-                controlCenter.applyBrightnessSnapshot(value);
-            if (success && Math.abs(controlCenter.pendingBrightness - controlCenter.lastAppliedBrightness) >= 0.01)
-                brightnessApplyTimer.restart();
-        }
-
-        function onVolumeSnapshotReady(value, muted, errorString) {
-            if (errorString === "")
-                controlCenter.applyVolumeSnapshotWithMute(value, muted);
-        }
-
-        function onVolumeSetFinished(value, success, errorString) {
-            controlCenter.volumeSetterRunning = false;
-            if (success)
-                controlCenter.applyVolumeSnapshot(value);
-            if (success && Math.abs(controlCenter.pendingVolume - controlCenter.lastAppliedVolume) >= 0.01)
-                volumeApplyTimer.restart();
-        }
     }
 
     Timer {
@@ -1124,24 +716,29 @@ Item {
         repeat: false
         onTriggered: {
             if (controlCenter.batteryModeStateRunning && !controlCenter.batteryTlpChecked) {
-                console.log("Power profiles state request timed out, assuming power-profiles-daemon is not installed.");
                 controlCenter.applyBatteryModeState(false, "", "", "power-profiles-daemon is not installed.");
             }
         }
     }
 
+    function syncBrightnessFromLevel(level) {
+        if (level < 0 || sliderIntroPending) return;
+        localBrightness = clamp01(level);
+        if (showCondition && !sliderIntroPending) displayedBrightness = localBrightness;
+        pendingBrightness = localBrightness;
+        lastAppliedBrightness = localBrightness;
+    }
+
+    function syncVolumeFromLevel(level) {
+        if (level < 0 || sliderIntroPending) return;
+        localVolume = clamp01(level);
+        if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
+        pendingVolume = localVolume;
+        lastAppliedVolume = localVolume;
+    }
+
     function refreshAudioSinks() {
         audioQueryProcess.running = true;
-    }
-
-    function selectAudioSink(sinkName) {
-        audioSetProcess.pendingSink = sinkName;
-        audioSetProcess.running = true;
-    }
-
-    function toggleAudioMute() {
-        if (!audioToggleMuteProcess.running)
-            audioToggleMuteProcess.running = true;
     }
 
     Process {
@@ -1162,14 +759,12 @@ Item {
                             for (let i = 0; i < list.length; i++) {
                                 const s = list[i];
                                 const isDefault = (s.name === defaultSink);
-                                if (isDefault) {
-                                    activeDesc = s.description;
-                                }
+                                if (isDefault) activeDesc = s.description;
                                 cleanedSinks.push({
                                     name: s.name,
                                     description: s.description,
                                     connected: isDefault,
-                                    deviceType: (s.name.indexOf("bluez") !== -1 || s.description.toLowerCase().indexOf("headset") !== -1 || s.description.toLowerCase().indexOf("headphone") !== -1 || s.description.toLowerCase().indexOf("buds") !== -1) ? "headset" : "speaker"
+                                    deviceType: (s.name.indexOf("bluez") !== -1 || s.description.toLowerCase().indexOf("headset") !== -1 || s.description.toLowerCase().indexOf("headphone") !== -1) ? "headset" : "speaker"
                                 });
                             }
                             controlCenter.audioSinks = cleanedSinks;
@@ -1185,37 +780,13 @@ Item {
     }
 
     Process {
-        id: audioSetProcess
-        property string pendingSink: ""
-        command: ["pactl", "set-default-sink", pendingSink]
-        running: false
-        onExited: (exitCode) => {
-            if (exitCode === 0) {
-                controlCenter.refreshAudioSinks();
-            }
-        }
-    }
-
-    Process {
-        id: audioToggleMuteProcess
-        command: ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"]
-        running: false
-        onExited: (exitCode) => {
-            if (exitCode === 0)
-                SystemServices.requestVolume();
-        }
-    }
-
-
-    Process {
         id: ppQueryProcess
         command: ["powerprofilesctl", "get"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 if (this.text) {
-                    const profileName = this.text.trim();
-                    controlCenter.applyBatteryModeState(true, profileName, this.text, "");
+                    controlCenter.applyBatteryModeState(true, this.text.trim(), this.text, "");
                 } else {
                     controlCenter.applyBatteryModeState(false, "", "", "Failed to read profile.");
                 }
@@ -1228,7 +799,6 @@ Item {
         property string pendingMode: ""
         command: ["powerprofilesctl", "set", pendingMode]
         running: false
-        
         onExited: (exitCode) => {
             const success = (exitCode === 0);
             controlCenter.finishBatteryModeApply(success, exitCode, "", success ? "" : "Failed to set profile.");
@@ -1251,19 +821,17 @@ Item {
         stdout: StdioCollector {
             onStreamFinished: {
                 if (this.text) {
-                    const text = this.text.trim();
-                    console.log("[NightLight] queryHyprsunsetProcess output: " + text);
-                    const match = text.match(/-t\s+(\d+)/);
+                    const match = this.text.match(/-t\s+(\d+)/);
                     if (match && match[1]) {
                         const temp = parseInt(match[1]);
-                        const v = (6500 - temp) / 4000;
-                        controlCenter.syncTempFromSystem(v);
+                        controlCenter.localTemp = (6500 - temp) / 4000;
                     } else {
-                        controlCenter.syncTempFromSystem(0);
+                        controlCenter.localTemp = 0;
                     }
                 } else {
-                    controlCenter.syncTempFromSystem(0);
+                    controlCenter.localTemp = 0;
                 }
+                controlCenter.displayedTemp = controlCenter.localTemp;
             }
         }
     }
@@ -1272,7 +840,6 @@ Item {
         id: sliderIntroTimer
         interval: controlCenter.sliderIntroDelay
         repeat: false
-
         onTriggered: {
             controlCenter.sliderIntroPending = false;
             controlCenter.displayedBrightness = controlCenter.localBrightness;
@@ -1290,81 +857,94 @@ Item {
                 stop();
                 return;
             }
-
             controlCenter.batteryModeRefreshPollsRemaining -= 1;
             controlCenter.refreshBatteryModeState();
-
-            if (controlCenter.batteryModeRefreshPollsRemaining <= 0)
-                stop();
-        }
-    }
-
-    Timer {
-        id: bluetoothScanStopTimer
-        interval: 8000
-        repeat: false
-        onTriggered: {
-            if (controlCenter.bluetoothAdapter && controlCenter.bluetoothAdapter.discovering)
-                controlCenter.bluetoothAdapter.discovering = false;
-            controlCenter.bluetoothInfoMessage = "";
-        }
-    }
-
-    Timer {
-        id: batteryDrawerSettleTimer
-        interval: 300
-        repeat: false
-        onTriggered: controlCenter.batteryDrawerSettling = false
-    }
-
-    Connections {
-        target: wifiController
-
-        function onEnabledChanged() {
-            if (!controlCenter.wifiEnabled)
-                controlCenter.clearWifiPrompt();
         }
     }
 
     Connections {
-        target: bluetoothAdapter
-
-        function onEnabledChanged() {
-            if (!controlCenter.bluetoothAdapter.enabled) {
-                controlCenter.bluetoothPairAndConnectPath = "";
-                controlCenter.bluetoothInfoMessage = "";
-                controlCenter.bluetoothError = "";
-                controlCenter.bluetoothScanStopTimer.stop();
+        target: SystemServices
+        function onBrightnessSnapshotReady(value, errorString) {
+            if (errorString === "") syncBrightnessFromLevel(value);
+        }
+        function onBrightnessSetFinished(value, success, errorString) {
+            controlCenter.brightnessSetterRunning = false;
+            if (success) syncBrightnessFromLevel(value);
+        }
+        function onVolumeSnapshotReady(value, muted, errorString) {
+            if (errorString === "") {
+                syncVolumeFromLevel(value);
+                controlCenter.isMuted = !!muted;
             }
         }
-
-        function onDiscoveringChanged() {
-            if (!controlCenter.bluetoothAdapter.discovering)
-                controlCenter.bluetoothScanStopTimer.stop();
+        function onVolumeSetFinished(value, success, errorString) {
+            controlCenter.volumeSetterRunning = false;
+            if (success) syncVolumeFromLevel(value);
         }
     }
 
-    Connections {
-        target: bluetoothPairingAgent
+    anchors.fill: parent
+    anchors.margins: 18
+    opacity: showCondition ? 1 : 0
+    visible: opacity > 0
 
-        function onRequestChanged() {
-            controlCenter.bluetoothPendingSecretValue = "";
-            if (controlCenter.bluetoothPairingActive) {
-                controlCenter.bluetoothError = "";
-                controlCenter.setConnectivityPanelOpen("bluetooth", true);
-            }
+    onBrightnessLevelChanged: syncBrightnessFromLevel(brightnessLevel)
+    onVolumeLevelChanged: syncVolumeFromLevel(volumeLevel)
+
+    onShowConditionChanged: {
+        if (showCondition) {
+            sliderIntroPending = true;
+            displayedBrightness = localBrightness;
+            displayedVolume = localVolume;
+            displayedTemp = localTemp;
+            sliderIntroTimer.interval = sliderIntroDelay;
+            sliderIntroTimer.restart();
+            refreshBatteryModeState();
+            refreshAudioSinks();
+            checkHypridleProcess.running = true;
+            queryHyprsunsetProcess.running = true;
+        } else {
+            sliderIntroTimer.stop();
+            sliderIntroPending = false;
+            closeConnectivityPanels();
+            powerMenuOpen = false;
         }
+    }
 
-        function onRegistrationErrorChanged() {
-            if (!controlCenter.bluetoothPairingAgent)
-                return;
+    Component.onCompleted: {
+        syncBrightnessFromLevel(brightnessLevel);
+        syncVolumeFromLevel(volumeLevel);
+        displayedBrightness = localBrightness;
+        displayedVolume = localVolume;
+        displayedTemp = localTemp;
+        SystemServices.requestBrightness();
+        SystemServices.requestVolume();
+        refreshBatteryModeState();
+        refreshAudioSinks();
+        checkHypridleProcess.running = true;
+        queryHyprsunsetProcess.running = true;
+    }
 
-            if (!controlCenter.bluetoothPairingAgent.registered
-                    && controlCenter.bluetoothPairingAgent.registrationError.length > 0
-                    && controlCenter.bluetoothPanelOpen) {
-                controlCenter.bluetoothError = controlCenter.bluetoothPairingAgent.registrationError;
-            }
+    Behavior on opacity {
+        NumberAnimation {
+            duration: showCondition ? 240 : 100
+            easing.type: Easing.InOutQuad
         }
+    }
+
+    Behavior on displayedBrightness {
+        enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending
+        NumberAnimation { duration: 130; easing.type: Easing.OutCubic }
+    }
+
+    Behavior on displayedVolume {
+        enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending
+        NumberAnimation { duration: 130; easing.type: Easing.OutCubic }
+    }
+
+    Behavior on displayedTemp {
+        enabled: controlCenter.showCondition && !controlCenter.sliderIntroPending
+        NumberAnimation { duration: 130; easing.type: Easing.OutCubic }
     }
 
     MouseArea {
@@ -1373,65 +953,113 @@ Item {
         onClicked: (mouse) => { mouse.accepted = true; }
     }
 
+    // ================= MAIN LAYOUT =================
     Column {
         anchors.fill: parent
         spacing: 12
 
+        // TOP HEADER: Clock, Date/Day & Actions
         Item {
             width: parent.width
-            height: 28
-
-            Item {
-                anchors.left: parent.left
-                anchors.leftMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                width: 220
-                height: parent.height
-
-                Text {
-                    id: timeLabel
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: currentTime
-                    color: StyleTokens.textPrimaryBright
-                    font.pixelSize: 19
-                    font.family: heroFontFamily
-                    font.weight: Font.Bold
-                    font.letterSpacing: -0.45
-                }
-
-                Text {
-                    anchors.left: timeLabel.right
-                    anchors.leftMargin: 10
-                    anchors.baseline: timeLabel.baseline
-                    text: currentDateLabel
-                }
-            }
+            height: 38
 
             Row {
-                id: headerRightRow
-                anchors.right: parent.right
-                anchors.rightMargin: 2
+                anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 12
 
+                // Large digital clock
+                Text {
+                    id: timeLabel
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: controlCenter.currentTime
+                    color: "#ffffff"
+                    font.pixelSize: 25
+                    font.family: heroFontFamily
+                    font.weight: Font.Bold
+                    font.letterSpacing: -0.5
+                }
+
+                // Vertical divider line
                 Rectangle {
-                    id: settingsButton
-                    width: 24
-                    height: 24
-                    radius: 12
-                    color: settingsButtonMouse.containsMouse ? "#26ffffff" : StyleTokens.transparent
+                    width: 1.5
+                    height: 28
+                    radius: 1
+                    color: "#38383a"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                // Date & Day column
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 1
+
+                    Text {
+                        text: controlCenter.formattedOrdinalDate
+                        color: "#ffffff"
+                        font.pixelSize: 12
+                        font.family: textFontFamily
+                        font.weight: Font.DemiBold
+                    }
+
+                    Text {
+                        text: controlCenter.formattedDayOfWeek
+                        color: "#8e8e93"
+                        font.pixelSize: 11
+                        font.family: textFontFamily
+                        font.weight: Font.Medium
+                    }
+                }
+            }
+
+            // Right header icons: Power & Settings
+            Row {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 10
+
+                // Power button
+                Rectangle {
+                    width: 32
+                    height: 32
+                    radius: 16
+                    color: powerButtonMouse.containsMouse || controlCenter.powerMenuOpen ? "#33ffffff" : "#1c1c1e"
                     anchors.verticalCenter: parent.verticalCenter
 
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf011" // Power icon
+                        color: controlCenter.powerMenuOpen ? "#ff453a" : (powerButtonMouse.containsMouse ? "#ffffff" : "#8e8e93")
+                        font.pixelSize: 15
+                        font.family: iconFontFamily
                     }
+
+                    MouseArea {
+                        id: powerButtonMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: controlCenter.powerMenuOpen = !controlCenter.powerMenuOpen
+                    }
+                }
+
+                // Settings button
+                Rectangle {
+                    width: 32
+                    height: 32
+                    radius: 16
+                    color: settingsButtonMouse.containsMouse ? "#33ffffff" : "#1c1c1e"
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
 
                     Text {
                         anchors.centerIn: parent
                         text: "\uf013" // Gear icon
-                        color: settingsButtonMouse.containsMouse ? "#ffffff" : StyleTokens.textSecondary
-                        font.pixelSize: 14
+                        color: settingsButtonMouse.containsMouse ? "#ffffff" : "#8e8e93"
+                        font.pixelSize: 15
                         font.family: iconFontFamily
                     }
 
@@ -1450,267 +1078,118 @@ Item {
             }
         }
 
-        Row {
-            id: tilesRow1
+        // Optional Power Menu Dropdown Row
+        Item {
             width: parent.width
-            spacing: 12
+            height: controlCenter.powerMenuOpen ? 38 : 0
+            visible: height > 0
+            clip: true
 
-            // Wi-Fi Card
+            Behavior on height {
+                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+            }
+
             Rectangle {
-                id: wifiCard
-                width: (parent.width - 12) / 2
-                height: 76
-                radius: 20
-                color: "#1c1c1e"
+                anchors.fill: parent
+                radius: 12
+                color: "#252528"
 
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 16
 
-                // Top Row: Icon + iOS Toggle Switch
-                Item {
-                    id: wifiTopRow
-                    anchors.top: parent.top
-                    anchors.topMargin: 12
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    height: 24
-
-                    // Icon
+                    // Lock
                     Rectangle {
-                        width: 26
-                        height: 26
-                        radius: 13
-                        color: wifiEnabled ? "#0a84ff" : "#2c2c2e"
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Text {
+                        width: 76
+                        height: 28
+                        radius: 8
+                        color: lockMouse.containsMouse ? "#3a3a3c" : "#1c1c1e"
+                        Row {
                             anchors.centerIn: parent
-                            text: wifiGlyph
-                            color: "#ffffff"
-                            font.pixelSize: 13
-                            font.family: iconFontFamily
+                            spacing: 6
+                            Text { text: "\uf023"; color: "#ffffff"; font.family: iconFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "Lock"; color: "#ffffff"; font.family: textFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
                         }
-                    }
-
-                    // iOS Green Toggle Switch
-                    Rectangle {
-                        width: 38
-                        height: 22
-                        radius: 11
-                        color: wifiEnabled ? "#34c759" : "#3a3a3c"
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Behavior on color { ColorAnimation { duration: 180 } }
-
-                        Rectangle {
-                            width: 18
-                            height: 18
-                            radius: 9
-                            color: "#ffffff"
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: wifiEnabled ? (parent.width - width - 2) : 2
-
-                            Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutQuint } }
-                        }
-
                         MouseArea {
+                            id: lockMouse
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: controlCenter.toggleWifiEnabled()
-                        }
-                    }
-                }
-
-                // Bottom Row: Title + Status + Chevron
-                Item {
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 10
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    height: 30
-
-                    Column {
-                        anchors.left: parent.left
-                        anchors.right: wifiChevronText.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 1
-
-                        Text {
-                            width: parent.width
-                            text: "Wi-Fi"
-                            color: "#ffffff"
-                            font.pixelSize: 13
-                            font.family: textFontFamily
-                            font.weight: Font.DemiBold
-                            elide: Text.ElideRight
-                        }
-
-                        Text {
-                            width: parent.width
-                            text: wifiStatusText
-                            color: "#8e8e93"
-                            font.pixelSize: 10
-                            font.family: textFontFamily
-                            font.weight: Font.Medium
-                            elide: Text.ElideRight
-                        }
-                    }
-
-                    Text {
-                        id: wifiChevronText
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "›"
-                        color: "#8e8e93"
-                        font.pixelSize: 18
-                        font.family: textFontFamily
-                        font.weight: Font.Bold
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (wifiEnabled) {
-                                controlCenter.toggleConnectivityOverlay("wifi");
-                            } else {
-                                controlCenter.toggleWifiEnabled();
+                            onClicked: {
+                                controlCenter.powerMenuOpen = false;
+                                Quickshell.execDetached([Quickshell.env("HOME") + "/.local/src/HyprDots/tide-island/lockscreen/lock.sh"]);
                             }
                         }
                     }
-                }
-            }
 
-            // Bluetooth Card
-            Rectangle {
-                id: bluetoothCard
-                width: (parent.width - 12) / 2
-                height: 76
-                radius: 20
-                color: "#1c1c1e"
-
-                Behavior on color { ColorAnimation { duration: 150 } }
-
-                // Top Row: Icon + iOS Toggle Switch
-                Item {
-                    id: btTopRow
-                    anchors.top: parent.top
-                    anchors.topMargin: 12
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    height: 24
-
-                    // Icon
+                    // Suspend
                     Rectangle {
-                        width: 26
-                        height: 26
-                        radius: 13
-                        color: bluetoothEnabled ? "#0a84ff" : "#2c2c2e"
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Text {
+                        width: 76
+                        height: 28
+                        radius: 8
+                        color: suspendMouse.containsMouse ? "#3a3a3c" : "#1c1c1e"
+                        Row {
                             anchors.centerIn: parent
-                            text: bluetoothGlyph
-                            color: "#ffffff"
-                            font.pixelSize: 13
-                            font.family: iconFontFamily
+                            spacing: 6
+                            Text { text: "\uf186"; color: "#ffffff"; font.family: iconFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "Sleep"; color: "#ffffff"; font.family: textFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
                         }
-                    }
-
-                    // iOS Green Toggle Switch
-                    Rectangle {
-                        width: 38
-                        height: 22
-                        radius: 11
-                        color: bluetoothEnabled ? "#34c759" : "#3a3a3c"
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Behavior on color { ColorAnimation { duration: 180 } }
-
-                        Rectangle {
-                            width: 18
-                            height: 18
-                            radius: 9
-                            color: "#ffffff"
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: bluetoothEnabled ? (parent.width - width - 2) : 2
-
-                            Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutQuint } }
-                        }
-
                         MouseArea {
+                            id: suspendMouse
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: controlCenter.toggleBluetoothEnabled()
-                        }
-                    }
-                }
-
-                // Bottom Row: Title + Status + Chevron
-                Item {
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 10
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    height: 30
-
-                    Column {
-                        anchors.left: parent.left
-                        anchors.right: btChevronText.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 1
-
-                        Text {
-                            width: parent.width
-                            text: "Bluetooth"
-                            color: "#ffffff"
-                            font.pixelSize: 13
-                            font.family: textFontFamily
-                            font.weight: Font.DemiBold
-                            elide: Text.ElideRight
-                        }
-
-                        Text {
-                            width: parent.width
-                            text: bluetoothStatusText
-                            color: "#8e8e93"
-                            font.pixelSize: 10
-                            font.family: textFontFamily
-                            font.weight: Font.Medium
-                            elide: Text.ElideRight
+                            onClicked: {
+                                controlCenter.powerMenuOpen = false;
+                                Quickshell.execDetached(["systemctl", "suspend"]);
+                            }
                         }
                     }
 
-                    Text {
-                        id: btChevronText
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "›"
-                        color: "#8e8e93"
-                        font.pixelSize: 18
-                        font.family: textFontFamily
-                        font.weight: Font.Bold
+                    // Reboot
+                    Rectangle {
+                        width: 76
+                        height: 28
+                        radius: 8
+                        color: rebootMouse.containsMouse ? "#3a3a3c" : "#1c1c1e"
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text { text: "\uf021"; color: "#ff9f0a"; font.family: iconFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "Reboot"; color: "#ffffff"; font.family: textFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                        }
+                        MouseArea {
+                            id: rebootMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                controlCenter.powerMenuOpen = false;
+                                Quickshell.execDetached(["systemctl", "reboot"]);
+                            }
+                        }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (bluetoothEnabled) {
-                                controlCenter.toggleConnectivityOverlay("bluetooth");
-                            } else {
-                                controlCenter.toggleBluetoothEnabled();
+                    // Power Off
+                    Rectangle {
+                        width: 76
+                        height: 28
+                        radius: 8
+                        color: poweroffMouse.containsMouse ? "#ff453a" : "#1c1c1e"
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text { text: "\uf011"; color: poweroffMouse.containsMouse ? "#ffffff" : "#ff453a"; font.family: iconFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "Shut Down"; color: "#ffffff"; font.family: textFontFamily; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                        }
+                        MouseArea {
+                            id: poweroffMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                controlCenter.powerMenuOpen = false;
+                                Quickshell.execDetached(["systemctl", "poweroff"]);
                             }
                         }
                     }
@@ -1718,78 +1197,581 @@ Item {
             }
         }
 
+        // ================= TWO-COLUMN GRID (Quick Controls) =================
         Row {
-            id: tilesRow2
             width: parent.width
+            height: 192
             spacing: 12
 
-            // Battery Profile Card
-            Rectangle {
-                id: powerModeCard
-                width: (parent.width - 12) / 2
-                height: 76
-                radius: 20
-                color: "#1c1c1e"
+            // -------- LEFT COLUMN (~54% width) --------
+            Column {
+                width: (parent.width - 12) * 0.54
+                height: parent.height
+                spacing: 8
 
-                Behavior on color { ColorAnimation { duration: 150 } }
+                // 1. BATTERY & POWER PROFILES CARD
+                Rectangle {
+                    width: parent.width
+                    height: 76
+                    radius: 18
+                    color: "#1c1c1e"
 
-                Item {
-                    anchors.top: parent.top
-                    anchors.topMargin: 10
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    height: 20
+                    Behavior on color { ColorAnimation { duration: 150 } }
 
-                    Text {
+                    // Card header
+                    Item {
+                        anchors.top: parent.top
+                        anchors.topMargin: 10
                         anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "Battery"
-                        color: "#ffffff"
-                        font.pixelSize: 13
-                        font.family: textFontFamily
-                        font.weight: Font.DemiBold
+                        anchors.leftMargin: 14
+                        anchors.right: parent.right
+                        anchors.rightMargin: 14
+                        height: 20
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 6
+
+                            Text {
+                                text: "Battery"
+                                color: "#ffffff"
+                                font.pixelSize: 13
+                                font.family: textFontFamily
+                                font.weight: Font.DemiBold
+                            }
+
+                            Text {
+                                text: (controlCenter.batteryCapacity > 0 ? (controlCenter.batteryCapacity + "%") : "") + (controlCenter.isCharging ? " \uf0e7" : "")
+                                color: "#8e8e93"
+                                font.pixelSize: 11
+                                font.family: iconFontFamily
+                                visible: controlCenter.batteryCapacity > 0 || controlCenter.isCharging
+                            }
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: controlCenter.batteryModeStatusText
+                            color: "#8e8e93"
+                            font.pixelSize: 11
+                            font.family: textFontFamily
+                            font.weight: Font.Medium
+                        }
                     }
 
-                    Text {
+                    // Mode switcher pills (Leaf, Battery, Lightning)
+                    Row {
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 10
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
                         anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: controlCenter.batteryModeStatusText
-                        color: "#8e8e93"
-                        font.pixelSize: 11
-                        font.family: textFontFamily
-                        font.weight: Font.Medium
+                        anchors.rightMargin: 10
+                        height: 28
+                        spacing: 6
+
+                        Repeater {
+                            model: [
+                                { icon: "\uf06c", label: "Power Saver" },
+                                { icon: "\uf242", label: "Balanced" },
+                                { icon: "\uf0e7", label: "Performance" }
+                            ]
+                            delegate: Rectangle {
+                                required property var modelData
+                                required property int index
+
+                                width: (parent.width - 12) / 3
+                                height: 28
+                                radius: 14
+                                color: controlCenter.batteryModeIndex === index ? "#ffffff" : (pillMouse.containsMouse ? "#323236" : "#2c2c2e")
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: modelData.icon
+                                    color: index === controlCenter.batteryModeIndex ? "#121418" : "#8e8e93"
+                                    font.pixelSize: 13
+                                    font.family: iconFontFamily
+                                }
+
+                                MouseArea {
+                                    id: pillMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: controlCenter.selectBatteryMode(index)
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Profile Selector Pills
+                // 2. SCREEN RECORDING CARD
+                Rectangle {
+                    width: parent.width
+                    height: 52
+                    radius: 16
+                    color: controlCenter.screenRecordingActive ? "#321618" : (recMouse.containsMouse ? "#242428" : "#1c1c1e")
+                    border.width: controlCenter.screenRecordingActive ? 1 : 0
+                    border.color: controlCenter.screenRecordingActive ? "#ff453a55" : "transparent"
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        // Record / Stop Badge
+                        Rectangle {
+                            width: 30
+                            height: 30
+                            radius: 15
+                            color: controlCenter.screenRecordingActive ? "#ff453a" : "#2c2c2e"
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            // Pulsing square when recording, red circle when idle
+                            Rectangle {
+                                width: controlCenter.screenRecordingActive ? 10 : 12
+                                height: controlCenter.screenRecordingActive ? 10 : 12
+                                radius: controlCenter.screenRecordingActive ? 2 : 6
+                                color: controlCenter.screenRecordingActive ? "#ffffff" : "#ff453a"
+                                anchors.centerIn: parent
+                            }
+                        }
+
+                        // Text Column
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 1
+                            width: parent.width - 42
+
+                            Text {
+                                text: controlCenter.screenRecordingActive
+                                    ? ("Recording • " + controlCenter.formatRecordingTime(controlCenter.recordingElapsedSeconds))
+                                    : "Screen Record"
+                                color: controlCenter.screenRecordingActive ? "#ff453a" : "#ffffff"
+                                font.pixelSize: 12
+                                font.family: textFontFamily
+                                font.weight: Font.DemiBold
+                            }
+
+                            Text {
+                                text: controlCenter.screenRecordingActive ? "Click to stop recording" : "Click to start recording"
+                                color: "#8e8e93"
+                                font.pixelSize: 10
+                                font.family: textFontFamily
+                                elide: Text.ElideRight
+                                width: parent.width
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: recMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: controlCenter.toggleScreenRecording()
+                    }
+                }
+
+                // 3. COFFEE MODE CARD
+                Rectangle {
+                    width: parent.width
+                    height: 48
+                    radius: 16
+                    color: coffeeMouse.containsMouse ? "#242428" : "#1c1c1e"
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 10
+
+                            Text {
+                                text: "\uf0f4" // Coffee cup
+                                color: controlCenter.caffeineMode ? "#ff9f0a" : "#8e8e93"
+                                font.pixelSize: 15
+                                font.family: iconFontFamily
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: "Coffee mode"
+                                color: "#ffffff"
+                                font.pixelSize: 13
+                                font.family: textFontFamily
+                                font.weight: Font.Medium
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        // iOS-style Toggle Switch
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 38
+                            height: 22
+                            radius: 11
+                            color: controlCenter.caffeineMode ? "#ff9f0a" : "#39393d"
+
+                            Behavior on color { ColorAnimation { duration: 180 } }
+
+                            Rectangle {
+                                width: 18
+                                height: 18
+                                radius: 9
+                                color: "#ffffff"
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: controlCenter.caffeineMode ? 18 : 2
+
+                                Behavior on x {
+                                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                }
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: coffeeMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: controlCenter.toggleCaffeineMode()
+                    }
+                }
+            }
+
+            // -------- RIGHT COLUMN (~46% width) --------
+            Column {
+                width: (parent.width - 12) * 0.46
+                height: parent.height
+                spacing: 8
+
+                // 1. TOP ROW: 3 CIRCULAR TOGGLE BUTTONS
                 Row {
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 10
-                    anchors.left: parent.left
-                    anchors.leftMargin: 12
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    height: 28
-                    spacing: 6
+                    width: parent.width
+                    height: 48
+                    spacing: 8
 
-                    Repeater {
-                        model: ["\uf06c", "\uf242", "\uf0e7"]
-                        delegate: Rectangle {
-                            required property string modelData
-                            required property int index
-                            width: (parent.width - 12) / 3
-                            height: 28
-                            radius: 14
-                            color: controlCenter.batteryModeIndex === index ? "#ffffff" : "#2c2c2e"
+                    readonly property real circleSize: (width - 16) / 3
 
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                    // Wi-Fi Button
+                    Rectangle {
+                        width: parent.circleSize
+                        height: 48
+                        radius: 24
+                        color: controlCenter.wifiEnabled ? (controlCenter.themeColors ? controlCenter.themeColors.primary : "#0a84ff") : (wifiBtnMouse.containsMouse ? "#28282c" : "#1c1c1e")
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: controlCenter.wifiGlyph
+                            color: controlCenter.wifiEnabled ? "#ffffff" : "#8e8e93"
+                            font.pixelSize: 18
+                            font.family: iconFontFamily
+                        }
+
+                        MouseArea {
+                            id: wifiBtnMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: (mouse) => {
+                                if (mouse.button === Qt.RightButton) {
+                                    controlCenter.toggleConnectivityOverlay("wifi");
+                                } else {
+                                    controlCenter.toggleWifiEnabled();
+                                }
+                            }
+                        }
+                    }
+
+                    // Bluetooth Button
+                    Rectangle {
+                        width: parent.circleSize
+                        height: 48
+                        radius: 24
+                        color: controlCenter.bluetoothEnabled ? (controlCenter.themeColors ? controlCenter.themeColors.primary : "#0a84ff") : (btBtnMouse.containsMouse ? "#28282c" : "#1c1c1e")
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: controlCenter.bluetoothGlyph
+                            color: controlCenter.bluetoothEnabled ? "#ffffff" : "#8e8e93"
+                            font.pixelSize: 18
+                            font.family: iconFontFamily
+                        }
+
+                        MouseArea {
+                            id: btBtnMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: (mouse) => {
+                                if (mouse.button === Qt.RightButton) {
+                                    controlCenter.toggleConnectivityOverlay("bluetooth");
+                                } else {
+                                    controlCenter.toggleBluetoothEnabled();
+                                }
+                            }
+                        }
+                    }
+
+                    // Do Not Disturb / Silent Button
+                    Rectangle {
+                        width: parent.circleSize
+                        height: 48
+                        radius: 24
+                        color: controlCenter.dndActive ? "#ff453a" : (dndBtnMouse.containsMouse ? "#28282c" : "#1c1c1e")
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: controlCenter.dndActive ? "\u{F00A0}" : "\uf0f3"
+                            color: controlCenter.dndActive ? "#ffffff" : "#8e8e93"
+                            font.pixelSize: 18
+                            font.family: iconFontFamily
+                        }
+
+                        MouseArea {
+                            id: dndBtnMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenter.dndToggleRequested()
+                        }
+                    }
+                }
+
+                // 2. BOTTOM ROW: 3 VERTICAL SLIDERS
+                Row {
+                    width: parent.width
+                    height: 136
+                    spacing: 8
+
+                    readonly property real sliderW: (width - 16) / 3
+
+                    // Brightness Slider
+                    ControlSliderVertical {
+                        width: parent.sliderW
+                        height: parent.height
+                        value: controlCenter.displayedBrightness
+                        iconText: controlCenter.brightnessIconGlyph
+                        iconFontFamily: controlCenter.iconFontFamily
+                        fillColor: "#ffffff"
+
+                        onInteractionStarted: {
+                            if (controlCenter.sliderIntroPending) {
+                                sliderIntroTimer.stop();
+                                controlCenter.sliderIntroPending = false;
+                                controlCenter.displayedBrightness = controlCenter.localBrightness;
+                            }
+                        }
+                        onValueMoved: (val) => controlCenter.queueBrightness(val)
+                        onCommitRequested: {
+                            brightnessApplyTimer.stop();
+                            controlCenter.flushBrightness(true);
+                        }
+                        onCancelRequested: SystemServices.requestBrightness()
+                    }
+
+                    // Volume Slider
+                    ControlSliderVertical {
+                        width: parent.sliderW
+                        height: parent.height
+                        value: controlCenter.displayedVolume
+                        iconText: controlCenter.volumeIconGlyph
+                        iconFontFamily: controlCenter.iconFontFamily
+                        fillColor: "#ffffff"
+
+                        onInteractionStarted: {
+                            if (controlCenter.sliderIntroPending) {
+                                sliderIntroTimer.stop();
+                                controlCenter.sliderIntroPending = false;
+                                controlCenter.displayedVolume = controlCenter.localVolume;
+                            }
+                        }
+                        onValueMoved: (val) => controlCenter.queueVolume(val)
+                        onCommitRequested: {
+                            volumeApplyTimer.stop();
+                            controlCenter.flushVolume(true);
+                        }
+                        onCancelRequested: SystemServices.requestVolume()
+                    }
+
+                    // Night Light / Temperature Slider
+                    ControlSliderVertical {
+                        width: parent.sliderW
+                        height: parent.height
+                        value: controlCenter.displayedTemp
+                        iconText: "\uf186" // Moon / Night light icon
+                        iconFontFamily: controlCenter.iconFontFamily
+                        fillColor: controlCenter.displayedTemp > 0.05 ? "#ff9f0a" : "#ffffff"
+
+                        onInteractionStarted: {
+                            if (controlCenter.sliderIntroPending) {
+                                sliderIntroTimer.stop();
+                                controlCenter.sliderIntroPending = false;
+                                controlCenter.displayedTemp = controlCenter.localTemp;
+                            }
+                        }
+                        onValueMoved: (val) => controlCenter.queueTemp(val)
+                        onCommitRequested: {
+                            tempApplyTimer.stop();
+                            controlCenter.flushTemp(true);
+                        }
+                        onCancelRequested: queryHyprsunsetProcess.running = true
+                    }
+                }
+            }
+        }
+
+        // ================= MEDIA PLAYER CARD (Full Width) =================
+        Rectangle {
+            id: playerCard
+            width: parent.width
+            height: 114
+            radius: 20
+            color: "#1c1c1e"
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 10
+
+                // Top: Art, Title/Artist & Playback Controls
+                Item {
+                    width: parent.width
+                    height: 48
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.right: playerControlsRow.left
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 12
+
+                        // Album art thumbnail
+                        Rectangle {
+                            width: 44
+                            height: 44
+                            radius: 10
+                            color: "#2c2c2e"
+                            clip: true
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Image {
+                                anchors.fill: parent
+                                source: controlCenter.currentArtUrl
+                                fillMode: Image.PreserveAspectCrop
+                                visible: source.toString() !== ""
+                                sourceSize: Qt.size(88, 88)
+                                asynchronous: true
+                            }
 
                             Text {
                                 anchors.centerIn: parent
-                                text: modelData
-                                color: index === controlCenter.batteryModeIndex ? "#121418" : "#8e8e93"
+                                text: "\uf001" // Music note fallback
+                                color: "#8e8e93"
+                                font.pixelSize: 18
+                                font.family: iconFontFamily
+                                visible: !controlCenter.currentArtUrl || controlCenter.currentArtUrl === ""
+                            }
+                        }
+
+                        // Title & Artist
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 3
+                            width: parent.width - 56
+
+                            Text {
+                                width: parent.width
+                                text: controlCenter.currentTrack.length > 0 ? controlCenter.currentTrack : "Not Playing"
+                                color: "#ffffff"
+                                font.pixelSize: 13
+                                font.family: textFontFamily
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                width: parent.width
+                                text: controlCenter.currentArtist.length > 0 ? controlCenter.currentArtist : "No media active"
+                                color: "#8e8e93"
+                                font.pixelSize: 11
+                                font.family: textFontFamily
+                                font.weight: Font.Medium
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    // Playback Controls: Prev, Play/Pause, Next
+                    Row {
+                        id: playerControlsRow
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 12
+
+                        // Prev
+                        Rectangle {
+                            width: 28
+                            height: 28
+                            radius: 14
+                            color: prevMouse.containsMouse ? "#2c2c2e" : "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "\uf048" // Step backward
+                                color: prevMouse.containsMouse ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 12
+                                font.family: iconFontFamily
+                            }
+
+                            MouseArea {
+                                id: prevMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: if (controlCenter.activePlayer) controlCenter.activePlayer.previous()
+                            }
+                        }
+
+                        // Play/Pause prominent button
+                        Rectangle {
+                            width: 34
+                            height: 34
+                            radius: 17
+                            color: "#ffffff"
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: (controlCenter.musicPlaying || (controlCenter.activePlayer && controlCenter.activePlayer.playbackState === MprisPlaybackState.Playing)) ? "\uf04c" : "\uf04b"
+                                color: "#121418"
                                 font.pixelSize: 13
                                 font.family: iconFontFamily
                             }
@@ -1797,509 +1779,413 @@ Item {
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: controlCenter.selectBatteryMode(index)
+                                onClicked: controlCenter.togglePlayback()
                             }
                         }
-                    }
-                }
-            }
 
-            // Quick Toggles Card (Silent, Night mode & Caffeine mode)
-            Rectangle {
-                id: quickTogglesCard
-                width: (parent.width - 12) / 2
-                height: 76
-                radius: 20
-                color: "#1c1c1e"
-
-                Row {
-                    anchors.fill: parent
-
-                    // Silent / DND Column
-                    Item {
-                        width: (parent.width - 2) / 3
-                        height: parent.height
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 4
+                        // Next
+                        Rectangle {
+                            width: 28
+                            height: 28
+                            radius: 14
+                            color: nextMouse.containsMouse ? "#2c2c2e" : "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
 
                             Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: dndActive ? "\uf1f6" : "\uf0f3"
-                                color: dndActive ? "#ffffff" : "#8e8e93"
-                                font.pixelSize: 18
+                                anchors.centerIn: parent
+                                text: "\uf051" // Step forward
+                                color: nextMouse.containsMouse ? "#ffffff" : "#8e8e93"
+                                font.pixelSize: 12
                                 font.family: iconFontFamily
                             }
 
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: "Silent"
-                                color: dndActive ? "#ffffff" : "#8e8e93"
-                                font.pixelSize: 11
-                                font.family: textFontFamily
-                                font.weight: Font.Medium
+                            MouseArea {
+                                id: nextMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: if (controlCenter.activePlayer) controlCenter.activePlayer.next()
                             }
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: controlCenter.dndToggleRequested()
-                        }
-                    }
-
-                    // Divider
-                    Rectangle {
-                        width: 1
-                        height: parent.height - 24
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: "#2c2c2e"
-                    }
-
-                    // Night Mode Column
-                    Item {
-                        width: (parent.width - 2) / 3
-                        height: parent.height
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 4
-
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: "\uf186"
-                                color: (controlCenter.displayedTemp > 0) ? "#ffffff" : "#8e8e93"
-                                font.pixelSize: 18
-                                font.family: iconFontFamily
-                            }
-
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: "Night mode"
-                                color: (controlCenter.displayedTemp > 0) ? "#ffffff" : "#8e8e93"
-                                font.pixelSize: 11
-                                font.family: textFontFamily
-                                font.weight: Font.Medium
-                            }
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                const nextVal = (controlCenter.displayedTemp > 0) ? 0 : 0.6;
-                                controlCenter.queueTemp(nextVal);
-                                controlCenter.flushTemp(true);
-                            }
-                        }
-                    }
-
-                    // Divider
-                    Rectangle {
-                        width: 1
-                        height: parent.height - 24
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: "#2c2c2e"
-                    }
-
-                    // Caffeine Mode Column
-                    Item {
-                        width: (parent.width - 2) / 3
-                        height: parent.height
-
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 4
-
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: "\uf0f4"
-                                color: controlCenter.caffeineMode ? "#ffffff" : "#8e8e93"
-                                font.pixelSize: 18
-                                font.family: iconFontFamily
-                            }
-
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: "Caffeine"
-                                color: controlCenter.caffeineMode ? "#ffffff" : "#8e8e93"
-                                font.pixelSize: 11
-                                font.family: textFontFamily
-                                font.weight: Font.Medium
-                            }
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: controlCenter.toggleCaffeineMode()
                         }
                     }
                 }
-            }
-        }
 
-        // Center Drag Handle Pill
-        Rectangle {
-            width: 36
-            height: 4
-            radius: 2
-            color: "#3a3a3c"
-            anchors.horizontalCenter: parent.horizontalCenter
-        }
-
-        ControlSliderCard {
-            id: brightnessCard
-            width: parent.width
-            height: 68
-            title: "Display"
-            iconText: controlCenter.brightnessIconGlyph
-            iconFontFamily: controlCenter.iconFontFamily
-            textFontFamily: controlCenter.textFontFamily
-            value: controlCenter.displayedBrightness
-            knobSize: controlCenter.sliderKnobSize
-            moduleColor: controlCenter.moduleColor
-            moduleHover: controlCenter.moduleHover
-            trackColor: controlCenter.trackColor
-            textPrimary: controlCenter.textPrimary
-            textSecondary: controlCenter.textSecondary
-            activeColor: controlCenter.cardAccent
-            activeHover: controlCenter.cardFillHover
-
-            onInteractionStarted: {
-                if (controlCenter.sliderIntroPending) {
-                    sliderIntroTimer.stop();
-                    controlCenter.sliderIntroPending = false;
-                    controlCenter.displayedBrightness = controlCenter.localBrightness;
-                    controlCenter.displayedVolume = controlCenter.localVolume;
-                    controlCenter.displayedTemp = controlCenter.localTemp;
-                }
-            }
-            onValueMoved: function(value) {
-                controlCenter.queueBrightness(value);
-            }
-            onCommitRequested: {
-                brightnessApplyTimer.stop();
-                controlCenter.flushBrightness(true);
-            }
-            onCancelRequested: SystemServices.requestBrightness()
-        }
-
-        ControlSliderCard {
-            id: volumeCard
-            width: parent.width
-            height: 68
-            title: "Sound"
-            iconText: controlCenter.volumeIconGlyph
-            iconFontFamily: controlCenter.iconFontFamily
-            textFontFamily: controlCenter.textFontFamily
-            value: controlCenter.displayedVolume
-            knobSize: controlCenter.sliderKnobSize
-            moduleColor: controlCenter.moduleColor
-            moduleHover: controlCenter.moduleHover
-            trackColor: controlCenter.trackColor
-            textPrimary: controlCenter.textPrimary
-            textSecondary: controlCenter.textSecondary
-            activeColor: controlCenter.cardAccent
-            activeHover: controlCenter.cardFillHover
-
-            onInteractionStarted: {
-                if (controlCenter.sliderIntroPending) {
-                    sliderIntroTimer.stop();
-                    controlCenter.sliderIntroPending = false;
-                    controlCenter.displayedBrightness = controlCenter.localBrightness;
-                    controlCenter.displayedVolume = controlCenter.localVolume;
-                    controlCenter.displayedTemp = controlCenter.localTemp;
-                }
-            }
-            onValueMoved: function(value) {
-                controlCenter.queueVolume(value);
-            }
-            onCommitRequested: {
-                volumeApplyTimer.stop();
-                controlCenter.flushVolume(true);
-            }
-            onCancelRequested: SystemServices.requestVolume()
-        }
-
-        ControlSliderCard {
-            id: tempCard
-            width: parent.width
-            height: 68
-            title: "Temperature"
-            iconText: "\uf186"
-            iconFontFamily: controlCenter.iconFontFamily
-            textFontFamily: controlCenter.textFontFamily
-            value: controlCenter.displayedTemp
-            knobSize: controlCenter.sliderKnobSize
-            moduleColor: controlCenter.moduleColor
-            moduleHover: controlCenter.moduleHover
-            trackColor: controlCenter.trackColor
-            textPrimary: controlCenter.textPrimary
-            textSecondary: controlCenter.textSecondary
-            activeColor: controlCenter.cardAccent
-            activeHover: controlCenter.cardFillHover
-
-            onInteractionStarted: {
-                if (controlCenter.sliderIntroPending) {
-                    sliderIntroTimer.stop();
-                    controlCenter.sliderIntroPending = false;
-                    controlCenter.displayedBrightness = controlCenter.localBrightness;
-                    controlCenter.displayedVolume = controlCenter.localVolume;
-                    controlCenter.displayedTemp = controlCenter.localTemp;
-                }
-            }
-            onValueMoved: function(value) {
-                controlCenter.queueTemp(value);
-            }
-            onCommitRequested: {
-                tempApplyTimer.stop();
-                controlCenter.flushTemp(true);
-            }
-            onCancelRequested: queryHyprsunsetProcess.running = true
-        }
-
-        Item {
-            width: parent.width
-            height: parent.height - y - 12
-            clip: true
-
-            Rectangle {
-                id: notificationsDivider
-                width: parent.width
-                height: 1
-                color: "#2c3038"
-                opacity: 0.8
-                anchors.top: parent.top
-            }
-
-            Item {
-                id: notificationsHeader
-                anchors.top: notificationsDivider.bottom
-                anchors.topMargin: 12
-                width: parent.width
-                height: 20
-
-                Row {
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
+                // Bottom: Timestamps + Waveform Visualizer Scrubber
+                Item {
+                    width: parent.width
+                    height: 28
 
                     Text {
-                        text: "Notifications"
-                        color: StyleTokens.textMuted
+                        id: timePlayedLabel
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: controlCenter.timePlayed
+                        color: "#8e8e93"
                         font.pixelSize: 11
                         font.family: textFontFamily
                         font.weight: Font.Medium
                     }
 
-                    // DND Toggle Button
+                    // Scrubber with acoustic soundwave bars & playhead line
                     Item {
-                        width: 20
-                        height: 20
+                        id: scrubberArea
+                        anchors.left: timePlayedLabel.right
+                        anchors.leftMargin: 10
+                        anchors.right: timeTotalLabel.left
+                        anchors.rightMargin: 10
+                        height: parent.height
                         anchors.verticalCenter: parent.verticalCenter
 
-                        Rectangle {
+                        readonly property int barCount: 36
+                        readonly property real progressFrac: controlCenter.clamp01(controlCenter.trackProgress)
+
+                        Row {
                             anchors.fill: parent
-                            radius: 10
-                            color: dndActive ? "#ff453a" : (themeColors ? themeColors.secondary_container : "#2c2c2e")
-                            opacity: dndMouseArea.containsMouse ? 1.0 : 0.8
-                            
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            spacing: Math.max(1, (parent.width - (scrubberArea.barCount * 3)) / (scrubberArea.barCount - 1))
+
+                            Repeater {
+                                model: scrubberArea.barCount
+
+                                delegate: Rectangle {
+                                    required property int index
+                                    readonly property real frac: index / (scrubberArea.barCount - 1)
+                                    readonly property bool isPlayed: frac <= scrubberArea.progressFrac
+
+                                    width: 3
+                                    height: controlCenter.waveformHeight(index, scrubberArea.barCount)
+                                    radius: 1.5
+                                    color: isPlayed ? "#ffffff" : "#38383c"
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Behavior on height {
+                                        enabled: !controlCenter.musicPlaying
+                                        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                    }
+                                }
+                            }
                         }
 
-                        Text {
-                            anchors.centerIn: parent
-                            text: dndActive ? "\u{F00A0}" : "\uf0f3" // bell-sleep (bell with zzz's) or normal bell
-                            font.family: iconFontFamily
-                            font.pixelSize: 11
-                            color: dndActive ? "#ffffff" : StyleTokens.textMuted
+                        // Playhead line cursor (like the `|` in drawing)
+                        Rectangle {
+                            width: 2
+                            height: 20
+                            radius: 1
+                            color: "#ffffff"
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: scrubberArea.progressFrac * Math.max(0, scrubberArea.width - 2)
 
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on x {
+                                enabled: !scrubberMouse.pressed
+                                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                            }
                         }
 
                         MouseArea {
-                            id: dndMouseArea
+                            id: scrubberMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+
+                            function seekFromMouse(mouseX) {
+                                if (width <= 0) return;
+                                const frac = controlCenter.clamp01(mouseX / width);
+                                controlCenter.seekTrack(frac);
+                            }
+
+                            onPressed: (mouse) => seekFromMouse(mouse.x)
+                            onPositionChanged: (mouse) => { if (pressed) seekFromMouse(mouse.x); }
+                        }
+                    }
+
+                    Text {
+                        id: timeTotalLabel
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: controlCenter.timeTotal
+                        color: "#8e8e93"
+                        font.pixelSize: 11
+                        font.family: textFontFamily
+                        font.weight: Font.Medium
+                    }
+                }
+            }
+        }
+
+        // ================= BOTTOM DRAGGABLE HANDLE =================
+        Item {
+            id: bottomHandle
+            width: parent.width
+            height: 18
+
+            // Horizontal rounded pill
+            Rectangle {
+                width: 46
+                height: 5
+                radius: 2.5
+                color: handleMouseArea.containsMouse ? "#636366" : "#3a3a3c"
+                anchors.centerIn: parent
+
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+
+            MouseArea {
+                id: handleMouseArea
+                anchors.fill: parent
+                anchors.margins: -4
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                preventStealing: true
+
+                property real startY: 0
+                onPressed: (mouse) => { startY = mouse.y; }
+                onReleased: (mouse) => {
+                    const delta = mouse.y - startY;
+                    if (delta > 20) {
+                        controlCenter.notificationsExpanded = true;
+                    } else if (delta < -20) {
+                        controlCenter.notificationsExpanded = false;
+                    } else {
+                        controlCenter.notificationsExpanded = !controlCenter.notificationsExpanded;
+                    }
+                }
+                onCanceled: {}
+            }
+        }
+
+        // ================= NOTIFICATIONS DRAWER =================
+        Item {
+            id: notificationsDrawer
+            width: parent.width
+            height: controlCenter.controlCenterExtraHeight
+            visible: controlCenter.controlCenterExtraHeight > 4
+            clip: true
+            opacity: Math.min(1.0, controlCenter.controlCenterExtraHeight / 160)
+
+            Column {
+                anchors.fill: parent
+                spacing: 8
+
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: "#2c3038"
+                    opacity: 0.8
+                }
+
+                // Header
+                Item {
+                    width: parent.width
+                    height: 22
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 8
+
+                        Text {
+                            text: "Notifications"
+                            color: "#ffffff"
+                            font.pixelSize: 12
+                            font.family: textFontFamily
+                            font.weight: Font.DemiBold
+                        }
+
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: "#2c2c2e"
+                            visible: notificationModel && notificationModel.count > 0
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: notificationModel ? String(notificationModel.count) : "0"
+                                color: "#8e8e93"
+                                font.pixelSize: 10
+                                font.family: textFontFamily
+                                font.weight: Font.Bold
+                            }
+                        }
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Clear all"
+                        color: clearAllMouse.containsMouse ? "#ffffff" : "#3bc99d"
+                        font.pixelSize: 11
+                        font.family: textFontFamily
+                        font.weight: Font.Medium
+                        visible: notificationModel && notificationModel.count > 0
+
+                        MouseArea {
+                            id: clearAllMouse
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                controlCenter.dndToggleRequested();
+                                if (notificationModel) notificationModel.clear();
                             }
                         }
                     }
                 }
 
-                Text {
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Clear all"
-                    color: "#3bc99d"
-                    font.pixelSize: 11
-                    font.family: textFontFamily
-                    font.weight: Font.Medium
+                // Empty state
+                Item {
+                    width: parent.width
+                    height: Math.max(0, parent.height - 34)
+                    visible: !notificationModel || notificationModel.count === 0
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "No new notifications"
+                        color: "#8e8e93"
+                        font.pixelSize: 12
+                        font.family: textFontFamily
+                    }
+                }
+
+                // Notifications ListView
+                ListView {
+                    id: notificationsList
+                    width: parent.width
+                    height: Math.max(0, parent.height - 34)
+                    spacing: 8
+                    model: notificationModel
+                    interactive: contentHeight > height
+                    clip: true
                     visible: notificationModel && notificationModel.count > 0
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            if (notificationModel) {
-                                notificationModel.clear();
-                            }
-                        }
-                    }
-                }
-            }
+                    delegate: Rectangle {
+                        width: notificationsList.width
+                        height: 68
+                        radius: 14
+                        color: notifItemMouse.containsMouse ? "#272a34" : "#1c1f26"
 
-            Text {
-                anchors.centerIn: parent
-                anchors.verticalCenterOffset: 10
-                text: "No new notifications"
-                color: StyleTokens.textMuted
-                font.pixelSize: 12
-                font.family: textFontFamily
-                visible: !notificationModel || notificationModel.count === 0
-            }
-
-            ListView {
-                id: notificationsList
-                anchors.top: notificationsHeader.bottom
-                anchors.topMargin: 8
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                spacing: 8
-                model: notificationModel
-                interactive: contentHeight > height
-                clip: true
-
-                delegate: Rectangle {
-                    id: notificationItem
-                    width: notificationsList.width
-                    height: 72
-                    radius: 12
-                    color: notificationMouseArea.containsMouse ? "#272a34" : "#1c1f26"
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    MouseArea {
-                        id: notificationMouseArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            console.log("[Notification] Clicked notification from app: " + appName + ", summary: " + summary);
-                            const home = controlCenter.shellRootController ? controlCenter.shellRootController.getHomePath() : (Quickshell.env("HOME") || "");
-                            Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/redirect_app.py", appName, summary, body]);
-                            if (controlCenter.shellRootController) {
-                                controlCenter.shellRootController.forEachWindow((w) => {
-                                    if (w && w.toggleControlCenter)
-                                        w.toggleControlCenter();
-                                });
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.right: parent.right
-                        anchors.rightMargin: 10
-                        anchors.top: parent.top
-                        anchors.topMargin: 10
-                        width: 16
-                        height: 16
-                        radius: 8
-                        color: "transparent"
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "✕"
-                            color: StyleTokens.textMuted
-                            font.pixelSize: 10
-                        }
+                        Behavior on color { ColorAnimation { duration: 150 } }
 
                         MouseArea {
+                            id: notifItemMouse
                             anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                notificationModel.remove(index);
+                                const home = controlCenter.shellRootController ? controlCenter.shellRootController.getHomePath() : (Quickshell.env("HOME") || "");
+                                Quickshell.execDetached([home + "/.local/src/HyprDots/tide-island/bin/redirect_app.py", appName, summary, body]);
+                                if (controlCenter.shellRootController) {
+                                    controlCenter.shellRootController.forEachWindow((w) => {
+                                        if (w && w.toggleControlCenter) w.toggleControlCenter();
+                                    });
+                                }
                             }
                         }
-                    }
 
-                    Rectangle {
-                        id: appIconBox
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 32
-                        height: 32
-                        radius: 16
-                        color: "#2d323f"
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: appName && appName.length > 0 ? appName[0].toUpperCase() : "I"
-                            color: "#ffffff"
-                            font.pixelSize: 14
-                            font.weight: Font.Bold
-                            font.family: textFontFamily
-                        }
-                    }
-
-                    Column {
-                        anchors.left: appIconBox.right
-                        anchors.leftMargin: 10
-                        anchors.right: parent.right
-                        anchors.rightMargin: 36
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 2
-
-                        Row {
-                            spacing: 6
-                            width: parent.width
+                        // Dismiss button
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.top: parent.top
+                            anchors.topMargin: 10
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: dismissMouse.containsMouse ? "#33ffffff" : "transparent"
 
                             Text {
-                                text: appName
-                                color: StyleTokens.textMuted
+                                anchors.centerIn: parent
+                                text: "✕"
+                                color: "#8e8e93"
                                 font.pixelSize: 10
+                            }
+
+                            MouseArea {
+                                id: dismissMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (notificationModel) notificationModel.remove(index);
+                                }
+                            }
+                        }
+
+                        // App initial / icon box
+                        Rectangle {
+                            id: appIconBox
+                            anchors.left: parent.left
+                            anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 32
+                            height: 32
+                            radius: 16
+                            color: "#2d323f"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: appName && appName.length > 0 ? appName[0].toUpperCase() : "I"
+                                color: "#ffffff"
+                                font.pixelSize: 13
+                                font.weight: Font.Bold
                                 font.family: textFontFamily
-                                font.weight: Font.Medium
+                            }
+                        }
+
+                        Column {
+                            anchors.left: appIconBox.right
+                            anchors.leftMargin: 10
+                            anchors.right: parent.right
+                            anchors.rightMargin: 36
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
+
+                            Row {
+                                spacing: 6
+                                width: parent.width
+
+                                Text {
+                                    text: appName
+                                    color: "#8e8e93"
+                                    font.pixelSize: 10
+                                    font.family: textFontFamily
+                                    font.weight: Font.Medium
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    text: "•"
+                                    color: "#8e8e93"
+                                    font.pixelSize: 10
+                                    visible: timestamp && timestamp.length > 0
+                                }
+
+                                Text {
+                                    text: timestamp
+                                    color: "#8e8e93"
+                                    font.pixelSize: 10
+                                    font.family: textFontFamily
+                                    visible: timestamp && timestamp.length > 0
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                text: summary
+                                color: "#ffffff"
+                                font.pixelSize: 12
+                                font.family: textFontFamily
+                                font.weight: Font.Bold
                                 elide: Text.ElideRight
                             }
 
                             Text {
-                                text: "•"
-                                color: StyleTokens.textMuted
-                                font.pixelSize: 10
-                                visible: timestamp && timestamp.length > 0
-                            }
-
-                            Text {
-                                text: timestamp
-                                color: StyleTokens.textMuted
-                                font.pixelSize: 10
+                                width: parent.width
+                                text: body
+                                color: "#8e8e93"
+                                font.pixelSize: 11
                                 font.family: textFontFamily
-                                visible: timestamp && timestamp.length > 0
+                                elide: Text.ElideRight
                             }
-                        }
-
-                        Text {
-                            width: parent.width
-                            text: summary
-                            color: StyleTokens.textPrimary
-                            font.pixelSize: 12
-                            font.family: textFontFamily
-                            font.weight: Font.Bold
-                            elide: Text.ElideRight
-                        }
-
-                        Text {
-                            width: parent.width
-                            text: body
-                            color: StyleTokens.textSecondary
-                            font.pixelSize: 11
-                            font.family: textFontFamily
-                            elide: Text.ElideRight
                         }
                     }
                 }

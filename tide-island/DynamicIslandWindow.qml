@@ -224,7 +224,7 @@ PanelWindow {
             height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
         }
     }
-    implicitHeight: 680
+    implicitHeight: 740
     exclusiveZone: root.reservedTopSpace
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad")
@@ -1724,7 +1724,7 @@ PanelWindow {
 
                 switch (islandContainer.islandState) {
                 case "control_center":
-                    return 480 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 32);
+                    return 440 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 0);
                 case "launcher":
                 case "clipboard":
                 case "emojis":
@@ -2360,6 +2360,13 @@ PanelWindow {
                         currentWorkspace: islandContainer.currentWs
                         currentTrack: islandContainer.currentTrack
                         currentArtist: islandContainer.currentArtist
+                        currentArtUrl: islandContainer.currentArtUrl
+                        timePlayed: islandContainer.timePlayed
+                        timeTotal: islandContainer.timeTotal
+                        trackProgress: islandContainer.trackProgress
+                        activePlayer: islandContainer.activePlayer
+                        musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
+                        screenRecordingActive: root.screenRecordingActive
                         showCondition: islandContainer.controlCenterLayerVisible
                         notificationModel: notificationHistory
                         onConnectivityPanelRequested: function(kind, open) {

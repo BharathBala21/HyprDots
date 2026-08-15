@@ -166,18 +166,26 @@ Item {
         SysBackend.setLyricsClientActive(registeredLyricsClientId, activePlayer !== null);
     }
 
+    function toSeconds(value) {
+        const num = Number(value);
+        if (isNaN(num) || num <= 0) return 0;
+        if (num > 10000000) return num / 1000000;
+        if (num > 10000) return num / 1000;
+        return num;
+    }
+
     function formatTime(value) {
-        const numberValue = Number(value);
-        if (isNaN(numberValue) || numberValue <= 0) return "0:00";
-
-        let totalSeconds = 0;
-        if (numberValue < 10000) totalSeconds = Math.floor(numberValue);
-        else if (numberValue < 100000000) totalSeconds = Math.floor(numberValue / 1000);
-        else totalSeconds = Math.floor(numberValue / 1000000);
-
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = Math.floor(totalSeconds % 60);
-        return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+        const sec = Math.floor(toSeconds(value));
+        if (sec <= 0) return "0:00";
+        const hours = Math.floor(sec / 3600);
+        const minutes = Math.floor((sec % 3600) / 60);
+        const seconds = sec % 60;
+        const secStr = seconds < 10 ? "0" + seconds : String(seconds);
+        if (hours > 0) {
+            const minStr = minutes < 10 ? "0" + minutes : String(minutes);
+            return hours + ":" + minStr + ":" + secStr;
+        }
+        return minutes + ":" + secStr;
     }
 
     function cleanLyricLineText(text) {
@@ -363,25 +371,26 @@ Item {
         id: progressPoller
 
         interval: 500
-        running: root.activePlayer !== null && root.expanded
+        running: root.activePlayer !== null
         repeat: true
 
         onTriggered: {
             let player = root.activePlayer;
             if (!player) return;
 
-            const currentPosition = Number(player.position) || 0;
-            let totalLength = Number(player.length) || 0;
-            if (totalLength <= 0 && player.metadata && player.metadata["mpris:length"])
-                totalLength = Number(player.metadata["mpris:length"]);
+            const posSec = root.toSeconds(player.position);
+            let lenRaw = Number(player.length) || 0;
+            if (lenRaw <= 0 && player.metadata && player.metadata["mpris:length"])
+                lenRaw = Number(player.metadata["mpris:length"]);
+            const lenSec = root.toSeconds(lenRaw);
 
-            if (totalLength > 0) {
-                root.trackProgress = currentPosition / totalLength;
-                root.timePlayed = root.formatTime(currentPosition);
-                root.timeTotal = root.formatTime(totalLength);
+            if (lenSec > 0) {
+                root.trackProgress = Math.max(0, Math.min(1, posSec / lenSec));
+                root.timePlayed = root.formatTime(posSec);
+                root.timeTotal = root.formatTime(lenSec);
             } else {
                 root.trackProgress = 0;
-                root.timePlayed = root.formatTime(currentPosition);
+                root.timePlayed = root.formatTime(posSec);
                 root.timeTotal = "0:00";
             }
         }
