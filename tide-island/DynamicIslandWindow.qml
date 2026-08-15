@@ -2367,8 +2367,13 @@ PanelWindow {
                         activePlayer: islandContainer.activePlayer
                         musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
                         screenRecordingActive: root.screenRecordingActive
+                        timerRunning: root.timerRunning
+                        timerRemainingSeconds: root.timerRemainingSeconds
                         showCondition: islandContainer.controlCenterLayerVisible
                         notificationModel: notificationHistory
+                        onTimerRequested: {
+                            root.toggleTimer();
+                        }
                         onConnectivityPanelRequested: function(kind, open) {
                             root.setConnectivityDetailVisible(kind, open);
                         }

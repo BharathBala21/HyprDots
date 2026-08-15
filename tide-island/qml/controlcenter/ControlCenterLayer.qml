@@ -14,6 +14,7 @@ Item {
     signal batteryModeIndexChangedExternal(int index)
     signal dndToggleRequested()
     signal tempChanged(real val)
+    signal timerRequested()
 
     readonly property var userConfig: UserConfig
 
@@ -69,6 +70,14 @@ Item {
     property var activePlayer: null
     property bool musicPlaying: false
     property bool screenRecordingActive: false
+    property bool timerRunning: false
+    property int timerRemainingSeconds: 0
+
+    function formatTimerTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return (m < 10 ? "0" + m : String(m)) + ":" + (s < 10 ? "0" + s : String(s));
+    }
 
     property real localVolume: 0.5
     property real localBrightness: 0.5
@@ -1724,76 +1733,160 @@ Item {
                     }
                 }
 
-                // 2. SCREEN RECORDING CARD
-                Rectangle {
+                // 2. MIDDLE ROW: RECORDING CARD & TIMER CARD (Side-by-side)
+                Row {
                     width: parent.width
                     height: 52
-                    radius: 16
-                    color: controlCenter.screenRecordingActive ? "#321618" : (recMouse.containsMouse ? "#242428" : "#1c1c1e")
-                    border.width: controlCenter.screenRecordingActive ? 1 : 0
-                    border.color: controlCenter.screenRecordingActive ? "#ff453a55" : "transparent"
+                    spacing: 8
 
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    readonly property real cardWidth: (width - 8) / 2
 
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.right: parent.right
-                        anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
+                    // 2a. SCREEN RECORDING CARD
+                    Rectangle {
+                        width: parent.cardWidth
+                        height: 52
+                        radius: 16
+                        color: controlCenter.screenRecordingActive ? "#321618" : (recMouse.containsMouse ? "#242428" : "#1c1c1e")
+                        border.width: controlCenter.screenRecordingActive ? 1 : 0
+                        border.color: controlCenter.screenRecordingActive ? "#ff453a55" : "transparent"
 
-                        // Record / Stop Badge
-                        Rectangle {
-                            width: 30
-                            height: 30
-                            radius: 15
-                            color: controlCenter.screenRecordingActive ? "#ff453a" : "#2c2c2e"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
                             anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
 
-                            // Pulsing square when recording, red circle when idle
+                            // Record / Stop Badge
                             Rectangle {
-                                width: controlCenter.screenRecordingActive ? 10 : 12
-                                height: controlCenter.screenRecordingActive ? 10 : 12
-                                radius: controlCenter.screenRecordingActive ? 2 : 6
-                                color: controlCenter.screenRecordingActive ? "#ffffff" : "#ff453a"
-                                anchors.centerIn: parent
+                                width: 28
+                                height: 28
+                                radius: 14
+                                color: controlCenter.screenRecordingActive ? "#ff453a" : "#2c2c2e"
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    width: controlCenter.screenRecordingActive ? 9 : 10
+                                    height: controlCenter.screenRecordingActive ? 9 : 10
+                                    radius: controlCenter.screenRecordingActive ? 2 : 5
+                                    color: controlCenter.screenRecordingActive ? "#ffffff" : "#ff453a"
+                                    anchors.centerIn: parent
+                                }
+                            }
+
+                            // Text Column
+                            Column {
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 1
+                                width: parent.width - 36
+
+                                Text {
+                                    text: controlCenter.screenRecordingActive
+                                        ? ("Rec " + controlCenter.formatRecordingTime(controlCenter.recordingElapsedSeconds))
+                                        : "Record"
+                                    color: controlCenter.screenRecordingActive ? "#ff453a" : "#ffffff"
+                                    font.pixelSize: 11
+                                    font.family: textFontFamily
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                    width: parent.width
+                                }
+
+                                Text {
+                                    text: controlCenter.screenRecordingActive ? "Stop" : "Start"
+                                    color: "#8e8e93"
+                                    font.pixelSize: 10
+                                    font.family: textFontFamily
+                                    elide: Text.ElideRight
+                                    width: parent.width
+                                }
                             }
                         }
 
-                        // Text Column
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 1
-                            width: parent.width - 42
-
-                            Text {
-                                text: controlCenter.screenRecordingActive
-                                    ? ("Recording • " + controlCenter.formatRecordingTime(controlCenter.recordingElapsedSeconds))
-                                    : "Screen Record"
-                                color: controlCenter.screenRecordingActive ? "#ff453a" : "#ffffff"
-                                font.pixelSize: 12
-                                font.family: textFontFamily
-                                font.weight: Font.DemiBold
-                            }
-
-                            Text {
-                                text: controlCenter.screenRecordingActive ? "Click to stop recording" : "Click to start recording"
-                                color: "#8e8e93"
-                                font.pixelSize: 10
-                                font.family: textFontFamily
-                                elide: Text.ElideRight
-                                width: parent.width
-                            }
+                        MouseArea {
+                            id: recMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenter.toggleScreenRecording()
                         }
                     }
 
-                    MouseArea {
-                        id: recMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: controlCenter.toggleScreenRecording()
+                    // 2b. CLOCK / TIMER CARD
+                    Rectangle {
+                        width: parent.cardWidth
+                        height: 52
+                        radius: 16
+                        color: controlCenter.timerRunning ? "#1a2a3a" : (timerMouse.containsMouse ? "#242428" : "#1c1c1e")
+                        border.width: controlCenter.timerRunning ? 1 : 0
+                        border.color: controlCenter.timerRunning ? "#0a84ff55" : "transparent"
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+
+                            // Clock / Timer Icon Badge
+                            Rectangle {
+                                width: 28
+                                height: 28
+                                radius: 14
+                                color: controlCenter.timerRunning ? "#0a84ff" : "#2c2c2e"
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "\uf017" // Clock icon
+                                    color: controlCenter.timerRunning ? "#ffffff" : (controlCenter.themeColors ? controlCenter.themeColors.primary : "#0a84ff")
+                                    font.pixelSize: 13
+                                    font.family: iconFontFamily
+                                }
+                            }
+
+                            // Text Column
+                            Column {
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 1
+                                width: parent.width - 36
+
+                                Text {
+                                    text: controlCenter.timerRunning
+                                        ? controlCenter.formatTimerTime(controlCenter.timerRemainingSeconds)
+                                        : "Timer"
+                                    color: controlCenter.timerRunning ? "#0a84ff" : "#ffffff"
+                                    font.pixelSize: 11
+                                    font.family: textFontFamily
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                    width: parent.width
+                                }
+
+                                Text {
+                                    text: controlCenter.timerRunning ? "Active" : "Open timer"
+                                    color: "#8e8e93"
+                                    font.pixelSize: 10
+                                    font.family: textFontFamily
+                                    elide: Text.ElideRight
+                                    width: parent.width
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: timerMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenter.timerRequested()
+                        }
                     }
                 }
 
