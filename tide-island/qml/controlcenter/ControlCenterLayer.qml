@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import QtQml
 import Quickshell
 import Quickshell.Bluetooth
@@ -2086,22 +2087,39 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 12
 
-                        // Album art thumbnail
+                        // Album art thumbnail (circular)
                         Rectangle {
+                            id: albumArtContainer
                             width: 44
                             height: 44
-                            radius: 10
+                            radius: 22
                             color: "#2c2c2e"
                             clip: true
+                            layer.enabled: true
                             anchors.verticalCenter: parent.verticalCenter
 
                             Image {
+                                id: albumArtImg
                                 anchors.fill: parent
                                 source: controlCenter.currentArtUrl
                                 fillMode: Image.PreserveAspectCrop
-                                visible: source.toString() !== ""
+                                visible: source.toString() !== "" && status !== Image.Error
                                 sourceSize: Qt.size(88, 88)
                                 asynchronous: true
+                                layer.enabled: true
+                                layer.effect: MultiEffect {
+                                    maskEnabled: true
+                                    maskSource: albumArtMask
+                                }
+                            }
+
+                            Rectangle {
+                                id: albumArtMask
+                                width: albumArtContainer.width
+                                height: albumArtContainer.height
+                                radius: 22
+                                visible: false
+                                layer.enabled: true
                             }
 
                             Text {
@@ -2110,7 +2128,7 @@ Item {
                                 color: "#8e8e93"
                                 font.pixelSize: 18
                                 font.family: iconFontFamily
-                                visible: !controlCenter.currentArtUrl || controlCenter.currentArtUrl === ""
+                                visible: !controlCenter.currentArtUrl || controlCenter.currentArtUrl === "" || albumArtImg.status === Image.Error
                             }
                         }
 
