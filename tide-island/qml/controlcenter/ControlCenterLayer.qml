@@ -299,11 +299,41 @@ Item {
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
     readonly property var bluetoothDeviceValues: bluetoothAdapter ? bluetoothAdapter.devices.values : []
     readonly property bool wifiSupported: wifiController ? wifiController.supported : false
+    readonly property bool wifiReadOnly: wifiController ? wifiController.readOnly : true
     readonly property bool wifiAvailable: wifiController ? wifiController.available : false
     readonly property bool wifiEnabled: wifiController ? wifiController.enabled : false
+    readonly property bool wifiBusy: wifiController ? wifiController.busy : false
+    readonly property bool wifiListRunning: wifiController ? wifiController.scanning : false
     readonly property string wifiCurrentSsid: wifiController ? wifiController.currentSsid : ""
+    readonly property string wifiInfoMessage: wifiLocalInfoMessage.length > 0
+        ? wifiLocalInfoMessage
+        : (wifiController ? wifiController.infoMessage : "")
+    readonly property string wifiError: wifiLocalError.length > 0
+        ? wifiLocalError
+        : (wifiController ? wifiController.errorMessage : "")
+    readonly property string wifiUnsupportedReason: wifiController ? wifiController.unsupportedReason : ""
+    readonly property string wifiAvailabilityMessage: {
+        if (wifiUnsupportedReason.length > 0) return wifiUnsupportedReason;
+        if (wifiSupported && !wifiAvailable) return "No Wi-Fi device is available.";
+        return "";
+    }
+    readonly property string wifiStatusText: wifiController ? wifiController.statusText : "Unavailable"
+
     readonly property bool bluetoothEnabled: bluetoothAdapter ? bluetoothAdapter.enabled : false
+    readonly property bool bluetoothBusy: bluetoothAdapter
+        ? bluetoothAdapter.state === BluetoothAdapterState.Enabling
+            || bluetoothAdapter.state === BluetoothAdapterState.Disabling
+        : false
     readonly property bool bluetoothPairingActive: bluetoothPairingAgent ? bluetoothPairingAgent.requestActive : false
+    readonly property bool bluetoothPairingRequiresInput: bluetoothPairingAgent ? bluetoothPairingAgent.requestRequiresInput : false
+    readonly property bool bluetoothPairingNumericInput: bluetoothPairingAgent ? bluetoothPairingAgent.requestNumericInput : false
+    readonly property bool bluetoothPairingRequiresConfirmation: bluetoothPairingAgent ? bluetoothPairingAgent.requestRequiresConfirmation : false
+    readonly property string bluetoothPairingTitle: bluetoothPairingAgent ? bluetoothPairingAgent.promptTitle : ""
+    readonly property string bluetoothPairingMessage: bluetoothPairingAgent ? bluetoothPairingAgent.promptMessage : ""
+    readonly property string bluetoothPairingDisplayedCode: bluetoothPairingAgent ? bluetoothPairingAgent.displayedCode : ""
+    readonly property string bluetoothStatusText: buildBluetoothStatusText()
+    readonly property string bluetoothAvailabilityMessage: bluetoothAvailable ? "" : "No Bluetooth adapter is available."
+
     readonly property bool hasConnectivityPrompt: wifiPendingPasswordSsid.length > 0 || bluetoothPairingActive
     readonly property string batteryModeStatusText: buildBatteryModeStatusText()
 
@@ -314,6 +344,305 @@ Item {
     function trimString(value) {
         if (value === undefined || value === null) return "";
         return String(value).trim();
+    }
+
+    function clearWifiPrompt() {
+        wifiPendingPasswordSsid = "";
+        wifiPendingPasswordValue = "";
+        wifiLocalInfoMessage = "";
+        wifiLocalError = "";
+    }
+
+    function clearWifiMessages() {
+        wifiLocalInfoMessage = "";
+        wifiLocalError = "";
+        if (wifiController)
+            wifiController.clearMessages();
+    }
+
+    function clearBluetoothMessages() {
+        bluetoothInfoMessage = "";
+        bluetoothError = "";
+    }
+
+    function submitBluetoothPairingSecret() {
+        if (!bluetoothPairingAgent || !bluetoothPairingRequiresInput)
+            return;
+
+        const secret = trimString(bluetoothPendingSecretValue);
+        if (!secret) {
+            bluetoothError = bluetoothPairingNumericInput
+                ? "Enter the 6-digit passkey first."
+                : "Enter the PIN first.";
+            return;
+        }
+
+        if (bluetoothPairingNumericInput && !/^\d{1,6}$/.test(secret)) {
+            bluetoothError = "Passkeys must be 1 to 6 digits.";
+            return;
+        }
+
+        bluetoothError = "";
+        bluetoothPairingAgent.submitSecret(secret);
+        bluetoothPendingSecretValue = "";
+    }
+
+    function confirmBluetoothPairing() {
+        if (!bluetoothPairingAgent)
+            return;
+
+        bluetoothError = "";
+        bluetoothPairingAgent.confirmRequest();
+    }
+
+    function cancelBluetoothPairing() {
+        if (!bluetoothPairingAgent)
+            return;
+
+        bluetoothPairingAgent.cancelRequest();
+        bluetoothPendingSecretValue = "";
+    }
+
+    function requestWifiStateRefresh() {
+        if (!showCondition || !wifiController) return;
+        wifiController.refreshState();
+    }
+
+    function requestWifiListRefresh(rescan) {
+        if (!showCondition || !wifiController) return;
+        if (!wifiSupported || !wifiAvailable || !wifiEnabled) return;
+        wifiController.refreshNetworks(!!rescan);
+    }
+
+    function disconnectWifi() {
+        if (!wifiSupported || !wifiAvailable) {
+            wifiLocalError = wifiAvailabilityMessage.length > 0 ? wifiAvailabilityMessage : "No Wi-Fi device is available.";
+            return;
+        }
+
+        clearWifiPrompt();
+        clearWifiMessages();
+        if (wifiController)
+            wifiController.disconnectCurrent();
+    }
+
+    function connectWifiNetwork(network) {
+        if (!network) return;
+        if (!wifiSupported) {
+            wifiLocalError = wifiAvailabilityMessage.length > 0 ? wifiAvailabilityMessage : "Wi-Fi control is unavailable.";
+            return;
+        }
+        if (!wifiAvailable) {
+            wifiLocalError = wifiAvailabilityMessage.length > 0 ? wifiAvailabilityMessage : "No Wi-Fi device is available.";
+            return;
+        }
+        if (!wifiEnabled) {
+            wifiLocalError = "Turn on Wi-Fi first.";
+            return;
+        }
+        if (network.connected) return;
+
+        const ssid = trimString(network.ssid);
+        const networkType = trimString(network.type);
+        const secure = !!network.secure;
+        const savedConnection = !!network.savedConnection;
+
+        if (!ssid) {
+            wifiLocalError = "Hidden networks are not supported in this panel yet.";
+            return;
+        }
+
+        if (!savedConnection && networkType === "wep") {
+            wifiLocalError = "WEP networks aren't supported by this panel.";
+            return;
+        }
+
+        if (!savedConnection && networkType === "8021x") {
+            wifiLocalError = "802.1X networks need to be provisioned first.";
+            return;
+        }
+
+        clearWifiPrompt();
+        clearWifiMessages();
+
+        if (savedConnection) {
+            if (wifiController)
+                wifiController.connectToNetwork(ssid);
+            return;
+        }
+
+        if (!secure) {
+            if (wifiController)
+                wifiController.connectToNetwork(ssid);
+            return;
+        }
+
+        wifiPendingPasswordSsid = ssid;
+        wifiPendingPasswordValue = "";
+        wifiLocalInfoMessage = "Enter the password for " + ssid + ".";
+    }
+
+    function submitWifiPassword() {
+        const ssid = trimString(wifiPendingPasswordSsid);
+        if (!ssid) return;
+
+        if (trimString(wifiPendingPasswordValue).length === 0) {
+            wifiLocalError = "Enter a password first.";
+            return;
+        }
+
+        const password = wifiPendingPasswordValue;
+        clearWifiPrompt();
+        clearWifiMessages();
+        if (wifiController)
+            wifiController.connectToNetwork(ssid, password);
+    }
+
+    function bluetoothDeviceName(device) {
+        if (!device) return "Unknown device";
+        const preferred = trimString(device.deviceName);
+        if (preferred.length > 0) return preferred;
+
+        const alias = trimString(device.name);
+        if (alias.length > 0) return alias;
+
+        const address = trimString(device.address);
+        return address.length > 0 ? address : "Unknown device";
+    }
+
+    function bluetoothDeviceStateText(device) {
+        if (!device) return "";
+        if (device.pairing) return "Pairing";
+
+        switch (device.state) {
+        case BluetoothDeviceState.Connecting:
+            return "Connecting";
+        case BluetoothDeviceState.Connected:
+            return "Connected";
+        case BluetoothDeviceState.Disconnecting:
+            return "Disconnecting";
+        default:
+            break;
+        }
+
+        if (device.paired || device.bonded) return "Paired";
+        return "Available";
+    }
+
+    function bluetoothDeviceSubtitle(device) {
+        const parts = [];
+        const stateLabel = bluetoothDeviceStateText(device);
+        if (stateLabel.length > 0) parts.push(stateLabel);
+        if (device && device.batteryAvailable) parts.push(bluetoothBatteryPercent(device) + "%");
+        return parts.join(" • ");
+    }
+
+    function bluetoothBatteryPercent(device) {
+        if (!device || !device.batteryAvailable)
+            return -1;
+
+        const rawValue = Math.max(0, Number(device.battery) || 0);
+        return Math.max(0, Math.min(100, Math.round(rawValue <= 1 ? rawValue * 100 : rawValue)));
+    }
+
+    function bluetoothDeviceMatchesSection(device, section) {
+        if (!device) return false;
+
+        const paired = device.paired || device.bonded;
+        if (section === "connected") return device.connected;
+        if (section === "paired") return !device.connected && paired;
+        if (section === "available") return !paired;
+        return false;
+    }
+
+    function buildBluetoothStatusText() {
+        if (!bluetoothAvailable) return "Unavailable";
+        if (!bluetoothEnabled) return "Off";
+
+        const devices = bluetoothDeviceValues || [];
+        const connectedNames = [];
+
+        for (let index = 0; index < devices.length; index++) {
+            const device = devices[index];
+            if (device && device.connected)
+                connectedNames.push(bluetoothDeviceName(device));
+        }
+
+        if (connectedNames.length === 1) return connectedNames[0];
+        if (connectedNames.length > 1) return connectedNames[0] + " +" + (connectedNames.length - 1);
+        if (bluetoothAdapter && bluetoothAdapter.discovering) return "Scanning";
+        return bluetoothBusy ? "Working..." : "On";
+    }
+
+    function toggleBluetoothEnabled() {
+        if (!bluetoothAdapter) {
+            bluetoothError = "No Bluetooth adapter is available.";
+            return;
+        }
+
+        bluetoothError = "";
+        bluetoothInfoMessage = "";
+        bluetoothPairAndConnectPath = "";
+
+        if (bluetoothAdapter.discovering)
+            bluetoothAdapter.discovering = false;
+
+        bluetoothAdapter.enabled = !bluetoothAdapter.enabled;
+    }
+
+    function toggleBluetoothScan() {
+        if (!bluetoothAdapter) {
+            bluetoothError = "No Bluetooth adapter is available.";
+            return;
+        }
+        if (!bluetoothEnabled) {
+            bluetoothError = "Turn on Bluetooth first.";
+            return;
+        }
+
+        bluetoothError = "";
+        if (bluetoothAdapter.discovering) {
+            bluetoothAdapter.discovering = false;
+            bluetoothInfoMessage = "";
+            bluetoothScanStopTimer.stop();
+        } else {
+            bluetoothAdapter.discovering = true;
+            bluetoothInfoMessage = "Scanning for nearby devices...";
+            bluetoothScanStopTimer.restart();
+        }
+    }
+
+    function handleBluetoothDevicePressed(device) {
+        if (!device) return;
+        if (!bluetoothAdapter || !bluetoothEnabled) {
+            bluetoothError = "Turn on Bluetooth first.";
+            return;
+        }
+
+        bluetoothError = "";
+
+        if (device.connected) {
+            bluetoothInfoMessage = "";
+            device.disconnect();
+            return;
+        }
+
+        if (device.paired || device.bonded) {
+            bluetoothInfoMessage = "";
+            device.connect();
+            return;
+        }
+
+        bluetoothPairAndConnectPath = device.dbusPath;
+        bluetoothInfoMessage = "Pairing " + bluetoothDeviceName(device) + "...";
+        device.pair();
+    }
+
+    function forgetBluetoothDevice(device) {
+        if (!device) return;
+        if (bluetoothPairAndConnectPath === device.dbusPath)
+            bluetoothPairAndConnectPath = "";
+        device.forget();
     }
 
     function batteryModeLabel(index) {
@@ -478,9 +807,35 @@ Item {
         if (kind === "wifi") {
             changed = wifiPanelOpen !== nextOpen;
             wifiPanelOpen = nextOpen;
+
+            if (nextOpen) {
+                if (showCondition) {
+                    requestWifiStateRefresh();
+                    if (wifiSupported && wifiEnabled)
+                        requestWifiListRefresh(true);
+                }
+            } else {
+                clearWifiPrompt();
+                clearWifiMessages();
+            }
         } else if (kind === "bluetooth") {
             changed = bluetoothPanelOpen !== nextOpen;
             bluetoothPanelOpen = nextOpen;
+
+            if (nextOpen) {
+                if (showCondition && bluetoothAdapter && bluetoothEnabled) {
+                    toggleBluetoothScan();
+                }
+            } else {
+                if (bluetoothPairingActive)
+                    cancelBluetoothPairing();
+                if (bluetoothAdapter && bluetoothAdapter.discovering)
+                    bluetoothAdapter.discovering = false;
+                bluetoothScanStopTimer.stop();
+                bluetoothPairAndConnectPath = "";
+                bluetoothPendingSecretValue = "";
+                clearBluetoothMessages();
+            }
         } else if (kind === "battery") {
             changed = batteryPanelOpen !== nextOpen;
             batteryPanelOpen = nextOpen;
@@ -504,15 +859,13 @@ Item {
         setConnectivityPanelOpen("bluetooth", false, emitSignals);
         setConnectivityPanelOpen("battery", false, emitSignals);
         setConnectivityPanelOpen("audio", false, emitSignals);
+        clearWifiPrompt();
+        clearWifiMessages();
+        clearBluetoothMessages();
     }
 
     function toggleWifiEnabled() {
         if (wifiController) wifiController.setEnabled(!wifiEnabled);
-    }
-
-    function toggleBluetoothEnabled() {
-        if (!bluetoothAdapter) return;
-        bluetoothAdapter.enabled = !bluetoothAdapter.enabled;
     }
 
     function toggleCaffeineMode() {
@@ -880,6 +1233,67 @@ Item {
         function onVolumeSetFinished(value, success, errorString) {
             controlCenter.volumeSetterRunning = false;
             if (success) syncVolumeFromLevel(value);
+        }
+    }
+
+    Timer {
+        id: bluetoothScanStopTimer
+        interval: 8000
+        repeat: false
+        onTriggered: {
+            if (controlCenter.bluetoothAdapter && controlCenter.bluetoothAdapter.discovering)
+                controlCenter.bluetoothAdapter.discovering = false;
+            controlCenter.bluetoothInfoMessage = "";
+        }
+    }
+
+    Connections {
+        target: wifiController
+
+        function onEnabledChanged() {
+            if (!controlCenter.wifiEnabled)
+                controlCenter.clearWifiPrompt();
+        }
+    }
+
+    Connections {
+        target: bluetoothAdapter
+
+        function onEnabledChanged() {
+            if (!controlCenter.bluetoothAdapter.enabled) {
+                controlCenter.bluetoothPairAndConnectPath = "";
+                controlCenter.bluetoothInfoMessage = "";
+                controlCenter.bluetoothError = "";
+                controlCenter.bluetoothScanStopTimer.stop();
+            }
+        }
+
+        function onDiscoveringChanged() {
+            if (!controlCenter.bluetoothAdapter.discovering)
+                controlCenter.bluetoothScanStopTimer.stop();
+        }
+    }
+
+    Connections {
+        target: bluetoothPairingAgent
+
+        function onRequestChanged() {
+            controlCenter.bluetoothPendingSecretValue = "";
+            if (controlCenter.bluetoothPairingActive) {
+                controlCenter.bluetoothError = "";
+                controlCenter.setConnectivityPanelOpen("bluetooth", true);
+            }
+        }
+
+        function onRegistrationErrorChanged() {
+            if (!controlCenter.bluetoothPairingAgent)
+                return;
+
+            if (!controlCenter.bluetoothPairingAgent.registered
+                    && controlCenter.bluetoothPairingAgent.registrationError.length > 0
+                    && controlCenter.bluetoothPanelOpen) {
+                controlCenter.bluetoothError = controlCenter.bluetoothPairingAgent.registrationError;
+            }
         }
     }
 
