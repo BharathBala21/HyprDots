@@ -186,17 +186,6 @@ def main():
         except Exception:
             pass
 
-        # Send desktop notification
-        try:
-            subprocess.Popen(
-                ["notify-send", "-a", "Tide Island", "-i", chosen_wallpaper, "Wallpaper Changed", wp_name],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True
-            )
-        except Exception:
-            pass
-
     output = {
         "status": "success",
         "wallpaper": chosen_wallpaper,
