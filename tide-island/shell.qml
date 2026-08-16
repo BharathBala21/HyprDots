@@ -75,6 +75,84 @@ Scope {
     }
 
     FileView {
+        id: shellCfgWatcher
+        path: getHomePath() + "/.config/tide-island/userconfig.json"
+        watchChanges: true
+        blockLoading: true
+        onFileChanged: shellCfgWatcher.reload()
+    }
+
+    readonly property var activeUserConfig: {
+        try {
+            return shellCfgWatcher.text() ? JSON.parse(shellCfgWatcher.text()) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    readonly property bool autoWallpaperEnabled: activeUserConfig.autoWallpaperEnabled !== undefined ? activeUserConfig.autoWallpaperEnabled : false
+    readonly property int autoWallpaperInterval: activeUserConfig.autoWallpaperInterval !== undefined ? Math.max(1, Number(activeUserConfig.autoWallpaperInterval)) : 15
+    readonly property bool autoWallpaperNotification: activeUserConfig.autoWallpaperNotification !== undefined ? activeUserConfig.autoWallpaperNotification : true
+    readonly property bool randomWallpaperOnStartup: activeUserConfig.randomWallpaperOnStartup !== undefined ? activeUserConfig.randomWallpaperOnStartup : false
+
+    Timer {
+        id: autoWallpaperTimer
+        interval: Math.max(1, shellRoot.autoWallpaperInterval) * 60 * 1000
+        running: shellRoot.autoWallpaperEnabled
+        repeat: true
+        onTriggered: {
+            console.log("[Wallpaper] Auto wallpaper timer fired (interval: " + shellRoot.autoWallpaperInterval + " min)");
+            shellRoot.triggerRandomWallpaper();
+        }
+    }
+
+    Timer {
+        id: startupRandomWallpaperTimer
+        interval: 2000
+        repeat: false
+        onTriggered: {
+            if (shellRoot.randomWallpaperOnStartup) {
+                console.log("[Wallpaper] Triggering random wallpaper on shell startup");
+                shellRoot.triggerRandomWallpaper();
+            }
+        }
+    }
+
+    Process {
+        id: randomWallpaperProcess
+        command: ["python3", Quickshell.shellDir + "/bin/random_wallpaper.py"]
+        running: false
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        const res = JSON.parse(this.text);
+                        if (res && res.name && shellRoot.autoWallpaperNotification) {
+                            shellRoot.showWallpaperToastAll(res.name);
+                        }
+                    } catch (e) {
+                        console.log("[Wallpaper] Response parse error:", e);
+                    }
+                }
+            }
+        }
+    }
+
+    function triggerRandomWallpaper() {
+        if (!randomWallpaperProcess.running) {
+            randomWallpaperProcess.running = true;
+        }
+    }
+
+    function showWallpaperToastAll(wallpaperName: string) {
+        shellRoot.forEachWindow((window) => {
+            if (window && window.showWallpaperToast)
+                window.showWallpaperToast(wallpaperName);
+        });
+    }
+
+    FileView {
         id: colorsWatcher
         path: getHomePath() + "/.local/state/quickshell/generated/colors.json"
         watchChanges: true
@@ -325,6 +403,14 @@ Scope {
                     window.showLayoutToast(layoutName);
             });
         }
+
+        function showWallpaperToast(wallpaperName: string) {
+            shellRoot.showWallpaperToastAll(wallpaperName);
+        }
+
+        function randomWallpaper() {
+            shellRoot.triggerRandomWallpaper();
+        }
     }
 
     GlobalShortcut {
@@ -460,6 +546,7 @@ Scope {
         startupQueryHyprsunsetProcess.running = true;
         startupPpQueryProcess.running = true;
         startupQueryDarkModeProcess.running = true;
+        startupRandomWallpaperTimer.start();
     }
 
     Variants {

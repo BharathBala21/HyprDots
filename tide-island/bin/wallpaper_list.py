@@ -65,10 +65,23 @@ def main():
             run_background_generator(sys.argv[2], sys.argv[3])
         sys.exit(0)
 
+    tide_config_path = os.path.expanduser("~/.config/tide-island/userconfig.json")
     config_path = os.path.expanduser("~/.config/waypaper/config.ini")
     current_wallpaper = ""
+    folder_path = os.path.expanduser("~/Pictures/Wallpapers")
 
-    if os.path.exists(config_path):
+    if os.path.exists(tide_config_path):
+        try:
+            with open(tide_config_path, 'r') as f:
+                tcfg = json.load(f)
+                if 'wallpaperPath' in tcfg and os.path.exists(os.path.expanduser(tcfg['wallpaperPath'])):
+                    current_wallpaper = os.path.abspath(os.path.expanduser(tcfg['wallpaperPath']))
+                if 'wallpaperFolder' in tcfg and os.path.exists(os.path.expanduser(tcfg['wallpaperFolder'])):
+                    folder_path = os.path.abspath(os.path.expanduser(tcfg['wallpaperFolder']))
+        except Exception:
+            pass
+
+    if not current_wallpaper and os.path.exists(config_path):
         try:
             config = configparser.ConfigParser()
             config.read(config_path)
@@ -76,10 +89,13 @@ def main():
                 settings = config['Settings']
                 if 'wallpaper' in settings:
                     current_wallpaper = os.path.expanduser(settings['wallpaper'])
+                if 'folder' in settings and folder_path == os.path.expanduser("~/Pictures/Wallpapers"):
+                    wfolder = os.path.expanduser(settings['folder'])
+                    if os.path.exists(wfolder):
+                        folder_path = os.path.abspath(wfolder)
         except Exception as e:
             print(f"Error reading config: {e}", file=sys.stderr)
 
-    folder_path = os.path.expanduser("~/Pictures/Wallpapers")
     cache_dir = os.path.expanduser("~/.cache/tide-island/thumbnails")
     os.makedirs(cache_dir, exist_ok=True)
 
