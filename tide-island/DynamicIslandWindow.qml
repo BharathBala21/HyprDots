@@ -2835,11 +2835,86 @@ PanelWindow {
                 layoutToastTimer.restart();
             }
         }
+
+        // Silent Wallpaper Indicator Pill between Center Pill and Right Pill
+        Rectangle {
+            id: wallpaperToastPill
+            property string wallpaperName: ""
+            property bool active: false
+
+            visible: opacity > 0.0
+            opacity: active ? 1.0 : 0.0
+            scale: active ? 1.0 : 0.85
+
+            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+            Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+
+            height: 32
+            width: Math.min(260, wallpaperRow.implicitWidth + 24)
+            radius: 16
+            color: StyleTokens.black
+            border.width: 1
+            border.color: StyleTokens.overviewInnerBorder
+
+            anchors.left: mainCapsule.right
+            anchors.leftMargin: 12
+            anchors.top: parent.top
+            anchors.topMargin: root.islandTopOffset
+
+            Row {
+                id: wallpaperRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Text {
+                    text: "\uf03e"
+                    color: root.shellRootController && root.shellRootController.matugenThemeColors ? root.shellRootController.matugenThemeColors.primary : "#c084fc"
+                    font.pixelSize: 13
+                    font.family: root.iconFontFamily
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: wallpaperToastPill.wallpaperName
+                    color: StyleTokens.textPrimary
+                    font.pixelSize: 12
+                    font.family: root.textFontFamily
+                    font.weight: Font.Medium
+                    elide: Text.ElideRight
+                    width: Math.min(200, implicitWidth)
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            Timer {
+                id: wallpaperToastTimer
+                interval: 2500
+                repeat: false
+                onTriggered: wallpaperToastPill.active = false
+            }
+
+            function show(name) {
+                let cleanName = name || "";
+                const dotIdx = cleanName.lastIndexOf('.');
+                if (dotIdx > 0) {
+                    cleanName = cleanName.substring(0, dotIdx);
+                }
+                wallpaperName = cleanName;
+                active = true;
+                wallpaperToastTimer.restart();
+            }
+        }
     }
 
     function showLayoutToast(layoutName) {
         if (layoutToastPill) {
             layoutToastPill.show(layoutName);
+        }
+    }
+
+    function showWallpaperToast(wallpaperName) {
+        if (wallpaperToastPill) {
+            wallpaperToastPill.show(wallpaperName);
         }
     }
 

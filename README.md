@@ -110,6 +110,7 @@ Personal Hyprland dotfiles configured with modular Lua (`hyprlua`), Material You
 | `Super` + `U` | Toggle Quick Utilities |
 | `Super` + `Alt` + `U` | Toggle Timer |
 | `Super` + `Alt` + `W` | Open Live Wallpaper Selector |
+| `Super` + `Ctrl` + `W` | Switch to Random Wallpaper |
 | `Super` + `.` | Open Emoji Selector |
 | `Super` + `/` | Toggle Keybinding Cheatsheet |
 | `Super` + `L` | Lock Screen |

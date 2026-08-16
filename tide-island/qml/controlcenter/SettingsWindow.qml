@@ -78,6 +78,49 @@ FloatingWindow {
     property bool notepadAutoSave: cfgData.notepadAutoSave !== undefined ? cfgData.notepadAutoSave : true
     property string tlpPermissionMode: cfgData.tlpPermissionMode !== undefined ? String(cfgData.tlpPermissionMode) : "password"
 
+    // Wallpaper settings loaded from userconfig.json
+    property bool autoWallpaperEnabled: cfgData.autoWallpaperEnabled !== undefined ? cfgData.autoWallpaperEnabled : false
+    property int autoWallpaperInterval: cfgData.autoWallpaperInterval !== undefined ? Math.max(1, Number(cfgData.autoWallpaperInterval)) : 15
+    property bool autoWallpaperNotification: cfgData.autoWallpaperNotification !== undefined ? cfgData.autoWallpaperNotification : true
+    property bool randomWallpaperOnStartup: cfgData.randomWallpaperOnStartup !== undefined ? cfgData.randomWallpaperOnStartup : false
+    property string wallpaperFolder: cfgData.wallpaperFolder !== undefined ? String(cfgData.wallpaperFolder) : (getHomePath() + "/Pictures/Wallpapers")
+    property string currentWallpaperPath: cfgData.wallpaperPath || ""
+
+    readonly property string currentWallpaperFilename: {
+        if (!currentWallpaperPath) return "None";
+        const parts = currentWallpaperPath.split("/");
+        return parts[parts.length - 1] || currentWallpaperPath;
+    }
+
+    Process {
+        id: instantRandomWallpaperProcess
+        command: ["python3", Quickshell.shellDir + "/bin/random_wallpaper.py", "--notify"]
+        running: false
+    }
+
+    Process {
+        id: chooseDirProcess
+        command: ["python3", Quickshell.shellDir + "/bin/choose_wallpaper_dir.py", root.wallpaperFolder]
+        running: false
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        const res = JSON.parse(this.text);
+                        if (res && res.status === "success" && res.folder) {
+                            root.wallpaperFolder = res.folder;
+                            folderInput.text = res.folder;
+                            root.saveSettings();
+                        }
+                    } catch (e) {
+                        console.log("Error parsing choose_wallpaper_dir result:", e);
+                    }
+                }
+            }
+        }
+    }
+
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
 
@@ -121,7 +164,12 @@ FloatingWindow {
             "--island-auto-hide", islandAutoHideEnabled ? "true" : "false",
             "--notepad-default-mode", notepadDefaultMode,
             "--notepad-auto-save", notepadAutoSave ? "true" : "false",
-            "--tlp-permission-mode", tlpPermissionMode
+            "--tlp-permission-mode", tlpPermissionMode,
+            "--auto-wallpaper-enabled", autoWallpaperEnabled ? "true" : "false",
+            "--auto-wallpaper-interval", String(autoWallpaperInterval),
+            "--auto-wallpaper-notification", autoWallpaperNotification ? "true" : "false",
+            "--random-wallpaper-on-startup", randomWallpaperOnStartup ? "true" : "false",
+            "--wallpaper-folder", wallpaperFolder
         ]);
     }
 
@@ -363,6 +411,7 @@ FloatingWindow {
                     Repeater {
                         model: [
                             { id: "bar_island", icon: "\uf108", label: "Bar & Island", desc: "Shape, size, notch style, and custom geometry." },
+                            { id: "wallpaper", icon: "\uf03e", label: "Wallpaper", desc: "Auto-switch timer, random wallpaper, folders, and slideshow." },
                             { id: "notepad", icon: "\uf044", label: "Notepad Notch", desc: "Default view mode, auto-save settings, and markdown." },
                             { id: "actions", icon: "\uf0e7", label: "Island Actions", desc: "Primary left-click and secondary right-click actions." },
                             { id: "clock_date", icon: "\uf017", label: "Clock & Behavior", desc: "Time format, auto-expansion, and battery text." }
@@ -460,6 +509,7 @@ FloatingWindow {
                                 text: {
                                     switch (root.activeCategory) {
                                     case "bar_island": return "\uf108";
+                                    case "wallpaper": return "\uf03e";
                                     case "notepad": return "\uf044";
                                     case "actions": return "\uf0e7";
                                     case "clock_date": return "\uf017";
@@ -480,6 +530,7 @@ FloatingWindow {
                                 text: {
                                     switch (root.activeCategory) {
                                     case "bar_island": return "Bar & Island";
+                                    case "wallpaper": return "Wallpaper";
                                     case "notepad": return "Notepad Notch";
                                     case "actions": return "Island Actions";
                                     case "clock_date": return "Clock & Behavior";
@@ -496,6 +547,7 @@ FloatingWindow {
                                 text: {
                                     switch (root.activeCategory) {
                                     case "bar_island": return "Customize island visual style (Pill vs Notch), height, width, radius, and padding.";
+                                    case "wallpaper": return "Configure automatic wallpaper rotation, timer intervals, instant random switcher, and directories.";
                                     case "notepad": return "Configure default view mode (Edit vs Preview) and auto-save behavior for notes.";
                                     case "actions": return "Set primary left-click and secondary right-click actions for the Dynamic Island.";
                                     case "clock_date": return "Adjust 12h/24h time format, battery percentage text, and auto-expand options.";
@@ -838,6 +890,469 @@ FloatingWindow {
                                     onToggled: (newValue) => {
                                         islandAutoHideEnabled = newValue;
                                         saveSettings();
+                                    }
+                                }
+                            }
+                        }
+
+                        // ==================== CATEGORY: WALLPAPER ====================
+                        ColumnLayout {
+                            visible: root.activeCategory === "wallpaper" || root.searchQuery !== ""
+                            Layout.fillWidth: true
+                            spacing: 14
+
+                            // 1. Current Active Wallpaper & Instant Actions
+                            SettingsCard {
+                                title: "Current Wallpaper"
+                                subtitle: root.currentWallpaperFilename !== "None" ? root.currentWallpaperFilename : "No wallpaper selected"
+
+                                control: Row {
+                                    spacing: 8
+
+                                    // Randomize Button
+                                    Rectangle {
+                                        width: 125
+                                        height: 32
+                                        radius: 8
+                                        color: colorPrimary
+
+                                        RowLayout {
+                                            anchors.centerIn: parent
+                                            spacing: 6
+
+                                            Text {
+                                                text: "\uf079"
+                                                font.family: root.iconFontFamily
+                                                font.pixelSize: 12
+                                                color: "#ffffff"
+                                            }
+
+                                            Text {
+                                                text: "Randomize"
+                                                font.family: "Inter Display"
+                                                font.pixelSize: 11
+                                                font.weight: Font.DemiBold
+                                                color: "#ffffff"
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                instantRandomWallpaperProcess.running = true;
+                                            }
+                                        }
+                                    }
+
+                                    // Gallery / Picker Button
+                                    Rectangle {
+                                        width: 95
+                                        height: 32
+                                        radius: 8
+                                        color: colorSecondaryContainer
+
+                                        RowLayout {
+                                            anchors.centerIn: parent
+                                            spacing: 6
+
+                                            Text {
+                                                text: "\uf03e"
+                                                font.family: root.iconFontFamily
+                                                font.pixelSize: 12
+                                                color: colorOnSecondaryContainer
+                                            }
+
+                                            Text {
+                                                text: "Gallery"
+                                                font.family: "Inter Display"
+                                                font.pixelSize: 11
+                                                font.weight: Font.Medium
+                                                color: colorOnSecondaryContainer
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                Quickshell.execDetached(["qs", "ipc", "-p", Quickshell.shellDir, "call", "island", "toggleWallpapers"]);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item {
+                                    width: parent.width
+                                    height: 26
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        spacing: 8
+
+                                        Rectangle {
+                                            Layout.preferredHeight: 24
+                                            Layout.preferredWidth: shortcutRow.implicitWidth + 14
+                                            radius: 6
+                                            color: "#18ffffff"
+                                            border.color: "#20ffffff"
+                                            border.width: 1
+
+                                            RowLayout {
+                                                id: shortcutRow
+                                                anchors.centerIn: parent
+                                                spacing: 6
+
+                                                Text {
+                                                    text: "Shortcut"
+                                                    font.family: "Inter Display"
+                                                    font.pixelSize: 10
+                                                    font.weight: Font.DemiBold
+                                                    color: colorPrimary
+                                                }
+
+                                                Rectangle {
+                                                    width: 1
+                                                    height: 10
+                                                    color: "#30ffffff"
+                                                }
+
+                                                Text {
+                                                    text: "Super + Ctrl + W"
+                                                    font.family: "Inter Display"
+                                                    font.pixelSize: 10
+                                                    color: colorOnSurface
+                                                    font.weight: Font.Medium
+                                                }
+                                            }
+                                        }
+
+                                        Text {
+                                            text: "Press shortcut anytime for instant wallpaper shuffle"
+                                            font.family: "Inter Display"
+                                            font.pixelSize: 11
+                                            color: colorOnSurfaceVariant
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 2. Auto Wallpaper Switcher Toggle
+                            SettingsCard {
+                                title: "Auto Wallpaper Switch"
+                                subtitle: "Automatically cycle to a new random wallpaper at regular intervals in the background"
+
+                                control: SettingsSwitch {
+                                    checked: root.autoWallpaperEnabled
+                                    onToggled: (newValue) => {
+                                        root.autoWallpaperEnabled = newValue;
+                                        root.saveSettings();
+                                    }
+                                }
+                            }
+
+                            // 3. Auto-Switch Timer Interval
+                            SettingsCard {
+                                title: "Rotation Interval"
+                                subtitle: root.autoWallpaperEnabled
+                                    ? ("Automatically changing wallpaper every " + (root.autoWallpaperInterval >= 60 ? (Math.floor(root.autoWallpaperInterval / 60) + "h " + (root.autoWallpaperInterval % 60 > 0 ? (root.autoWallpaperInterval % 60 + "m") : "")) : (root.autoWallpaperInterval + " min")))
+                                    : "Configure active timer interval for automatic wallpaper rotation"
+
+                                control: Text {
+                                    text: root.autoWallpaperInterval >= 60
+                                        ? (Math.floor(root.autoWallpaperInterval / 60) + " hr" + (root.autoWallpaperInterval >= 120 ? "s" : "") + (root.autoWallpaperInterval % 60 > 0 ? (" " + (root.autoWallpaperInterval % 60) + " min") : ""))
+                                        : (root.autoWallpaperInterval + " min")
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    color: colorPrimary
+                                }
+
+                                ColumnLayout {
+                                    width: parent.width
+                                    spacing: 12
+
+                                    // Preset chips
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 6
+
+                                        Repeater {
+                                            model: [
+                                                { label: "5m", mins: 5 },
+                                                { label: "10m", mins: 10 },
+                                                { label: "15m", mins: 15 },
+                                                { label: "30m", mins: 30 },
+                                                { label: "1h", mins: 60 },
+                                                { label: "2h", mins: 120 },
+                                                { label: "4h", mins: 240 }
+                                            ]
+
+                                            delegate: Rectangle {
+                                                required property var modelData
+                                                Layout.fillWidth: true
+                                                Layout.preferredHeight: 30
+                                                radius: 8
+                                                color: root.autoWallpaperInterval === modelData.mins ? colorPrimary : colorSecondaryContainer
+
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: modelData.label
+                                                    color: root.autoWallpaperInterval === modelData.mins ? "#ffffff" : colorOnSurfaceVariant
+                                                    font.pixelSize: 11
+                                                    font.family: "Inter Display"
+                                                    font.weight: root.autoWallpaperInterval === modelData.mins ? Font.Bold : Font.Medium
+                                                }
+
+                                                MouseArea {
+                                                    anchors.fill: parent
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onClicked: {
+                                                        root.autoWallpaperInterval = modelData.mins;
+                                                        root.saveSettings();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Fine-tuning Slider (1m to 180m)
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 10
+
+                                        Text {
+                                            text: "1m"
+                                            font.pixelSize: 10
+                                            color: colorOnSurfaceVariant
+                                            font.family: "Inter Display"
+                                        }
+
+                                        Slider {
+                                            Layout.fillWidth: true
+                                            from: 1
+                                            to: 180
+                                            stepSize: 1
+                                            value: root.autoWallpaperInterval
+                                            onMoved: {
+                                                root.autoWallpaperInterval = Math.round(value);
+                                                root.saveSettings();
+                                            }
+                                        }
+
+                                        Text {
+                                            text: "3h"
+                                            font.pixelSize: 10
+                                            color: colorOnSurfaceVariant
+                                            font.family: "Inter Display"
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 4. Wallpaper Folder Directory
+                            SettingsCard {
+                                title: "Wallpaper Directory"
+                                subtitle: "Folder scanned for random rotation and dynamic island gallery"
+
+                                control: Row {
+                                    spacing: 8
+
+                                    // Choose directory button
+                                    Rectangle {
+                                        width: 105
+                                        height: 32
+                                        radius: 8
+                                        color: colorPrimary
+
+                                        RowLayout {
+                                            anchors.centerIn: parent
+                                            spacing: 6
+
+                                            Text {
+                                                text: "\uf07c"
+                                                font.family: root.iconFontFamily
+                                                font.pixelSize: 12
+                                                color: "#ffffff"
+                                            }
+
+                                            Text {
+                                                text: "Choose..."
+                                                font.family: "Inter Display"
+                                                font.pixelSize: 11
+                                                font.weight: Font.DemiBold
+                                                color: "#ffffff"
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                chooseDirProcess.running = true;
+                                            }
+                                        }
+                                    }
+
+                                    // Reset Button (if custom folder)
+                                    Rectangle {
+                                        visible: root.wallpaperFolder !== (root.getHomePath() + "/Pictures/Wallpapers")
+                                        width: 32
+                                        height: 32
+                                        radius: 8
+                                        color: colorSecondaryContainer
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "\uf0e2"
+                                            font.family: root.iconFontFamily
+                                            font.pixelSize: 12
+                                            color: colorOnSecondaryContainer
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                root.wallpaperFolder = root.getHomePath() + "/Pictures/Wallpapers";
+                                                folderInput.text = root.wallpaperFolder;
+                                                root.saveSettings();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item {
+                                    width: parent.width
+                                    height: 40
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: 10
+                                        color: "#12ffffff"
+                                        border.color: "#1affffff"
+                                        border.width: 1
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 12
+                                            anchors.rightMargin: 8
+                                            spacing: 8
+
+                                            Text {
+                                                text: "\uf07b"
+                                                font.family: root.iconFontFamily
+                                                font.pixelSize: 13
+                                                color: colorPrimary
+                                            }
+
+                                            TextField {
+                                                id: folderInput
+                                                Layout.fillWidth: true
+                                                text: root.wallpaperFolder
+                                                placeholderText: root.getHomePath() + "/Pictures/Wallpapers"
+                                                placeholderTextColor: "#606060"
+                                                font.family: "Inter Display"
+                                                font.pixelSize: 12
+                                                color: "#ffffff"
+                                                background: null
+                                                selectByMouse: true
+                                                onEditingFinished: {
+                                                    if (text.trim() !== "") {
+                                                        root.wallpaperFolder = text.trim();
+                                                        root.saveSettings();
+                                                    }
+                                                }
+                                            }
+
+                                            Rectangle {
+                                                width: 58
+                                                height: 26
+                                                radius: 6
+                                                color: "#1cffffff"
+
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: "Open"
+                                                    font.family: "Inter Display"
+                                                    font.pixelSize: 10
+                                                    font.weight: Font.Medium
+                                                    color: colorOnSurface
+                                                }
+
+                                                MouseArea {
+                                                    anchors.fill: parent
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onClicked: {
+                                                        Quickshell.execDetached(["xdg-open", root.wallpaperFolder]);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 5. Randomize on Startup
+                            SettingsCard {
+                                title: "Randomize on Startup"
+                                subtitle: "Pick a new random wallpaper automatically on login or session start"
+
+                                control: SettingsSwitch {
+                                    checked: root.randomWallpaperOnStartup
+                                    onToggled: (newValue) => {
+                                        root.randomWallpaperOnStartup = newValue;
+                                        root.saveSettings();
+                                    }
+                                }
+                            }
+
+                            // 6. Switch Notification Toast
+                            SettingsCard {
+                                title: "Switch Notification"
+                                subtitle: "Show a Dynamic Island toast and system notification when wallpaper changes"
+
+                                control: SettingsSwitch {
+                                    checked: root.autoWallpaperNotification
+                                    onToggled: (newValue) => {
+                                        root.autoWallpaperNotification = newValue;
+                                        root.saveSettings();
+                                    }
+                                }
+                            }
+
+                            // 7. Dynamic Matugen Theming Indicator
+                            SettingsCard {
+                                title: "Material Design Color Sync"
+                                subtitle: "System UI, Hyprland borders, Tide Island, Kitty, Cava, and btop automatically adapt palette tokens via Matugen"
+
+                                control: Rectangle {
+                                    width: 68
+                                    height: 24
+                                    radius: 12
+                                    color: Qt.rgba(0.2, 0.8, 0.4, 0.15)
+                                    border.color: Qt.rgba(0.2, 0.8, 0.4, 0.4)
+                                    border.width: 1
+
+                                    RowLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 5
+
+                                        Rectangle {
+                                            width: 6
+                                            height: 6
+                                            radius: 3
+                                            color: "#34d399"
+                                        }
+
+                                        Text {
+                                            text: "Active"
+                                            font.family: "Inter Display"
+                                            font.pixelSize: 10
+                                            font.weight: Font.Bold
+                                            color: "#34d399"
+                                        }
                                     }
                                 }
                             }

@@ -136,6 +136,7 @@ FloatingWindow {
         { keys: "Super+V", desc: "Clipboard history" },
         { keys: "Super+.", desc: "Emoji picker" },
         { keys: "Super+Alt+W", desc: "Wallpaper picker" },
+        { keys: "Super+Ctrl+W", desc: "Random wallpaper" },
         { keys: "Super+Tab", desc: "Workspace overview" },
         { keys: "Super+A", desc: "Control center" },
         { keys: "Super+L", desc: "Lock screen" },

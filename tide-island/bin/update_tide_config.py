@@ -31,6 +31,11 @@ def main():
     parser.add_argument("--notepad-default-mode", choices=["edit", "preview"], help="Default notepad mode (edit or preview)")
     parser.add_argument("--notepad-auto-save", choices=["true", "false"], help="Default notepad auto-save state")
     parser.add_argument("--tlp-permission-mode", choices=["password", "polkit", "sudoers", "skip"], help="Power mode permission mode")
+    parser.add_argument("--auto-wallpaper-enabled", choices=["true", "false"], help="Enable/disable automatic wallpaper rotation")
+    parser.add_argument("--auto-wallpaper-interval", type=int, help="Auto wallpaper rotation timer interval in minutes")
+    parser.add_argument("--auto-wallpaper-notification", choices=["true", "false"], help="Show notification when wallpaper changes")
+    parser.add_argument("--random-wallpaper-on-startup", choices=["true", "false"], help="Set random wallpaper on startup")
+    parser.add_argument("--wallpaper-folder", help="Directory path to load wallpapers from")
 
     args = parser.parse_args()
     config_path = os.path.expanduser("~/.config/tide-island/userconfig.json")
@@ -93,6 +98,16 @@ def main():
         config['notepadAutoSave'] = (args.notepad_auto_save.lower() == "true")
     if args.tlp_permission_mode is not None:
         config['tlpPermissionMode'] = args.tlp_permission_mode
+    if args.auto_wallpaper_enabled is not None:
+        config['autoWallpaperEnabled'] = (args.auto_wallpaper_enabled.lower() == "true")
+    if args.auto_wallpaper_interval is not None:
+        config['autoWallpaperInterval'] = args.auto_wallpaper_interval
+    if args.auto_wallpaper_notification is not None:
+        config['autoWallpaperNotification'] = (args.auto_wallpaper_notification.lower() == "true")
+    if args.random_wallpaper_on_startup is not None:
+        config['randomWallpaperOnStartup'] = (args.random_wallpaper_on_startup.lower() == "true")
+    if args.wallpaper_folder is not None:
+        config['wallpaperFolder'] = args.wallpaper_folder
 
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
     with open(config_path, 'w') as f:

@@ -192,6 +192,13 @@ hl.bind(
     )
 )
 
+hl.bind(
+    mainMod .. " + CTRL + W",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island randomWallpaper"
+    )
+)
+
 --hyprpicker
 hl.bind(mainMod .. " +SHIFT + C",hl.dsp.exec_cmd("hyprpicker -a"))
 
