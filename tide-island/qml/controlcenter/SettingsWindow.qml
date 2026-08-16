@@ -98,6 +98,29 @@ FloatingWindow {
         running: false
     }
 
+    Process {
+        id: chooseDirProcess
+        command: ["python3", Quickshell.shellDir + "/bin/choose_wallpaper_dir.py", root.wallpaperFolder]
+        running: false
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text) {
+                    try {
+                        const res = JSON.parse(this.text);
+                        if (res && res.status === "success" && res.folder) {
+                            root.wallpaperFolder = res.folder;
+                            folderInput.text = res.folder;
+                            root.saveSettings();
+                        }
+                    } catch (e) {
+                        console.log("Error parsing choose_wallpaper_dir result:", e);
+                    }
+                }
+            }
+        }
+    }
+
     // Matugen dynamic theme colors
     readonly property var themeColors: shellRoot.matugenThemeColors
 
@@ -959,55 +982,59 @@ FloatingWindow {
                                     }
                                 }
 
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 8
-                                    Layout.topMargin: 4
+                                Item {
+                                    width: parent.width
+                                    height: 26
 
-                                    Rectangle {
-                                        Layout.preferredHeight: 24
-                                        Layout.preferredWidth: shortcutRow.implicitWidth + 14
-                                        radius: 6
-                                        color: "#18ffffff"
-                                        border.color: "#20ffffff"
-                                        border.width: 1
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        spacing: 8
 
-                                        RowLayout {
-                                            id: shortcutRow
-                                            anchors.centerIn: parent
-                                            spacing: 6
+                                        Rectangle {
+                                            Layout.preferredHeight: 24
+                                            Layout.preferredWidth: shortcutRow.implicitWidth + 14
+                                            radius: 6
+                                            color: "#18ffffff"
+                                            border.color: "#20ffffff"
+                                            border.width: 1
 
-                                            Text {
-                                                text: "Shortcut"
-                                                font.family: "Inter Display"
-                                                font.pixelSize: 10
-                                                font.weight: Font.DemiBold
-                                                color: colorPrimary
-                                            }
+                                            RowLayout {
+                                                id: shortcutRow
+                                                anchors.centerIn: parent
+                                                spacing: 6
 
-                                            Rectangle {
-                                                width: 1
-                                                height: 10
-                                                color: "#30ffffff"
-                                            }
+                                                Text {
+                                                    text: "Shortcut"
+                                                    font.family: "Inter Display"
+                                                    font.pixelSize: 10
+                                                    font.weight: Font.DemiBold
+                                                    color: colorPrimary
+                                                }
 
-                                            Text {
-                                                text: "Super + Ctrl + W"
-                                                font.family: "Inter Display"
-                                                font.pixelSize: 10
-                                                color: colorOnSurface
-                                                font.weight: Font.Medium
+                                                Rectangle {
+                                                    width: 1
+                                                    height: 10
+                                                    color: "#30ffffff"
+                                                }
+
+                                                Text {
+                                                    text: "Super + Ctrl + W"
+                                                    font.family: "Inter Display"
+                                                    font.pixelSize: 10
+                                                    color: colorOnSurface
+                                                    font.weight: Font.Medium
+                                                }
                                             }
                                         }
-                                    }
 
-                                    Text {
-                                        text: "Press shortcut anytime for instant wallpaper shuffle"
-                                        font.family: "Inter Display"
-                                        font.pixelSize: 11
-                                        color: colorOnSurfaceVariant
-                                        Layout.fillWidth: true
-                                        elide: Text.ElideRight
+                                        Text {
+                                            text: "Press shortcut anytime for instant wallpaper shuffle"
+                                            font.family: "Inter Display"
+                                            font.pixelSize: 11
+                                            color: colorOnSurfaceVariant
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
                                     }
                                 }
                             }
@@ -1043,9 +1070,8 @@ FloatingWindow {
                                 }
 
                                 ColumnLayout {
-                                    Layout.fillWidth: true
+                                    width: parent.width
                                     spacing: 12
-                                    Layout.topMargin: 4
 
                                     // Preset chips
                                     RowLayout {
@@ -1128,71 +1154,35 @@ FloatingWindow {
                             // 4. Wallpaper Folder Directory
                             SettingsCard {
                                 title: "Wallpaper Directory"
-                                subtitle: "Folder scanned for random switching and dynamic island gallery"
+                                subtitle: "Folder scanned for random rotation and dynamic island gallery"
 
-                                RowLayout {
-                                    Layout.fillWidth: true
+                                control: Row {
                                     spacing: 8
-                                    Layout.topMargin: 4
 
+                                    // Choose directory button
                                     Rectangle {
-                                        Layout.fillWidth: true
-                                        Layout.preferredHeight: 36
+                                        width: 105
+                                        height: 32
                                         radius: 8
-                                        color: "#14ffffff"
-                                        border.color: "#20ffffff"
-                                        border.width: 1
-
-                                        RowLayout {
-                                            anchors.fill: parent
-                                            anchors.leftMargin: 10
-                                            anchors.rightMargin: 10
-                                            spacing: 8
-
-                                            Text {
-                                                text: "\uf07b"
-                                                font.family: root.iconFontFamily
-                                                font.pixelSize: 12
-                                                color: colorPrimary
-                                            }
-
-                                            TextField {
-                                                id: folderInput
-                                                Layout.fillWidth: true
-                                                text: root.wallpaperFolder
-                                                placeholderText: root.getHomePath() + "/Pictures/Wallpapers"
-                                                placeholderTextColor: "#606060"
-                                                font.family: "Inter Display"
-                                                font.pixelSize: 11
-                                                color: "#ffffff"
-                                                background: null
-                                                onEditingFinished: {
-                                                    if (text.trim() !== "") {
-                                                        root.wallpaperFolder = text.trim();
-                                                        root.saveSettings();
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Open Folder Button
-                                    Rectangle {
-                                        Layout.preferredWidth: 70
-                                        Layout.preferredHeight: 36
-                                        radius: 8
-                                        color: colorSecondaryContainer
+                                        color: colorPrimary
 
                                         RowLayout {
                                             anchors.centerIn: parent
-                                            spacing: 4
+                                            spacing: 6
 
                                             Text {
-                                                text: "Open"
+                                                text: "\uf07c"
+                                                font.family: root.iconFontFamily
+                                                font.pixelSize: 12
+                                                color: "#ffffff"
+                                            }
+
+                                            Text {
+                                                text: "Choose..."
                                                 font.family: "Inter Display"
                                                 font.pixelSize: 11
-                                                font.weight: Font.Medium
-                                                color: colorOnSecondaryContainer
+                                                font.weight: Font.DemiBold
+                                                color: "#ffffff"
                                             }
                                         }
 
@@ -1200,16 +1190,16 @@ FloatingWindow {
                                             anchors.fill: parent
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: {
-                                                Quickshell.execDetached(["xdg-open", root.wallpaperFolder]);
+                                                chooseDirProcess.running = true;
                                             }
                                         }
                                     }
 
-                                    // Reset Folder Button (if non-default)
+                                    // Reset Button (if custom folder)
                                     Rectangle {
                                         visible: root.wallpaperFolder !== (root.getHomePath() + "/Pictures/Wallpapers")
-                                        Layout.preferredWidth: 36
-                                        Layout.preferredHeight: 36
+                                        width: 32
+                                        height: 32
                                         radius: 8
                                         color: colorSecondaryContainer
 
@@ -1228,6 +1218,76 @@ FloatingWindow {
                                                 root.wallpaperFolder = root.getHomePath() + "/Pictures/Wallpapers";
                                                 folderInput.text = root.wallpaperFolder;
                                                 root.saveSettings();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item {
+                                    width: parent.width
+                                    height: 40
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: 10
+                                        color: "#12ffffff"
+                                        border.color: "#1affffff"
+                                        border.width: 1
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 12
+                                            anchors.rightMargin: 8
+                                            spacing: 8
+
+                                            Text {
+                                                text: "\uf07b"
+                                                font.family: root.iconFontFamily
+                                                font.pixelSize: 13
+                                                color: colorPrimary
+                                            }
+
+                                            TextField {
+                                                id: folderInput
+                                                Layout.fillWidth: true
+                                                text: root.wallpaperFolder
+                                                placeholderText: root.getHomePath() + "/Pictures/Wallpapers"
+                                                placeholderTextColor: "#606060"
+                                                font.family: "Inter Display"
+                                                font.pixelSize: 12
+                                                color: "#ffffff"
+                                                background: null
+                                                selectByMouse: true
+                                                onEditingFinished: {
+                                                    if (text.trim() !== "") {
+                                                        root.wallpaperFolder = text.trim();
+                                                        root.saveSettings();
+                                                    }
+                                                }
+                                            }
+
+                                            Rectangle {
+                                                width: 58
+                                                height: 26
+                                                radius: 6
+                                                color: "#1cffffff"
+
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: "Open"
+                                                    font.family: "Inter Display"
+                                                    font.pixelSize: 10
+                                                    font.weight: Font.Medium
+                                                    color: colorOnSurface
+                                                }
+
+                                                MouseArea {
+                                                    anchors.fill: parent
+                                                    cursorShape: Qt.PointingHandCursor
+                                                    onClicked: {
+                                                        Quickshell.execDetached(["xdg-open", root.wallpaperFolder]);
+                                                    }
+                                                }
                                             }
                                         }
                                     }
