@@ -36,6 +36,7 @@ def main():
     parser.add_argument("--auto-wallpaper-notification", choices=["true", "false"], help="Show notification when wallpaper changes")
     parser.add_argument("--random-wallpaper-on-startup", choices=["true", "false"], help="Set random wallpaper on startup")
     parser.add_argument("--wallpaper-folder", help="Directory path to load wallpapers from")
+    parser.add_argument("--night-light-temp", type=float, help="Night light temperature value (0.0 to 1.0)")
 
     args = parser.parse_args()
     config_path = os.path.expanduser("~/.config/tide-island/userconfig.json")
@@ -108,6 +109,8 @@ def main():
         config['randomWallpaperOnStartup'] = (args.random_wallpaper_on_startup.lower() == "true")
     if args.wallpaper_folder is not None:
         config['wallpaperFolder'] = args.wallpaper_folder
+    if args.night_light_temp is not None:
+        config['nightLightTemp'] = max(0.0, min(1.0, round(float(args.night_light_temp), 2)))
 
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
     with open(config_path, 'w') as f:

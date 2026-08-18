@@ -49,11 +49,12 @@ Scope {
         interval: 500
         repeat: false
         onTriggered: {
-            console.log("[NightLight] saveTempCacheTimer triggered. Saving nightLightTemp = " + shellRoot.nightLightTemp);
-            Quickshell.execDetached(["sh", "-c", "mkdir -p ~/.cache/tide-island && echo '" + shellRoot.nightLightTemp + "' > ~/.cache/tide-island/night_light_temp"]);
             const val = shellRoot.nightLightTemp;
+            console.log("[NightLight] saveTempCacheTimer triggered. Saving nightLightTemp = " + val);
+            Quickshell.execDetached(["sh", "-c", "mkdir -p ~/.cache/tide-island && echo '" + val + "' > ~/.cache/tide-island/night_light_temp"]);
+            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_tide_config.py", "--night-light-temp", val.toFixed(2)]);
             if (val < 0.05) {
-                Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
+                Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset identity || pkill -x hyprsunset"]);
             } else {
                 const targetK = Math.round(6500 - (val * 4000));
                 Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
@@ -465,37 +466,25 @@ Scope {
 
     Process {
         id: startupQueryHyprsunsetProcess
-        command: ["sh", "-c", "pgrep -x hyprsunset >/dev/null && ps -o command= -p $(pgrep -x hyprsunset) || cat " + getHomePath() + "/.cache/tide-island/night_light_temp 2>/dev/null || echo ''"]
+        command: ["sh", "-c", "python3 -c '\nimport json, os, sys\ntemp = None\ncfg_path = os.path.expanduser(\"~/.config/tide-island/userconfig.json\")\ncache_path = os.path.expanduser(\"~/.cache/tide-island/night_light_temp\")\nif os.path.exists(cfg_path):\n    try:\n        with open(cfg_path) as f:\n            d = json.load(f)\n            if \"nightLightTemp\" in d and d[\"nightLightTemp\"] is not None:\n                temp = float(d[\"nightLightTemp\"])\n    except Exception:\n        pass\nif temp is None and os.path.exists(cache_path):\n    try:\n        with open(cache_path) as f:\n            temp = float(f.read().strip())\n    except Exception:\n        pass\nif temp is not None and 0.0 <= temp <= 1.0:\n    print(f\"{temp:.2f}\")\nelse:\n    print(\"0.0\")\n'"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 const text = this.text ? this.text.trim() : "";
                 console.log("[NightLight] startupQueryHyprsunsetProcess finished. stdout: '" + text + "'");
-                if (text !== "") {
-                    const match = text.match(/-t\s+(\d+)/);
-                    if (match && match[1]) {
-                        const temp = parseInt(match[1]);
-                        const calculatedTemp = (6500 - temp) / 4000;
-                        console.log("[NightLight] Found running hyprsunset with temp " + temp + "K. Setting nightLightTemp = " + calculatedTemp);
-                        shellRoot.nightLightTemp = calculatedTemp;
+                const val = parseFloat(text);
+                if (!isNaN(val) && val >= 0.0 && val <= 1.0) {
+                    console.log("[NightLight] Restored startup nightLightTemp = " + val);
+                    shellRoot.nightLightTemp = val;
+                    if (val >= 0.05) {
+                        const targetK = Math.round(6500 - (val * 4000));
+                        console.log("[NightLight] Starting hyprsunset with restored temp " + targetK + "K");
+                        Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
                     } else {
-                        const val = parseFloat(text);
-                        if (!isNaN(val) && val >= 0.0 && val <= 1.0) {
-                            console.log("[NightLight] Found cached temperature " + val + ". Setting nightLightTemp.");
-                            shellRoot.nightLightTemp = val;
-                            if (val >= 0.05) {
-                                const targetK = Math.round(6500 - (val * 4000));
-                                console.log("[NightLight] Starting hyprsunset with cached temp " + targetK + "K");
-                                Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
-                            }
-                        } else {
-                            console.log("[NightLight] Cached value invalid: '" + text + "'. Setting nightLightTemp = 0");
-                            shellRoot.nightLightTemp = 0;
-                        }
+                        Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset identity || pkill -x hyprsunset"]);
                     }
                 } else {
-                    console.log("[NightLight] No running process or cache found. Setting nightLightTemp = 0");
-                    shellRoot.nightLightTemp = 0;
+                    shellRoot.nightLightTemp = 0.0;
                 }
             }
         }

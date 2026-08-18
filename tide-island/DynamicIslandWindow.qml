@@ -511,8 +511,9 @@ PanelWindow {
     }
 
     function setNightLightTemp(value) {
-        if (controlCenterLoader.item) {
-            controlCenterLoader.item.queueTemp(value);
+        root.nightLightTemp = value;
+        if (controlCenterLoader.item && controlCenterLoader.item.syncTempFromLevel) {
+            controlCenterLoader.item.syncTempFromLevel(value);
         }
     }
 

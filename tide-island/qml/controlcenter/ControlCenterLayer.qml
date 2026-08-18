@@ -1045,7 +1045,7 @@ Item {
         if (!force && Math.abs(nextValue - lastAppliedTemp) < 0.02) return;
         lastAppliedTemp = nextValue;
         if (nextValue < 0.05) {
-            Quickshell.execDetached(["pkill", "-x", "hyprsunset"]);
+            Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset identity || pkill -x hyprsunset"]);
         } else {
             const targetK = tempFromValue(nextValue);
             Quickshell.execDetached(["sh", "-c", "hyprctl hyprsunset temperature " + targetK + " || (hyprsunset -t " + targetK + " &)"]);
@@ -1098,6 +1098,14 @@ Item {
         if (showCondition && !sliderIntroPending) displayedVolume = localVolume;
         pendingVolume = localVolume;
         lastAppliedVolume = localVolume;
+    }
+
+    function syncTempFromLevel(level) {
+        if (level < 0 || sliderIntroPending) return;
+        localTemp = clamp01(level);
+        if (showCondition && !sliderIntroPending) displayedTemp = localTemp;
+        pendingTemp = localTemp;
+        lastAppliedTemp = localTemp;
     }
 
     function refreshAudioSinks() {
@@ -1174,28 +1182,6 @@ Item {
         running: false
         onExited: (exitCode) => {
             controlCenter.caffeineMode = (exitCode !== 0);
-        }
-    }
-
-    Process {
-        id: queryHyprsunsetProcess
-        command: ["sh", "-c", "pgrep -fa hyprsunset || echo ''"]
-        running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (this.text) {
-                    const match = this.text.match(/-t\s+(\d+)/);
-                    if (match && match[1]) {
-                        const temp = parseInt(match[1]);
-                        controlCenter.localTemp = (6500 - temp) / 4000;
-                    } else {
-                        controlCenter.localTemp = 0;
-                    }
-                } else {
-                    controlCenter.localTemp = 0;
-                }
-                controlCenter.displayedTemp = controlCenter.localTemp;
-            }
         }
     }
 
@@ -1314,10 +1300,14 @@ Item {
 
     onBrightnessLevelChanged: syncBrightnessFromLevel(brightnessLevel)
     onVolumeLevelChanged: syncVolumeFromLevel(volumeLevel)
+    onTempLevelChanged: syncTempFromLevel(tempLevel)
 
     onShowConditionChanged: {
         if (showCondition) {
             sliderIntroPending = true;
+            syncBrightnessFromLevel(brightnessLevel);
+            syncVolumeFromLevel(volumeLevel);
+            syncTempFromLevel(tempLevel);
             displayedBrightness = localBrightness;
             displayedVolume = localVolume;
             displayedTemp = localTemp;
@@ -1326,7 +1316,6 @@ Item {
             refreshBatteryModeState();
             refreshAudioSinks();
             checkHypridleProcess.running = true;
-            queryHyprsunsetProcess.running = true;
         } else {
             sliderIntroTimer.stop();
             sliderIntroPending = false;
@@ -1338,6 +1327,7 @@ Item {
     Component.onCompleted: {
         syncBrightnessFromLevel(brightnessLevel);
         syncVolumeFromLevel(volumeLevel);
+        syncTempFromLevel(tempLevel);
         displayedBrightness = localBrightness;
         displayedVolume = localVolume;
         displayedTemp = localTemp;
@@ -1346,7 +1336,6 @@ Item {
         refreshBatteryModeState();
         refreshAudioSinks();
         checkHypridleProcess.running = true;
-        queryHyprsunsetProcess.running = true;
     }
 
     Behavior on opacity {
@@ -2147,7 +2136,7 @@ Item {
                             tempApplyTimer.stop();
                             controlCenter.flushTemp(true);
                         }
-                        onCancelRequested: queryHyprsunsetProcess.running = true
+                        onCancelRequested: controlCenter.syncTempFromLevel(controlCenter.tempLevel)
                     }
                 }
             }
