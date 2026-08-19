@@ -1727,6 +1727,7 @@ PanelWindow {
                 case "control_center":
                     return 440 + (controlCenterLoader.item ? controlCenterLoader.item.controlCenterExtraHeight : 0);
                 case "launcher":
+                    return 460;
                 case "clipboard":
                 case "emojis":
                 case "wallpapers":

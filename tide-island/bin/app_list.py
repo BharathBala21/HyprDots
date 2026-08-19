@@ -6,6 +6,55 @@ import sys
 import argparse
 
 USAGE_FILE = os.path.expanduser('~/.cache/tide-island/app_usage.json')
+CACHE_FILE = os.path.expanduser('~/.cache/tide-island/app_cache.json')
+
+APP_DIRS = [
+    os.path.expanduser('~/.local/share/applications'),
+    '/usr/local/share/applications',
+    '/usr/share/applications'
+]
+
+CATEGORY_MAP = {
+    'development': 'dev',
+    'ide': 'dev',
+    'texteditor': 'dev',
+    'debugger': 'dev',
+    'programming': 'dev',
+    'network': 'web',
+    'webbrowser': 'web',
+    'email': 'web',
+    'chat': 'web',
+    'instantmessaging': 'web',
+    'feed': 'web',
+    'audiovideo': 'media',
+    'audio': 'media',
+    'video': 'media',
+    'music': 'media',
+    'player': 'media',
+    'recorder': 'media',
+    'graphics': 'media',
+    'photography': 'media',
+    'system': 'system',
+    'settings': 'system',
+    'packagemanager': 'system',
+    'monitor': 'system',
+    'terminalemulator': 'system',
+    'utility': 'tools',
+    'accessories': 'tools',
+    'filemanager': 'tools',
+    'calculator': 'tools',
+    'core': 'tools',
+    'game': 'games'
+}
+
+def normalize_category(raw_cats):
+    if not raw_cats:
+        return 'tools'
+    cats = [c.strip().lower() for c in raw_cats.split(';') if c.strip()]
+    for c in cats:
+        if c in CATEGORY_MAP:
+            return CATEGORY_MAP[c]
+    return 'tools'
 
 def parse_desktop_file(filepath):
     entry = {}
@@ -26,7 +75,7 @@ def parse_desktop_file(filepath):
                     parts = line.split('=', 1)
                     key = parts[0].strip()
                     val = parts[1].strip()
-                    if key in ('Name', 'Exec', 'Icon', 'Comment', 'GenericName', 'Keywords', 'NoDisplay', 'Hidden'):
+                    if key in ('Name', 'Exec', 'Icon', 'Comment', 'GenericName', 'Keywords', 'Categories', 'Terminal', 'NoDisplay', 'Hidden'):
                         entry[key] = val
     except Exception:
         return None
@@ -34,16 +83,15 @@ def parse_desktop_file(filepath):
 
 def track_app(filename):
     os.makedirs(os.path.dirname(USAGE_FILE), exist_ok=True)
-    try:
-        if os.path.exists(USAGE_FILE):
+    counts = {}
+    if os.path.exists(USAGE_FILE):
+        try:
             with open(USAGE_FILE, 'r', encoding='utf-8') as f:
                 counts = json.load(f)
                 if not isinstance(counts, dict):
                     counts = {}
-        else:
+        except Exception:
             counts = {}
-    except Exception:
-        counts = {}
     
     counts[filename] = counts.get(filename, 0) + 1
     
@@ -53,42 +101,36 @@ def track_app(filename):
     except Exception as e:
         print(f"Error writing usage counts: {e}", file=sys.stderr)
 
-CACHE_FILE = os.path.expanduser('~/.cache/tide-island/app_cache.json')
-
 def get_apps():
     usage_counts = {}
-    try:
-        if os.path.exists(USAGE_FILE):
+    if os.path.exists(USAGE_FILE):
+        try:
             with open(USAGE_FILE, 'r', encoding='utf-8') as f:
                 usage_counts = json.load(f)
                 if not isinstance(usage_counts, dict):
                     usage_counts = {}
-    except Exception:
-        pass
-
-    dirs = [
-        os.path.expanduser('~/.local/share/applications'),
-        '/usr/share/applications'
-    ]
+        except Exception:
+            pass
 
     cache_valid = False
     apps = {}
 
-    try:
-        if os.path.exists(CACHE_FILE):
+    if os.path.exists(CACHE_FILE):
+        try:
             cache_mtime = os.path.getmtime(CACHE_FILE)
-            dir_mtimes = [os.path.getmtime(d) for d in dirs if os.path.exists(d)]
+            dir_mtimes = [os.path.getmtime(d) for d in APP_DIRS if os.path.exists(d)]
             if dir_mtimes and cache_mtime > max(dir_mtimes):
                 with open(CACHE_FILE, 'r', encoding='utf-8') as f:
-                    apps = json.load(f)
-                    if isinstance(apps, dict) and len(apps) > 0:
+                    cached_data = json.load(f)
+                    if isinstance(cached_data, dict) and len(cached_data) > 0:
+                        apps = cached_data
                         cache_valid = True
-    except Exception:
-        cache_valid = False
+        except Exception:
+            cache_valid = False
 
     if not cache_valid:
         apps = {}
-        for d in dirs:
+        for d in APP_DIRS:
             if not os.path.exists(d):
                 continue
             try:
@@ -96,9 +138,7 @@ def get_apps():
             except Exception:
                 continue
             for filename in filenames:
-                if not filename.endswith('.desktop'):
-                    continue
-                if filename in apps:
+                if not filename.endswith('.desktop') or filename in apps:
                     continue
                 filepath = os.path.join(d, filename)
                 entry = parse_desktop_file(filepath)
@@ -118,6 +158,9 @@ def get_apps():
                 comment = entry.get('Comment', '')
                 generic = entry.get('GenericName', '')
                 keywords = entry.get('Keywords', '').replace(';', ' ')
+                raw_categories = entry.get('Categories', '')
+                category = normalize_category(raw_categories)
+                is_terminal = entry.get('Terminal', 'false').lower() == 'true'
                 
                 apps[filename] = {
                     'filename': filename,
@@ -125,7 +168,10 @@ def get_apps():
                     'exec': exec_cmd,
                     'icon': icon,
                     'description': comment or generic,
-                    'search': f"{name} {comment} {generic} {keywords}".lower()
+                    'category': category,
+                    'rawCategories': raw_categories,
+                    'terminal': is_terminal,
+                    'search': f"{name} {comment} {generic} {keywords} {raw_categories} {exec_cmd}".lower()
                 }
         
         try:
@@ -135,11 +181,16 @@ def get_apps():
         except Exception:
             pass
 
-    sorted_apps = sorted(
-        apps.values(),
-        key=lambda x: (-usage_counts.get(x['filename'], 0), x['name'].lower())
-    )
-    return sorted_apps
+    # Attach live usage count and sort
+    app_list = []
+    for filename, app in apps.items():
+        app_copy = dict(app)
+        count = usage_counts.get(filename, 0)
+        app_copy['count'] = count
+        app_list.append(app_copy)
+
+    app_list.sort(key=lambda x: (-x['count'], x['name'].lower()))
+    return app_list
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
