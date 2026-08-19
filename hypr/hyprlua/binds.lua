@@ -108,11 +108,10 @@ hl.bind(mainMod .. " + SHIFT + F", function()
 end)
 
 hl.bind(
-    "SUPER + D",
+    mainMod .. " + D",
     hl.dsp.exec_cmd(
         "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island toggleLauncher"
-    ),
-    { release = true }
+    )
 )
 
 hl.bind(

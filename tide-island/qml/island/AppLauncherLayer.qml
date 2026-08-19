@@ -28,7 +28,6 @@ FocusScope {
 
     // In-memory persistent app cache
     property var allApps: []
-    property var frequentApps: []
     property var filteredResults: []
     property int selectedIndex: 0
     property string searchText: ""
@@ -110,20 +109,6 @@ FocusScope {
                         const apps = JSON.parse(this.text);
                         if (Array.isArray(apps)) {
                             root.allApps = apps;
-                            // Extract top frequent apps (count > 0)
-                            const freq = [];
-                            for (let i = 0; i < apps.length && freq.length < 6; i++) {
-                                if (apps[i].count && apps[i].count > 0) {
-                                    freq.push(apps[i]);
-                                }
-                            }
-                            // If no usage history yet, default to first 6 apps
-                            if (freq.length === 0) {
-                                for (let i = 0; i < Math.min(6, apps.length); i++) {
-                                    freq.push(apps[i]);
-                                }
-                            }
-                            root.frequentApps = freq;
                             root.updateFilteredResults();
                         }
                     } catch (e) {
@@ -284,7 +269,7 @@ FocusScope {
         // Category filtering
         if (cat !== "all") {
             if (cat === "frequent") {
-                if (!app.count || app.count <= 0) return -1;
+                if ((app.count || 0) <= 0) return -1;
             } else if (app.category !== cat && (!app.rawCategories || !app.rawCategories.toLowerCase().includes(cat))) {
                 return -1;
             }
@@ -561,7 +546,7 @@ FocusScope {
                         ? "Enter math calculation (e.g. 128 * 4, sqrt(256))..."
                         : (root.searchMode === "cmd" 
                             ? "Enter terminal command to run..." 
-                            : (root.searchMode === "web" ? "Search web with browser..." : "Search"))
+                            : (root.searchMode === "web" ? "Search web with browser..." : "Search "))
                     placeholderTextColor: Qt.rgba(1, 1, 1, 0.3)
                     color: "#ffffff"
                     font.family: root.textFontFamily
@@ -612,13 +597,6 @@ FocusScope {
                         } else if (event.key === Qt.Key_Escape) {
                             root.closeRequested();
                             event.accepted = true;
-                        } else if (event.modifiers & Qt.AltModifier) {
-                            // Alt+1 .. Alt+6 for instant frequent app launch
-                            const num = event.key - Qt.Key_1;
-                            if (num >= 0 && num < root.frequentApps.length) {
-                                root.launchApp(root.frequentApps[num], false);
-                                event.accepted = true;
-                            }
                         }
                     }
                 }
@@ -736,93 +714,11 @@ FocusScope {
             }
         }
 
-        // Frequent Apps Quick Row (Visible when search query is empty & 'all' or 'frequent' category is active)
-        Rectangle {
-            id: frequentContainer
-            width: parent.width
-            height: 64
-            radius: 12
-            color: Qt.rgba(1, 1, 1, 0.03)
-            visible: root.searchMode === "apps" && root.searchText.trim() === "" && (root.activeCategory === "all" || root.activeCategory === "frequent") && root.frequentApps.length > 0
-
-            Row {
-                anchors.fill: parent
-                anchors.margins: 6
-                spacing: 8
-
-                Repeater {
-                    model: root.frequentApps
-
-                    delegate: Rectangle {
-                        id: freqCard
-                        width: (frequentContainer.width - 12 - (root.frequentApps.length - 1) * 8) / root.frequentApps.length
-                        height: parent.height
-                        radius: 10
-                        color: freqMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.04)
-
-                        Behavior on color { ColorAnimation { duration: 100 } }
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 8
-
-                            Rectangle {
-                                width: 28
-                                height: 28
-                                radius: 7
-                                color: "transparent"
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                Image {
-                                    anchors.fill: parent
-                                    source: Quickshell.iconPath(modelData.icon, "application-x-executable")
-                                    smooth: true
-                                    mipmap: true
-                                    sourceSize: Qt.size(28, 28)
-                                    asynchronous: true
-                                }
-                            }
-
-                            Column {
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: freqCard.width - 44
-                                spacing: 2
-
-                                Text {
-                                    text: modelData.name
-                                    font.family: root.textFontFamily
-                                    font.pixelSize: 11
-                                    font.weight: Font.DemiBold
-                                    color: "#ffffff"
-                                    elide: Text.ElideRight
-                                    width: parent.width
-                                }
-
-                                Text {
-                                    text: "Alt+" + (index + 1)
-                                    font.family: root.textFontFamily
-                                    font.pixelSize: 9
-                                    color: Qt.rgba(1, 1, 1, 0.35)
-                                }
-                            }
-                        }
-
-                        MouseArea {
-                            id: freqMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: root.launchApp(modelData, false)
-                        }
-                    }
-                }
-            }
-        }
-
         // Results Container
         Item {
             id: resultsContainer
             width: parent.width
-            height: parent.height - searchBarContainer.height - (categoryRow.visible ? categoryRow.height + 10 : 0) - (frequentContainer.visible ? frequentContainer.height + 10 : 0) - footerRow.height - 24
+            height: parent.height - searchBarContainer.height - (categoryRow.visible ? categoryRow.height + 10 : 0) - footerRow.height - 20
 
             // 1. Application / Command Results ListView
             ListView {
@@ -880,11 +776,11 @@ FocusScope {
                             Image {
                                 visible: !(modelData && (modelData.isSystem || modelData.isCommand || modelData.isWebSearch))
                                 anchors.fill: parent
-                                anchors.margins: 2
-                                source: Quickshell.iconPath(modelData.icon || "application-x-executable", "application-x-executable")
+                                anchors.margins: 3
+                                source: (modelData && modelData.icon) ? Quickshell.iconPath(modelData.icon, "application-x-executable") : Quickshell.iconPath("application-x-executable")
                                 smooth: true
                                 mipmap: true
-                                sourceSize: Qt.size(36, 36)
+                                sourceSize: Qt.size(32, 32)
                                 asynchronous: true
                             }
 
@@ -909,7 +805,7 @@ FocusScope {
                                 width: parent.width
 
                                 Text {
-                                    text: modelData.name || ""
+                                    text: (modelData && modelData.name) ? modelData.name : ""
                                     font.family: root.textFontFamily
                                     font.pixelSize: 13
                                     font.weight: isSelected ? Font.DemiBold : Font.Normal
@@ -930,7 +826,7 @@ FocusScope {
                                     Text {
                                         id: catLabel
                                         anchors.centerIn: parent
-                                        text: (modelData.category || "").toUpperCase()
+                                        text: (modelData && modelData.category ? modelData.category : "").toUpperCase()
                                         font.family: root.textFontFamily
                                         font.pixelSize: 8
                                         font.weight: Font.Bold
@@ -940,7 +836,7 @@ FocusScope {
                             }
 
                             Text {
-                                text: modelData.description || (modelData.exec ? "Exec: " + modelData.exec : "")
+                                text: (modelData && modelData.description) ? modelData.description : ((modelData && modelData.exec) ? "Exec: " + modelData.exec : "")
                                 font.family: root.textFontFamily
                                 font.pixelSize: 11
                                 color: isSelected ? Qt.rgba(1, 1, 1, 0.6) : Qt.rgba(1, 1, 1, 0.35)
