@@ -63,6 +63,16 @@ PanelWindow {
     readonly property bool utilitiesLayerVisible: islandContainer.islandState === "utilities"
     readonly property bool controlCenterLayerVisible: islandContainer.islandState === "control_center"
     readonly property bool notepadLayerVisible: islandContainer.islandState === "notepad"
+    readonly property bool pillHidden: shellRootController ? !!shellRootController.pillHidden : (activeUserConfig.hideTopPill || false)
+    readonly property bool isRestingState: (islandContainer.islandState === "normal"
+        || islandContainer.islandState === "custom"
+        || islandContainer.islandState === "lyrics"
+        || (islandContainer.islandState === "utilities" && !root.utilitiesLayerVisible))
+        && !root.overviewVisible
+        && !root.connectivityPromptActive
+        && !islandContainer.isAutoExpanded
+        && islandContainer.osdProgress < 0
+    readonly property bool isPillHiddenInRestingState: root.pillHidden && root.isRestingState
     readonly property var userConfig: UserConfig
 
     FileView {
@@ -155,8 +165,8 @@ PanelWindow {
             intersection: Intersection.Combine
             x: Math.floor(mainCapsule.x)
             y: Math.floor(mainCapsule.y)
-            width: Math.ceil(mainCapsule.width)
-            height: Math.ceil(mainCapsule.height)
+            width: (!root.isPillHiddenInRestingState && mainCapsule.visible) ? Math.ceil(mainCapsule.width) : 0
+            height: (!root.isPillHiddenInRestingState && mainCapsule.visible) ? Math.ceil(mainCapsule.height) : 0
         }
         
         // Add existing detail shells
@@ -204,28 +214,28 @@ PanelWindow {
             intersection: Intersection.Combine
             x: Math.floor(topRightComponent.x)
             y: Math.floor(topRightComponent.y)
-            width: topRightComponent.visible ? Math.ceil(topRightComponent.width) : 0
-            height: topRightComponent.visible ? Math.ceil(topRightComponent.height) : 0
+            width: (topRightComponent.visible && !root.isPillHiddenInRestingState) ? Math.ceil(topRightComponent.width) : 0
+            height: (topRightComponent.visible && !root.isPillHiddenInRestingState) ? Math.ceil(topRightComponent.height) : 0
         }
 
         Region {
             intersection: Intersection.Combine
             x: Math.floor(topRightTray.x)
             y: Math.floor(topRightTray.y)
-            width: topRightTray.visible ? Math.ceil(topRightTray.width) : 0
-            height: topRightTray.visible ? Math.ceil(topRightTray.height) : 0
+            width: (topRightTray.visible && !root.isPillHiddenInRestingState) ? Math.ceil(topRightTray.width) : 0
+            height: (topRightTray.visible && !root.isPillHiddenInRestingState) ? Math.ceil(topRightTray.height) : 0
         }
 
         Region {
             intersection: Intersection.Combine
             x: Math.floor(topLeftComponent.x)
             y: Math.floor(topLeftComponent.y)
-            width: topLeftComponent.visible ? Math.ceil(topLeftComponent.width) : 0
-            height: topLeftComponent.visible ? Math.ceil(topLeftComponent.height) : 0
+            width: (topLeftComponent.visible && !root.isPillHiddenInRestingState) ? Math.ceil(topLeftComponent.width) : 0
+            height: (topLeftComponent.visible && !root.isPillHiddenInRestingState) ? Math.ceil(topLeftComponent.height) : 0
         }
     }
     implicitHeight: 740
-    exclusiveZone: root.reservedTopSpace
+    exclusiveZone: root.pillHidden ? 0 : root.reservedTopSpace
     aboveWindows: true
     focusable: root.monitorFocused && (root.overviewVisible || root.connectivityPromptActive || islandContainer.islandState === "control_center" || islandContainer.islandState === "launcher" || islandContainer.islandState === "clipboard" || islandContainer.islandState === "emojis" || islandContainer.islandState === "wallpapers" || islandContainer.islandState === "utilities" || islandContainer.islandState === "timer" || islandContainer.islandState === "notepad")
     WlrLayershell.layer: (islandContainer.islandState === islandContainer.restingState && !root.overviewVisible) ? WlrLayer.Top : WlrLayer.Overlay
@@ -268,7 +278,7 @@ PanelWindow {
         userConfig.dynamicIslandPrimaryButton,
         userConfig.dynamicIslandSecondaryButton
     ])
-    readonly property bool topGestureInputActive: !root.overviewVisible && islandContainer.canShowSideSwipe
+    readonly property bool topGestureInputActive: !root.overviewVisible && !root.isPillHiddenInRestingState && islandContainer.canShowSideSwipe
     readonly property real topGestureInputHeight: topGestureInputActive ? root.exclusiveZone : 0
     readonly property real overviewCapsuleWidth: islandContainer.overviewView ? islandContainer.overviewView.width : 760
     readonly property real overviewCapsuleHeight: islandContainer.overviewView ? islandContainer.overviewView.height : 308
@@ -543,6 +553,15 @@ PanelWindow {
 
     function toggleNotepad() {
         islandContainer.toggleNotepad();
+    }
+
+    function togglePill() {
+        if (shellRootController && shellRootController.togglePill) {
+            shellRootController.togglePill();
+        } else {
+            root.pillHidden = !root.pillHidden;
+            root.showLayoutToast(root.pillHidden ? "Top Bar Hidden" : "Top Bar Visible");
+        }
     }
 
     function toggleCaffeine() {
@@ -1793,13 +1812,20 @@ PanelWindow {
                 islandContainer.swipeTransitionProgress
             )
             color: root.overviewContentVisible ? root.overviewCapsuleColor : StyleTokens.black
-            y: (root.isCenterNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
+            y: (root.isCenterNotch && !root.overviewVisible)
+                ? (root.isPillHiddenInRestingState ? -targetHeight - 20 : 0)
+                : (root.isPillHiddenInRestingState ? -targetHeight - 20 : root.islandTopOffset)
+            opacity: root.isPillHiddenInRestingState ? 0.0 : 1.0
+            visible: opacity > 0.0
             anchors.horizontalCenter: parent.horizontalCenter
             clip: true
             width: displayedWidth
             height: targetHeight
             radius: targetRadius
 
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+            }
             Behavior on y {
                 NumberAnimation { duration: mainCapsule.morphDuration; easing.type: Easing.OutQuint }
             }
@@ -2721,11 +2747,14 @@ PanelWindow {
 
         TopRightStatus {
             id: topRightComponent
-            visible: root.showTopRightPill
+            visible: opacity > 0.0
+            opacity: (root.showTopRightPill && !root.isPillHiddenInRestingState) ? 1.0 : 0.0
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: (root.isTopRightNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
+            anchors.topMargin: (root.isTopRightNotch && !root.overviewVisible)
+                ? (root.isPillHiddenInRestingState ? -50 : 0)
+                : (root.isPillHiddenInRestingState ? -50 : root.islandTopOffset)
             cavaLevels: islandContainer.cavaLevels
             batteryCapacity: islandContainer.batteryCapacity
             isCharging: islandContainer.isCharging
@@ -2734,6 +2763,9 @@ PanelWindow {
             iconFontFamily: root.iconFontFamily
             textFontFamily: root.textFontFamily
 
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+            }
             Behavior on anchors.topMargin {
                 NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
             }
@@ -2741,11 +2773,14 @@ PanelWindow {
 
         TopLeftLyrics {
             id: topLeftComponent
-            visible: root.showTopLeftPill
+            visible: opacity > 0.0
+            opacity: (root.showTopLeftPill && !root.isPillHiddenInRestingState) ? 1.0 : 0.0
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: (root.isTopLeftNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
+            anchors.topMargin: (root.isTopLeftNotch && !root.overviewVisible)
+                ? (root.isPillHiddenInRestingState ? -50 : 0)
+                : (root.isPillHiddenInRestingState ? -50 : root.islandTopOffset)
             lyricText: islandContainer.lyricsDisplayText
             musicPlaying: islandContainer.activePlayer && islandContainer.activePlayer.playbackState === MprisPlaybackState.Playing
             artUrl: islandContainer.currentArtUrl
@@ -2755,6 +2790,9 @@ PanelWindow {
             maxAllowedWidth: (root.width - mainCapsule.width) / 2 - 32
             islandState: islandContainer.islandState
 
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+            }
             Behavior on anchors.topMargin {
                 NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
             }
@@ -2762,15 +2800,21 @@ PanelWindow {
 
         TopRightTray {
             id: topRightTray
-            visible: root.showTopRightTray
+            visible: opacity > 0.0
+            opacity: (root.showTopRightTray && !root.isPillHiddenInRestingState) ? 1.0 : 0.0
             anchors.right: topRightComponent.left
             anchors.rightMargin: 12
             anchors.top: parent.top
-            anchors.topMargin: (root.isTopRightTrayNotch && !root.overviewVisible) ? 0 : root.islandTopOffset
+            anchors.topMargin: (root.isTopRightTrayNotch && !root.overviewVisible)
+                ? (root.isPillHiddenInRestingState ? -50 : 0)
+                : (root.isPillHiddenInRestingState ? -50 : root.islandTopOffset)
             window: root
             textFontFamily: root.textFontFamily
             iconFontFamily: root.iconFontFamily
 
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+            }
             Behavior on anchors.topMargin {
                 NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
             }

@@ -232,6 +232,20 @@ hl.bind(
     )
 )
 
+-- Top bar / Dynamic Island Pill hide & unhide toggle
+hl.bind(
+    mainMod .. " + B",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island togglePill"
+    )
+)
+hl.bind(
+    mainMod .. " + I",
+    hl.dsp.exec_cmd(
+        "qs ipc -p " .. os.getenv("HOME") .. "/.local/src/HyprDots/tide-island call island togglePill"
+    )
+)
+
 -- -- btop
 -- hl.bind("CTRL + SHIFT + code:9",
 --     hl.dsp.exec_cmd("pgrep -x btop && pkill -x btop || kitty --title btop btop")
