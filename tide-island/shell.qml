@@ -24,6 +24,17 @@ Scope {
     property bool caffeineMode: false
     property int batteryModeIndex: 1
     property bool darkMode: true
+    property bool pillHidden: activeUserConfig.hideTopPill || false
+
+    function togglePill() {
+        shellRoot.pillHidden = !shellRoot.pillHidden;
+        const msg = shellRoot.pillHidden ? "Top Bar Hidden" : "Top Bar Visible";
+        console.log("[Island] Pill visibility toggled: pillHidden = " + shellRoot.pillHidden);
+        shellRoot.forEachWindow((window) => {
+            if (window && window.showLayoutToast)
+                window.showLayoutToast(msg);
+        });
+    }
 
     function toggleDarkMode() {
         shellRoot.darkMode = !shellRoot.darkMode;
@@ -411,6 +422,10 @@ Scope {
 
         function randomWallpaper() {
             shellRoot.triggerRandomWallpaper();
+        }
+
+        function togglePill() {
+            shellRoot.togglePill();
         }
     }
 
