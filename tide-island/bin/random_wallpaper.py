@@ -7,6 +7,9 @@ import argparse
 import subprocess
 import configparser
 
+VIDEO_EXTS = {'.mp4', '.webm', '.mkv', '.mov', '.avi', '.flv', '.m4v', '.gif'}
+IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.avif'}
+
 def get_current_wallpaper(userconfig_path, waypaper_config_path):
     if os.path.exists(userconfig_path):
         try:
@@ -85,7 +88,7 @@ def get_theme_mode(userconfig_path):
     return "dark"
 
 def scan_wallpapers(folder_path):
-    valid_exts = {'.png', '.jpg', '.jpeg', '.webp'}
+    valid_exts = IMAGE_EXTS | VIDEO_EXTS
     wallpapers = []
     if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
         return wallpapers
@@ -129,38 +132,15 @@ def main():
     chosen_wallpaper = random.choice(candidates)
     wp_name = os.path.basename(chosen_wallpaper)
 
-    # 1. Apply wallpaper via waypaper
-    try:
-        subprocess.run(["waypaper", "--wallpaper", chosen_wallpaper], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception as e:
-        print(f"Error running waypaper: {e}", file=sys.stderr)
-
-    # 2. Update userconfig.json
-    try:
-        cfg = {}
-        if os.path.exists(userconfig_path):
-            with open(userconfig_path, 'r') as f:
-                cfg = json.load(f)
-        cfg['wallpaperPath'] = chosen_wallpaper
-        os.makedirs(os.path.dirname(userconfig_path), exist_ok=True)
-        with open(userconfig_path, 'w') as f:
-            json.dump(cfg, f, indent=4)
-    except Exception as e:
-        print(f"Error updating userconfig.json: {e}", file=sys.stderr)
-
-    # 3. Apply matugen Material You colors
+    # 1. Apply wallpaper via unified apply_wallpaper script
     theme_mode = get_theme_mode(userconfig_path)
+    apply_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "apply_wallpaper.py")
     try:
-        subprocess.Popen(
-            ["matugen", "image", "--mode", theme_mode, "-v", "--source-color-index", "0", chosen_wallpaper],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True
-        )
+        subprocess.run([sys.executable, apply_script, "--wallpaper", chosen_wallpaper, "--mode", theme_mode], check=False)
     except Exception as e:
-        print(f"Error starting matugen: {e}", file=sys.stderr)
+        print(f"Error applying wallpaper: {e}", file=sys.stderr)
 
-    # 4. Check notification preferences
+    # 2. Check notification preferences
     notify_enabled = args.notify
     if not args.silent and not args.notify:
         try:

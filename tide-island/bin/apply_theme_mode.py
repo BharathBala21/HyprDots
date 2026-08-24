@@ -2,8 +2,12 @@
 import os
 import sys
 import json
+import hashlib
 import subprocess
 import configparser
+
+VIDEO_EXTS = {'.mp4', '.webm', '.mkv', '.mov', '.avi', '.flv', '.m4v', '.gif'}
+IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.avif'}
 
 def get_current_wallpaper():
     # 1. Try reading ~/.config/tide-island/userconfig.json
@@ -13,8 +17,8 @@ def get_current_wallpaper():
             with open(tide_config, 'r') as f:
                 data = json.load(f)
                 wp = data.get('wallpaperPath')
-                if wp and os.path.exists(wp):
-                    return wp
+                if wp and os.path.exists(os.path.expanduser(wp)):
+                    return os.path.abspath(os.path.expanduser(wp))
         except Exception:
             pass
 
@@ -27,7 +31,7 @@ def get_current_wallpaper():
             if 'Settings' in config and 'wallpaper' in config['Settings']:
                 wp = os.path.expanduser(config['Settings']['wallpaper'])
                 if os.path.exists(wp):
-                    return wp
+                    return os.path.abspath(wp)
         except Exception:
             pass
 
@@ -35,7 +39,8 @@ def get_current_wallpaper():
     wp_dir = os.path.expanduser("~/Pictures/Wallpapers")
     if os.path.exists(wp_dir) and os.path.isdir(wp_dir):
         for f in sorted(os.listdir(wp_dir)):
-            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+            ext = os.path.splitext(f)[1].lower()
+            if ext in IMAGE_EXTS or ext in VIDEO_EXTS:
                 return os.path.join(wp_dir, f)
 
     return ""
@@ -84,8 +89,27 @@ def main():
     # Run matugen for active wallpaper
     wp = get_current_wallpaper()
     if wp:
+        target_img = wp
+        ext = os.path.splitext(wp)[1].lower()
+        if ext in VIDEO_EXTS:
+            h = hashlib.md5(wp.encode('utf-8')).hexdigest()
+            thumb_cache_dir = os.path.expanduser("~/.cache/tide-island/thumbnails")
+            os.makedirs(thumb_cache_dir, exist_ok=True)
+            thumb_path = os.path.join(thumb_cache_dir, f"{h}.jpg")
+            if not os.path.exists(thumb_path):
+                subprocess.run(
+                    ["ffmpeg", "-y", "-ss", "00:00:01", "-i", wp, "-vframes", "1",
+                     "-vf", "scale=240:135:force_original_aspect_ratio=decrease,pad=240:135:(ow-iw)/2:(oh-ih)/2",
+                     thumb_path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False
+                )
+            if os.path.exists(thumb_path):
+                target_img = thumb_path
+
         try:
-            subprocess.run(["matugen", "image", "--mode", mode, "-v", "--source-color-index", "0", wp], check=False)
+            subprocess.run(["matugen", "image", "--mode", mode, "-v", "--source-color-index", "0", target_img], check=False)
         except Exception as e:
             print(f"Error running matugen: {e}", file=sys.stderr)
 

@@ -4,17 +4,21 @@ import sys
 import json
 import configparser
 import hashlib
+import subprocess
+
+VIDEO_EXTS = {'.mp4', '.webm', '.mkv', '.mov', '.avi', '.flv', '.m4v', '.gif'}
+IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.avif'}
 
 def run_background_generator(folder_path, cache_dir):
     try:
         os.nice(19)
-    except:
+    except Exception:
         pass
 
     try:
         from PIL import Image
     except ImportError:
-        return
+        Image = None
 
     import time
 
@@ -28,8 +32,10 @@ def run_background_generator(folder_path, cache_dir):
 
     for file in files:
         ext = os.path.splitext(file)[1].lower()
-        if ext in ['.png', '.jpg', '.jpeg', '.webp']:
+        if ext in IMAGE_EXTS or ext in VIDEO_EXTS:
             src_path = os.path.join(folder_path, file)
+            if not os.path.isfile(src_path):
+                continue
             h = hashlib.md5(src_path.encode('utf-8')).hexdigest()
             thumb_path = os.path.join(cache_dir, f"{h}.jpg")
 
@@ -38,25 +44,38 @@ def run_background_generator(folder_path, cache_dir):
                 try:
                     if os.path.getmtime(src_path) <= os.path.getmtime(thumb_path):
                         need_gen = False
-                except:
+                except Exception:
                     pass
 
             if need_gen:
-                try:
-                    with Image.open(src_path) as img:
-                        img.thumbnail((240, 135))
-                        if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
-                            background = Image.new('RGB', img.size, (0, 0, 0))
-                            try:
-                                background.paste(img, mask=img.split()[3] if img.mode == 'RGBA' else img.split()[1])
-                            except:
-                                background.paste(img)
-                            img = background
-                        elif img.mode != 'RGB':
-                            img = img.convert('RGB')
-                        img.save(thumb_path, 'JPEG', quality=80)
-                except Exception:
-                    pass
+                if ext in VIDEO_EXTS:
+                    try:
+                        subprocess.run(
+                            ["ffmpeg", "-y", "-ss", "00:00:01", "-i", src_path, "-vframes", "1",
+                             "-vf", "scale=240:135:force_original_aspect_ratio=decrease,pad=240:135:(ow-iw)/2:(oh-ih)/2",
+                             thumb_path],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            check=False
+                        )
+                    except Exception:
+                        pass
+                elif Image is not None:
+                    try:
+                        with Image.open(src_path) as img:
+                            img.thumbnail((240, 135))
+                            if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                                background = Image.new('RGB', img.size, (0, 0, 0))
+                                try:
+                                    background.paste(img, mask=img.split()[3] if img.mode == 'RGBA' else img.split()[1])
+                                except Exception:
+                                    background.paste(img)
+                                img = background
+                            elif img.mode != 'RGB':
+                                img = img.convert('RGB')
+                            img.save(thumb_path, 'JPEG', quality=80)
+                    except Exception:
+                        pass
                 time.sleep(0.02)
 
 def main():
@@ -106,8 +125,10 @@ def main():
         try:
             for file in os.listdir(folder_path):
                 ext = os.path.splitext(file)[1].lower()
-                if ext in ['.png', '.jpg', '.jpeg', '.webp']:
+                if ext in IMAGE_EXTS or ext in VIDEO_EXTS:
                     src_path = os.path.join(folder_path, file)
+                    if not os.path.isfile(src_path):
+                        continue
                     h = hashlib.md5(src_path.encode('utf-8')).hexdigest()
                     thumb_path = os.path.join(cache_dir, f"{h}.jpg")
 
@@ -116,21 +137,45 @@ def main():
                         try:
                             if os.path.getmtime(src_path) <= os.path.getmtime(thumb_path):
                                 is_valid = True
-                        except:
+                        except Exception:
                             pass
+
+                    is_video = ext in VIDEO_EXTS
 
                     if is_valid:
                         thumb = thumb_path
                     else:
-                        thumb = src_path
-                        needs_generator = True
+                        if is_video:
+                            # Quick 1 frame capture if possible
+                            try:
+                                subprocess.run(
+                                    ["ffmpeg", "-y", "-ss", "00:00:01", "-i", src_path, "-vframes", "1",
+                                     "-vf", "scale=240:135:force_original_aspect_ratio=decrease,pad=240:135:(ow-iw)/2:(oh-ih)/2",
+                                     thumb_path],
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL,
+                                    timeout=2,
+                                    check=False
+                                )
+                                if os.path.exists(thumb_path):
+                                    thumb = thumb_path
+                                else:
+                                    thumb = ""
+                                    needs_generator = True
+                            except Exception:
+                                thumb = ""
+                                needs_generator = True
+                        else:
+                            thumb = src_path
+                            needs_generator = True
 
                     wallpapers.append({
                         "name": file,
                         "path": src_path,
-                        "thumb": thumb
+                        "thumb": thumb,
+                        "isVideo": is_video
                     })
-            wallpapers.sort(key=lambda x: x["name"])
+            wallpapers.sort(key=lambda x: x["name"].lower())
         except Exception as e:
             print(f"Error listing folder: {e}", file=sys.stderr)
 
@@ -143,7 +188,6 @@ def main():
     print(json.dumps(result))
 
     if needs_generator:
-        import subprocess
         try:
             subprocess.Popen(
                 [sys.executable, __file__, "--background-generate", folder_path, cache_dir],

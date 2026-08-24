@@ -19,6 +19,12 @@ Item {
     property int maxFailureRetries: 2
 
     readonly property string normalizedSourcePath: localPath(sourcePath)
+    readonly property bool isVideoSource: {
+        const lower = normalizedSourcePath.toLowerCase();
+        return lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mkv")
+            || lower.endsWith(".mov") || lower.endsWith(".avi") || lower.endsWith(".flv")
+            || lower.endsWith(".m4v") || lower.endsWith(".gif");
+    }
     readonly property string cacheDir: localPath(StandardPaths.writableLocation(StandardPaths.GenericCacheLocation))
         + "/quickshell/dynamic_island/workspace-overview"
     readonly property string cacheFileName: "wallpaper-"
@@ -28,7 +34,7 @@ Item {
     readonly property string cachePath: cacheDir + "/" + cacheFileName
     readonly property string effectiveSource: cacheAvailable
         ? (toFileUrl(cachePath) + "?v=" + cacheRevision)
-        : (normalizedSourcePath === "" ? "" : (toFileUrl(normalizedSourcePath) + "?v=source-" + sourceRevision))
+        : (isVideoSource ? "" : (normalizedSourcePath === "" ? "" : (toFileUrl(normalizedSourcePath) + "?v=source-" + sourceRevision)))
 
     property bool cacheAvailable: false
     property int cacheRevision: 0
@@ -97,14 +103,25 @@ Item {
         inFlightCachePath = cachePath;
         inFlightSourcePath = normalizedSourcePath;
         thumbnailRequestActive = true;
-        SystemServices.generateWallpaperThumbnail(
-            normalizedSourcePath,
-            cachePath,
-            cacheDir,
-            targetWidth,
-            targetHeight,
-            quality
-        );
+
+        if (isVideoSource) {
+            videoThumbProcess.command = [
+                "ffmpeg", "-y", "-ss", "00:00:01", "-i", normalizedSourcePath,
+                "-vframes", "1",
+                "-vf", "scale=" + targetWidth + ":" + targetHeight + ":force_original_aspect_ratio=increase,crop=" + targetWidth + ":" + targetHeight,
+                cachePath
+            ];
+            videoThumbProcess.running = true;
+        } else {
+            SystemServices.generateWallpaperThumbnail(
+                normalizedSourcePath,
+                cachePath,
+                cacheDir,
+                targetWidth,
+                targetHeight,
+                quality
+            );
+        }
     }
 
     onCachePathChanged: {
@@ -129,6 +146,21 @@ Item {
         repeat: false
 
         onTriggered: root.refreshCache()
+    }
+
+    Process {
+        id: videoThumbProcess
+        running: false
+        onExited: (exitCode) => {
+            root.thumbnailRequestActive = false;
+            if (exitCode === 0 && root.hasCacheOnDisk()) {
+                root.cacheAvailable = true;
+                root.cacheRevision += 1;
+                root.consecutiveFailureCount = 0;
+            } else {
+                root.consecutiveFailureCount += 1;
+            }
+        }
     }
 
     FileView {

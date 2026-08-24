@@ -13,6 +13,7 @@ hl.config({
         follow_min_visible = 1,
         explicit_column_widths = "0.333, 0.5, 0.667, 1.0",
         fullscreen_on_one_column = true,
+        wrap_focus = false
     }
   }
   )

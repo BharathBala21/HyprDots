@@ -146,7 +146,7 @@ end)
 
 hl.bind("SUPER+ALT+D", function ()
     hl.dispatch(hl.dsp.workspace.toggle_special("discord_special"))
-    hl.workspace_rule({workspace = "special:discord_special", on_created_empty = "discord"})
+    hl.workspace_rule({workspace = "special:discord_special", on_created_empty = "vesktop"})
 end)
 
 hl.bind("SUPER+ALT+E", function ()
@@ -303,14 +303,14 @@ hl.bind("SUPER + TAB", function()
     hl.plugin.scrolloverview.overview("toggle")
 end)
 
-hl.bind("SUPER + mouse_up", layout_bind({
+hl.bind("SUPER + mouse_down", layout_bind({
     scrolling = hl.dsp.layout("focus r"),
     default   = hl.dsp.focus({ direction = "right" }),
-}))
-hl.bind("SUPER + mouse_down", layout_bind({
+}),{non_consuming = false,repeating = true})
+hl.bind("SUPER + mouse_up", layout_bind({
     scrolling = hl.dsp.layout("focus l"),
     default   = hl.dsp.focus({ direction = "left" }),
-}))
+}),{non_consuming = false,repeating = true})
 
 
 

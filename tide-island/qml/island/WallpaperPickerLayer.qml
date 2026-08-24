@@ -79,22 +79,20 @@ FocusScope {
 
     function previewWallpaper(path) {
         root.currentWallpaper = path;
-        Quickshell.execDetached(["waypaper", "--wallpaper", path]);
-        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_wallpaper_config.py", path]);
+        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/apply_wallpaper.py", "--wallpaper", path, "--no-matugen"]);
     }
 
     function confirmWallpaper(path) {
-        previewWallpaper(path);
         const mode = (shellRootController && !shellRootController.darkMode) ? "light" : "dark";
-        Quickshell.execDetached(["matugen", "image", "--mode", mode, "-v", "--source-color-index", "0", path]);
+        Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/apply_wallpaper.py", "--wallpaper", path, "--mode", mode]);
         root.initialWallpaper = path; // Confirm it as the active wallpaper (reverting won't change it back)    
         root.closeRequested();
     }
 
     function revertAndClose() {
         if (initialWallpaper !== "" && initialWallpaper !== currentWallpaper) {
-            Quickshell.execDetached(["waypaper", "--wallpaper", initialWallpaper]);
-            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/update_wallpaper_config.py", initialWallpaper]);
+            const mode = (shellRootController && !shellRootController.darkMode) ? "light" : "dark";
+            Quickshell.execDetached(["python3", Quickshell.shellDir + "/bin/apply_wallpaper.py", "--wallpaper", initialWallpaper, "--mode", mode]);
         }
         root.closeRequested();
     }
@@ -278,6 +276,7 @@ FocusScope {
 
                 readonly property bool isSelected: index === root.selectedIndex
                 readonly property bool isActive: modelData.path === root.initialWallpaper
+                readonly property bool isVideo: !!modelData.isVideo
 
                 // Wallpaper Card Wrapper
                 Rectangle {
@@ -298,7 +297,7 @@ FocusScope {
                     Image {
                         anchors.fill: parent
                         anchors.margins: parent.border.width
-                        source: "file://" + modelData.thumb
+                        source: modelData.thumb ? ("file://" + modelData.thumb) : ""
                         // Guard decode size to prevent full resolution decoding during initialization
                         sourceSize.width: root.itemWidth > 0 ? root.itemWidth : 200
                         sourceSize.height: root.itemHeight > 0 ? root.itemHeight : 113
@@ -308,6 +307,25 @@ FocusScope {
                         opacity: isSelected ? 1.0 : 0.75
                         
                         Behavior on opacity { NumberAnimation { duration: 120 } }
+                    }
+
+                    // Video indicator badge
+                    Rectangle {
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.margins: 6
+                        width: 22
+                        height: 18
+                        radius: 5
+                        color: Qt.rgba(0, 0, 0, 0.65)
+                        visible: isVideo
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "▶"
+                            font.pixelSize: 8
+                            color: "#ffffff"
+                        }
                     }
 
                     // Glowing badge for active wallpaper

@@ -113,10 +113,10 @@ REQUIRED_PACMAN=(
     "btop" "fastfetch" "fish" "kitty" "yazi" "python" "python-pillow" "jq"
     "wireplumber" "brightnessctl" "hyprpicker" "hyprshot" "tesseract"
     "tesseract-data-eng" "zbar" "grim" "slurp" "wf-recorder" "libnotify"
-     "ttf-jetbrains-mono-nerd"
+    "ttf-jetbrains-mono-nerd" "ffmpeg"
 )
 REQUIRED_AUR=(
-    "quickshell" "matugen" "tide-island"
+    "quickshell" "matugen" "tide-island" "mpvpaper"
 )
 
 install_packages() {
@@ -437,7 +437,9 @@ setup_tide_island() {
 
     # Apply tom_jazz.png wallpaper by default
     log_info "Applying default wallpaper (tom_jazz.png)..."
-    if command -v waypaper &>/dev/null; then
+    if [ -f "${REPO_DIR}/tide-island/bin/apply_wallpaper.py" ]; then
+        python3 "${REPO_DIR}/tide-island/bin/apply_wallpaper.py" --wallpaper "${HOME}/Pictures/Wallpapers/tom_jazz.png" &>/dev/null || true
+    elif command -v waypaper &>/dev/null; then
         # Set via waypaper CLI (which also updates waypaper configuration)
         waypaper --wallpaper "${HOME}/Pictures/Wallpapers/tom_jazz.png" &>/dev/null || true
     fi
